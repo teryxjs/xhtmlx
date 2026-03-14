@@ -1,0 +1,1707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>xhtmlx — REST APIs meet declarative HTML</title>
+<meta name="description" content="A lightweight, zero-dependency JavaScript library for building dynamic UIs with REST APIs using declarative HTML attributes. Like htmx, but your server returns JSON.">
+<style>
+/* ========== CSS Custom Properties ========== */
+:root {
+  --bg-primary: #0b0e17;
+  --bg-secondary: #111627;
+  --bg-card: #161b2e;
+  --bg-card-hover: #1c2240;
+  --bg-code: #0d1117;
+  --bg-code-header: #161b2e;
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent-1: #6366f1;
+  --accent-2: #8b5cf6;
+  --accent-3: #06b6d4;
+  --accent-4: #22d3ee;
+  --gradient-accent: linear-gradient(135deg, #6366f1, #8b5cf6, #06b6d4);
+  --gradient-subtle: linear-gradient(135deg, rgba(99,102,241,0.08), rgba(6,182,212,0.08));
+  --gradient-glow: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(6,182,212,0.15));
+  --border-color: rgba(99,102,241,0.15);
+  --border-color-hover: rgba(99,102,241,0.35);
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: "SF Mono", "Cascadia Code", "Fira Code", Consolas, "DejaVu Sans Mono", monospace;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow-lg: 0 25px 50px -12px rgba(0,0,0,0.5);
+  --shadow-glow: 0 0 40px rgba(99,102,241,0.15);
+  --max-width: 1200px;
+  --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ========== Reset & Base ========== */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.7;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: var(--accent-3);
+  text-decoration: none;
+  transition: color var(--transition);
+}
+a:hover { color: var(--accent-4); }
+
+code, pre {
+  font-family: var(--font-mono);
+}
+
+img { max-width: 100%; }
+
+/* ========== Utility ========== */
+.container {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.section {
+  padding: 100px 0;
+}
+
+.section-label {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  background: var(--gradient-accent);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 12px;
+}
+
+.section-title {
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  font-weight: 800;
+  line-height: 1.2;
+  margin-bottom: 16px;
+  letter-spacing: -0.02em;
+}
+
+.section-subtitle {
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  max-width: 640px;
+  line-height: 1.7;
+}
+
+.text-center { text-align: center; }
+.mx-auto { margin-left: auto; margin-right: auto; }
+
+/* ========== Scroll Animations ========== */
+.fade-in {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+}
+.fade-in.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.fade-in-delay-1 { transition-delay: 0.1s; }
+.fade-in-delay-2 { transition-delay: 0.2s; }
+.fade-in-delay-3 { transition-delay: 0.3s; }
+.fade-in-delay-4 { transition-delay: 0.4s; }
+
+/* ========== Navigation ========== */
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  padding: 0 24px;
+  transition: background var(--transition), box-shadow var(--transition);
+}
+.nav.scrolled {
+  background: rgba(11, 14, 23, 0.85);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 1px 0 var(--border-color);
+}
+.nav-inner {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+}
+.nav-logo {
+  font-family: var(--font-mono);
+  font-size: 1.3rem;
+  font-weight: 800;
+  background: var(--gradient-accent);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.02em;
+}
+.nav-links {
+  display: flex;
+  gap: 32px;
+  list-style: none;
+  align-items: center;
+}
+.nav-links a {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: color var(--transition);
+}
+.nav-links a:hover { color: var(--text-primary); }
+.nav-github {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.nav-github svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+/* Mobile menu */
+.nav-toggle {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  color: var(--text-primary);
+}
+.nav-toggle span {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: currentColor;
+  margin: 5px 0;
+  transition: transform var(--transition), opacity var(--transition);
+  border-radius: 2px;
+}
+.nav-toggle.active span:nth-child(1) { transform: rotate(45deg) translate(5px, 5px); }
+.nav-toggle.active span:nth-child(2) { opacity: 0; }
+.nav-toggle.active span:nth-child(3) { transform: rotate(-45deg) translate(5px, -5px); }
+
+@media (max-width: 768px) {
+  .nav-toggle { display: block; }
+  .nav-links {
+    display: none;
+    position: absolute;
+    top: 64px;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    background: rgba(11, 14, 23, 0.95);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    padding: 24px;
+    gap: 16px;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .nav-links.open { display: flex; }
+}
+
+/* ========== Hero ========== */
+.hero {
+  position: relative;
+  padding: 140px 0 100px;
+  overflow: hidden;
+}
+
+/* Background decoration */
+.hero::before {
+  content: "";
+  position: absolute;
+  top: -300px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 900px;
+  height: 900px;
+  background: radial-gradient(circle, rgba(99,102,241,0.12) 0%, rgba(6,182,212,0.06) 40%, transparent 70%);
+  pointer-events: none;
+}
+
+.hero-grid-bg {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(99,102,241,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(99,102,241,0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+  -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 70%);
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 70%);
+  pointer-events: none;
+}
+
+.hero-content {
+  position: relative;
+  text-align: center;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-radius: 100px;
+  border: 1px solid var(--border-color);
+  background: var(--gradient-subtle);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--accent-3);
+  margin-bottom: 32px;
+}
+.hero-badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-4);
+  animation: pulse-dot 2s infinite;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(34,211,238,0.4); }
+  50% { opacity: 0.8; box-shadow: 0 0 0 6px rgba(34,211,238,0); }
+}
+
+.hero-title {
+  font-size: clamp(3rem, 8vw, 5.5rem);
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+  margin-bottom: 20px;
+}
+.hero-title-gradient {
+  background: var(--gradient-accent);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-tagline {
+  font-size: clamp(1.15rem, 2.5vw, 1.5rem);
+  color: var(--text-secondary);
+  font-weight: 400;
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+.hero-description {
+  font-size: 1.05rem;
+  color: var(--text-muted);
+  max-width: 560px;
+  margin: 0 auto 36px;
+  line-height: 1.7;
+}
+
+.hero-cta {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 48px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 28px;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition);
+  text-decoration: none;
+}
+.btn-primary {
+  background: var(--gradient-accent);
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(99,102,241,0.3);
+}
+.btn-primary:hover {
+  box-shadow: 0 8px 25px rgba(99,102,241,0.4);
+  transform: translateY(-2px);
+  color: #fff;
+}
+.btn-secondary {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+.btn-secondary:hover {
+  border-color: var(--border-color-hover);
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+  transform: translateY(-2px);
+}
+.btn svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+.hero-stats {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  flex-wrap: wrap;
+}
+.hero-stat {
+  text-align: center;
+}
+.hero-stat-value {
+  font-family: var(--font-mono);
+  font-size: 1.3rem;
+  font-weight: 700;
+  background: var(--gradient-accent);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.hero-stat-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* Hero code demo */
+.hero-demo {
+  position: relative;
+  max-width: 960px;
+  margin: 64px auto 0;
+}
+
+.demo-window {
+  background: var(--bg-code);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg), var(--shadow-glow);
+}
+.demo-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--bg-code-header);
+  border-bottom: 1px solid var(--border-color);
+}
+.demo-dots {
+  display: flex;
+  gap: 6px;
+}
+.demo-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.demo-dot:nth-child(1) { background: #ff5f57; }
+.demo-dot:nth-child(2) { background: #ffbd2e; }
+.demo-dot:nth-child(3) { background: #28c840; }
+.demo-tab-label {
+  margin-left: 12px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.demo-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 260px;
+}
+@media (max-width: 700px) {
+  .demo-body { grid-template-columns: 1fr; }
+}
+.demo-pane {
+  padding: 20px 24px;
+  position: relative;
+}
+.demo-pane + .demo-pane {
+  border-left: 1px solid var(--border-color);
+}
+@media (max-width: 700px) {
+  .demo-pane + .demo-pane {
+    border-left: none;
+    border-top: 1px solid var(--border-color);
+  }
+}
+.demo-pane-label {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent-3);
+  margin-bottom: 12px;
+}
+.demo-pane pre {
+  font-size: 0.82rem;
+  line-height: 1.65;
+  color: var(--text-primary);
+  white-space: pre;
+  overflow-x: auto;
+}
+
+/* Arrow animation between panes */
+.demo-arrow {
+  display: none;
+  position: absolute;
+  top: 50%;
+  right: -16px;
+  transform: translateY(-50%);
+  z-index: 2;
+  width: 32px;
+  height: 32px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-3);
+  font-size: 0.9rem;
+}
+@media (min-width: 701px) {
+  .demo-arrow { display: flex; }
+}
+
+/* ========== How It Works ========== */
+.how-section {
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.flow-diagram {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin: 48px 0;
+  flex-wrap: wrap;
+}
+.flow-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 20px 16px;
+  min-width: 120px;
+}
+.flow-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  margin-bottom: 12px;
+  border: 1px solid var(--border-color);
+  background: var(--gradient-subtle);
+}
+.flow-step-title {
+  font-weight: 700;
+  font-size: 0.9rem;
+  margin-bottom: 4px;
+}
+.flow-step-desc {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.flow-connector {
+  color: var(--accent-2);
+  font-size: 1.3rem;
+  padding: 0 4px;
+  margin-top: -20px;
+  font-family: var(--font-mono);
+}
+
+@media (max-width: 640px) {
+  .flow-diagram { flex-direction: column; }
+  .flow-connector { transform: rotate(90deg); margin-top: 0; }
+}
+
+/* Comparison boxes */
+.compare-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-top: 48px;
+}
+@media (max-width: 700px) {
+  .compare-grid { grid-template-columns: 1fr; }
+}
+.compare-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 28px;
+  position: relative;
+  overflow: hidden;
+}
+.compare-box::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+}
+.compare-box--htmx::before {
+  background: linear-gradient(90deg, #3d72b4, #508ecf);
+}
+.compare-box--xhtmlx::before {
+  background: var(--gradient-accent);
+}
+.compare-box-title {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 16px;
+}
+.compare-flow {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  line-height: 2;
+  color: var(--text-secondary);
+}
+.compare-flow span {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* ========== Features ========== */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+  margin-top: 48px;
+}
+
+.feature-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 28px;
+  transition: all var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+.feature-card:hover {
+  border-color: var(--border-color-hover);
+  background: var(--bg-card-hover);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-glow);
+}
+.feature-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--gradient-accent);
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+.feature-card:hover::after { opacity: 1; }
+
+.feature-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  background: var(--gradient-subtle);
+  border: 1px solid var(--border-color);
+  margin-bottom: 16px;
+}
+.feature-title {
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin-bottom: 8px;
+}
+.feature-desc {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+.feature-attr {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  background: rgba(99,102,241,0.1);
+  border-radius: 4px;
+  color: var(--accent-3);
+  margin-top: 10px;
+}
+
+/* ========== Code Examples ========== */
+.examples-section {
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.examples-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 1px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) transparent;
+}
+.example-tab {
+  padding: 10px 20px;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: none;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition);
+}
+.example-tab:hover {
+  color: var(--text-secondary);
+  background: rgba(99,102,241,0.05);
+}
+.example-tab.active {
+  color: var(--text-primary);
+  background: var(--bg-code);
+  border-color: var(--border-color);
+}
+
+.examples-content {
+  background: var(--bg-code);
+  border: 1px solid var(--border-color);
+  border-radius: 0 var(--radius) var(--radius) var(--radius);
+  overflow: hidden;
+}
+.example-panel {
+  display: none;
+  padding: 28px;
+  animation: fadeTab 0.3s ease;
+}
+.example-panel.active { display: block; }
+
+@keyframes fadeTab {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.example-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.example-desc {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+}
+
+/* Code block styling */
+.code-block {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.code-block:last-child { margin-bottom: 0; }
+.code-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: rgba(99,102,241,0.05);
+  border-bottom: 1px solid var(--border-color);
+}
+.code-block-label {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.code-block pre {
+  padding: 16px 20px;
+  font-size: 0.82rem;
+  line-height: 1.65;
+  overflow-x: auto;
+  color: var(--text-primary);
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) transparent;
+}
+
+/* Syntax highlighting */
+.syn-tag { color: #7dd3fc; }
+.syn-attr { color: #c4b5fd; }
+.syn-val { color: #86efac; }
+.syn-interp { color: #fbbf24; font-weight: 600; }
+.syn-comment { color: #4a5568; font-style: italic; }
+.syn-str { color: #86efac; }
+.syn-key { color: #c4b5fd; }
+.syn-num { color: #fbbf24; }
+.syn-bool { color: #f472b6; }
+.syn-punct { color: #64748b; }
+.syn-kw { color: #c084fc; font-weight: 600; }
+
+/* ========== Installation ========== */
+.install-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-top: 48px;
+}
+@media (max-width: 700px) {
+  .install-grid { grid-template-columns: 1fr; }
+}
+.install-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.install-card-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.install-card-icon {
+  font-size: 1.2rem;
+}
+.install-card-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+.install-card-desc {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+.install-card pre {
+  padding: 20px 24px;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--text-primary);
+  overflow-x: auto;
+}
+
+/* ========== Comparison Table ========== */
+.comparison-wrapper {
+  overflow-x: auto;
+  margin-top: 48px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) transparent;
+}
+.comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  min-width: 600px;
+}
+.comparison-table thead {
+  background: var(--bg-card);
+}
+.comparison-table th {
+  padding: 14px 20px;
+  text-align: left;
+  font-weight: 700;
+  font-size: 0.88rem;
+  border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
+}
+.comparison-table th:first-child {
+  color: var(--text-secondary);
+}
+.comparison-table th.highlight {
+  background: rgba(99,102,241,0.08);
+  color: var(--accent-3);
+}
+.comparison-table td {
+  padding: 12px 20px;
+  border-bottom: 1px solid rgba(99,102,241,0.06);
+  color: var(--text-secondary);
+}
+.comparison-table tr:last-child td { border-bottom: none; }
+.comparison-table td:first-child {
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+.comparison-table td.highlight {
+  background: rgba(99,102,241,0.04);
+  color: var(--accent-3);
+  font-weight: 600;
+}
+.table-check { color: #22c55e; font-weight: 700; }
+.table-cross { color: #64748b; }
+.table-na { color: #4a5568; font-style: italic; }
+
+/* ========== Footer ========== */
+.footer {
+  padding: 48px 0;
+  border-top: 1px solid var(--border-color);
+}
+.footer-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+.footer-brand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.footer-logo {
+  font-family: var(--font-mono);
+  font-weight: 800;
+  font-size: 1.1rem;
+  background: var(--gradient-accent);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.footer-copy {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+.footer-links {
+  display: flex;
+  gap: 24px;
+  list-style: none;
+}
+.footer-links a {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+}
+.footer-links a:hover { color: var(--text-primary); }
+.footer-badge {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  padding: 4px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 100px;
+}
+
+@media (max-width: 640px) {
+  .footer-inner { flex-direction: column; text-align: center; }
+  .footer-brand { flex-direction: column; }
+}
+
+/* ========== Scrollbar ========== */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-color-hover); }
+
+/* ========== Selection ========== */
+::selection {
+  background: rgba(99,102,241,0.3);
+  color: #fff;
+}
+</style>
+</head>
+<body>
+
+<!-- ==================== Navigation ==================== -->
+<nav class="nav" id="nav">
+  <div class="nav-inner">
+    <a href="#" class="nav-logo">xhtmlx</a>
+    <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+      <span></span><span></span><span></span>
+    </button>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="#how-it-works">How It Works</a></li>
+      <li><a href="#features">Features</a></li>
+      <li><a href="#examples">Examples</a></li>
+      <li><a href="#install">Install</a></li>
+      <li><a href="#comparison">Compare</a></li>
+      <li>
+        <a href="https://github.com/dkropachev/xhtmlx" class="nav-github" target="_blank" rel="noopener">
+          <svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          GitHub
+        </a>
+      </li>
+    </ul>
+  </div>
+</nav>
+
+<!-- ==================== Hero ==================== -->
+<section class="hero" id="hero">
+  <div class="hero-grid-bg"></div>
+  <div class="container hero-content">
+    <div class="fade-in">
+      <div class="hero-badge">
+        <span class="hero-badge-dot"></span>
+        ~5KB gzipped &middot; zero dependencies
+      </div>
+    </div>
+    <h1 class="hero-title fade-in fade-in-delay-1">
+      <span class="hero-title-gradient">xhtmlx</span>
+    </h1>
+    <p class="hero-tagline fade-in fade-in-delay-2">REST APIs meet declarative HTML</p>
+    <p class="hero-description fade-in fade-in-delay-2">
+      Like htmx, but your server returns JSON and xhtmlx renders it client-side.
+      Build dynamic UIs with nothing but HTML attributes.
+    </p>
+    <div class="hero-cta fade-in fade-in-delay-3">
+      <a href="#install" class="btn btn-primary">Get Started</a>
+      <a href="https://github.com/dkropachev/xhtmlx" class="btn btn-secondary" target="_blank" rel="noopener">
+        <svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        GitHub
+      </a>
+    </div>
+    <div class="hero-stats fade-in fade-in-delay-4">
+      <div class="hero-stat">
+        <div class="hero-stat-value">~5KB</div>
+        <div class="hero-stat-label">Gzipped</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-value">0</div>
+        <div class="hero-stat-label">Dependencies</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-value">No</div>
+        <div class="hero-stat-label">Build Step</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-value">15+</div>
+        <div class="hero-stat-label">Attributes</div>
+      </div>
+    </div>
+
+    <!-- Live code demo -->
+    <div class="hero-demo fade-in">
+      <div class="demo-window">
+        <div class="demo-header">
+          <div class="demo-dots">
+            <span class="demo-dot"></span>
+            <span class="demo-dot"></span>
+            <span class="demo-dot"></span>
+          </div>
+          <span class="demo-tab-label">index.html</span>
+        </div>
+        <div class="demo-body">
+          <div class="demo-pane">
+            <div class="demo-pane-label">Your HTML</div>
+            <pre><span class="syn-comment">&lt;!-- That's it. No JavaScript. --&gt;</span>
+<span class="syn-tag">&lt;div</span> <span class="syn-attr">xh-get</span>=<span class="syn-val">"/api/users"</span>
+     <span class="syn-attr">xh-trigger</span>=<span class="syn-val">"load"</span>
+     <span class="syn-attr">xh-target</span>=<span class="syn-val">"#results"</span><span class="syn-tag">&gt;</span>
+  <span class="syn-tag">&lt;template&gt;</span>
+    <span class="syn-tag">&lt;div</span> <span class="syn-attr">xh-each</span>=<span class="syn-val">"users"</span><span class="syn-tag">&gt;</span>
+      <span class="syn-tag">&lt;p</span> <span class="syn-attr">xh-text</span>=<span class="syn-val">"name"</span><span class="syn-tag">&gt;&lt;/p&gt;</span>
+    <span class="syn-tag">&lt;/div&gt;</span>
+  <span class="syn-tag">&lt;/template&gt;</span>
+<span class="syn-tag">&lt;/div&gt;</span>
+<span class="syn-tag">&lt;div</span> <span class="syn-attr">id</span>=<span class="syn-val">"results"</span><span class="syn-tag">&gt;&lt;/div&gt;</span></pre>
+            <div class="demo-arrow">&#8594;</div>
+          </div>
+          <div class="demo-pane">
+            <div class="demo-pane-label">Server returns JSON</div>
+            <pre><span class="syn-punct">{</span>
+  <span class="syn-key">"users"</span><span class="syn-punct">:</span> <span class="syn-punct">[</span>
+    <span class="syn-punct">{</span> <span class="syn-key">"name"</span><span class="syn-punct">:</span> <span class="syn-str">"Alice Chen"</span> <span class="syn-punct">},</span>
+    <span class="syn-punct">{</span> <span class="syn-key">"name"</span><span class="syn-punct">:</span> <span class="syn-str">"Bob Smith"</span> <span class="syn-punct">},</span>
+    <span class="syn-punct">{</span> <span class="syn-key">"name"</span><span class="syn-punct">:</span> <span class="syn-str">"Carol Diaz"</span> <span class="syn-punct">}</span>
+  <span class="syn-punct">]</span>
+<span class="syn-punct">}</span>
+
+<span class="syn-comment">&#8595; xhtmlx renders &#8595;</span>
+
+<span class="syn-tag">&lt;div</span> <span class="syn-attr">id</span>=<span class="syn-val">"results"</span><span class="syn-tag">&gt;</span>
+  <span class="syn-tag">&lt;p&gt;</span>Alice Chen<span class="syn-tag">&lt;/p&gt;</span>
+  <span class="syn-tag">&lt;p&gt;</span>Bob Smith<span class="syn-tag">&lt;/p&gt;</span>
+  <span class="syn-tag">&lt;p&gt;</span>Carol Diaz<span class="syn-tag">&lt;/p&gt;</span>
+<span class="syn-tag">&lt;/div&gt;</span></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== How It Works ==================== -->
+<section class="section how-section" id="how-it-works">
+  <div class="container">
+    <div class="text-center fade-in">
+      <div class="section-label">How It Works</div>
+      <h2 class="section-title">Declarative, from attribute to UI</h2>
+      <p class="section-subtitle mx-auto">
+        Add HTML attributes to your elements. xhtmlx handles the fetch, template rendering, and DOM updates automatically.
+      </p>
+    </div>
+
+    <div class="flow-diagram fade-in">
+      <div class="flow-step">
+        <div class="flow-icon">&lt;/&gt;</div>
+        <div class="flow-step-title">HTML Attributes</div>
+        <div class="flow-step-desc">xh-get, xh-trigger</div>
+      </div>
+      <div class="flow-connector">&#8594;</div>
+      <div class="flow-step">
+        <div class="flow-icon">&#9889;</div>
+        <div class="flow-step-title">REST API Call</div>
+        <div class="flow-step-desc">fetch() with config</div>
+      </div>
+      <div class="flow-connector">&#8594;</div>
+      <div class="flow-step">
+        <div class="flow-icon">{ }</div>
+        <div class="flow-step-title">JSON Response</div>
+        <div class="flow-step-desc">Structured data</div>
+      </div>
+      <div class="flow-connector">&#8594;</div>
+      <div class="flow-step">
+        <div class="flow-icon">&#9998;</div>
+        <div class="flow-step-title">Template</div>
+        <div class="flow-step-desc">Inline or external</div>
+      </div>
+      <div class="flow-connector">&#8594;</div>
+      <div class="flow-step">
+        <div class="flow-icon">&#9745;</div>
+        <div class="flow-step-title">Rendered UI</div>
+        <div class="flow-step-desc">Swapped into DOM</div>
+      </div>
+    </div>
+
+    <div class="compare-grid">
+      <div class="compare-box compare-box--htmx fade-in">
+        <div class="compare-box-title">htmx approach</div>
+        <div class="compare-flow">
+          1. Trigger event<br>
+          2. Send request to server<br>
+          3. Server renders <span>HTML fragment</span><br>
+          4. Swap HTML into DOM
+        </div>
+      </div>
+      <div class="compare-box compare-box--xhtmlx fade-in fade-in-delay-1">
+        <div class="compare-box-title">xhtmlx approach</div>
+        <div class="compare-flow">
+          1. Trigger event<br>
+          2. Send request to REST API<br>
+          3. Server returns <span>JSON data</span><br>
+          4. Render template with data<br>
+          5. Swap rendered result into DOM
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== Features ==================== -->
+<section class="section" id="features">
+  <div class="container">
+    <div class="text-center fade-in">
+      <div class="section-label">Features</div>
+      <h2 class="section-title">Everything you need, nothing you don't</h2>
+      <p class="section-subtitle mx-auto">
+        Powerful enough for production apps. Simple enough to learn in an afternoon.
+      </p>
+    </div>
+
+    <div class="features-grid">
+      <div class="feature-card fade-in">
+        <div class="feature-icon">&lt;/&gt;</div>
+        <div class="feature-title">REST Verbs</div>
+        <div class="feature-desc">Full HTTP method support for CRUD operations. GET, POST, PUT, DELETE, and PATCH &mdash; all from HTML attributes.</div>
+        <span class="feature-attr">xh-get xh-post xh-put xh-delete xh-patch</span>
+      </div>
+
+      <div class="feature-card fade-in fade-in-delay-1">
+        <div class="feature-icon">&#128196;</div>
+        <div class="feature-title">External Templates</div>
+        <div class="feature-desc">Load templates from separate files with automatic caching. Multiple elements can share the same template without extra network requests.</div>
+        <span class="feature-attr">xh-template="/tpl/card.html"</span>
+      </div>
+
+      <div class="feature-card fade-in fade-in-delay-2">
+        <div class="feature-icon">&#128279;</div>
+        <div class="feature-title">Data Binding</div>
+        <div class="feature-desc">Bind JSON fields to text content, raw HTML, or any element attribute. Supports dot notation for nested objects.</div>
+        <span class="feature-attr">xh-text xh-html xh-attr-*</span>
+      </div>
+
+      <div class="feature-card fade-in fade-in-delay-3">
+        <div class="feature-icon">&#128257;</div>
+        <div class="feature-title">Iteration</div>
+        <div class="feature-desc">Loop over arrays with access to $index, $parent, and $root context variables. Renders performantly with batching for large lists.</div>
+        <span class="feature-attr">xh-each="items"</span>
+      </div>
+
+      <div class="feature-card fade-in">
+        <div class="feature-icon">&#10003;</div>
+        <div class="feature-title">Conditionals</div>
+        <div class="feature-desc">Show or hide elements based on data values. Render admin badges, verified status, empty states, and more.</div>
+        <span class="feature-attr">xh-if xh-unless</span>
+      </div>
+
+      <div class="feature-card fade-in fade-in-delay-1">
+        <div class="feature-icon">&#9889;</div>
+        <div class="feature-title">Smart Triggers</div>
+        <div class="feature-desc">Trigger requests on click, page load, scroll reveal, polling intervals, or custom events. Add debounce, throttle, and once modifiers.</div>
+        <span class="feature-attr">xh-trigger="keyup delay:300ms"</span>
+      </div>
+
+      <div class="feature-card fade-in fade-in-delay-2">
+        <div class="feature-icon">&#127919;</div>
+        <div class="feature-title">Flexible Targeting</div>
+        <div class="feature-desc">Control where rendered content goes with CSS selectors and 8 swap modes: innerHTML, outerHTML, append, prepend, and more.</div>
+        <span class="feature-attr">xh-target xh-swap</span>
+      </div>
+
+      <div class="feature-card fade-in fade-in-delay-3">
+        <div class="feature-icon">&#128737;</div>
+        <div class="feature-title">3-Level Error Handling</div>
+        <div class="feature-desc">Per-element error templates, error boundaries that catch child errors, and a global fallback. Status-specific templates for 404, 4xx, 5xx.</div>
+        <span class="feature-attr">xh-error-template xh-error-boundary</span>
+      </div>
+
+      <div class="feature-card fade-in">
+        <div class="feature-icon">&#9203;</div>
+        <div class="feature-title">Loading Indicators</div>
+        <div class="feature-desc">Built-in indicator support with CSS-driven show/hide. No flickering &mdash; smooth opacity transitions come out of the box.</div>
+        <span class="feature-attr">xh-indicator="#spinner"</span>
+      </div>
+
+      <div class="feature-card fade-in fade-in-delay-1">
+        <div class="feature-icon">&#123;&#123;&#125;&#125;</div>
+        <div class="feature-title">URL Interpolation</div>
+        <div class="feature-desc">Embed data values in URLs with double-curly syntax. Supports dot notation and automatic URI encoding.</div>
+        <span class="feature-attr">xh-get="/api/users/{{id}}"</span>
+      </div>
+
+      <div class="feature-card fade-in fade-in-delay-2">
+        <div class="feature-icon">&#128227;</div>
+        <div class="feature-title">Custom DOM Events</div>
+        <div class="feature-desc">Lifecycle hooks for every stage: beforeRequest, afterRequest, beforeSwap, afterSwap, and responseError. Cancel requests programmatically.</div>
+        <span class="feature-attr">xh:beforeRequest xh:afterSwap</span>
+      </div>
+
+      <div class="feature-card fade-in fade-in-delay-3">
+        <div class="feature-icon">&#128171;</div>
+        <div class="feature-title">Zero Dependencies</div>
+        <div class="feature-desc">A single file at approximately 5KB gzipped. No build step, no framework, no toolchain. Just add a script tag and go.</div>
+        <span class="feature-attr">&lt;script src="xhtmlx.js"&gt;</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== Code Examples ==================== -->
+<section class="section examples-section" id="examples">
+  <div class="container">
+    <div class="text-center fade-in">
+      <div class="section-label">Examples</div>
+      <h2 class="section-title">See it in action</h2>
+      <p class="section-subtitle mx-auto">
+        Real-world patterns you can copy-paste. Every line is plain HTML &mdash; no JavaScript required.
+      </p>
+    </div>
+
+    <div class="fade-in" style="margin-top: 48px;">
+      <div class="examples-tabs" role="tablist">
+        <button class="example-tab active" data-tab="ex1" role="tab">Basic GET</button>
+        <button class="example-tab" data-tab="ex2" role="tab">CRUD App</button>
+        <button class="example-tab" data-tab="ex3" role="tab">Nested Templates</button>
+        <button class="example-tab" data-tab="ex4" role="tab">Search + Debounce</button>
+        <button class="example-tab" data-tab="ex5" role="tab">Error Handling</button>
+      </div>
+      <div class="examples-content">
+        <!-- Example 1: Basic GET -->
+        <div class="example-panel active" id="ex1">
+          <div class="example-title">Load and render data with a single element</div>
+          <div class="example-desc">On page load, fetch JSON from the API and render each user with the inline template.</div>
+          <div class="code-block">
+            <div class="code-block-header">
+              <span class="code-block-label">index.html</span>
+            </div>
+            <pre><span class="syn-tag">&lt;div</span> <span class="syn-attr">xh-get</span>=<span class="syn-val">"/api/users"</span>
+     <span class="syn-attr">xh-trigger</span>=<span class="syn-val">"load"</span>
+     <span class="syn-attr">xh-target</span>=<span class="syn-val">"#user-list"</span><span class="syn-tag">&gt;</span>
+  <span class="syn-tag">&lt;template&gt;</span>
+    <span class="syn-tag">&lt;div</span> <span class="syn-attr">xh-each</span>=<span class="syn-val">"users"</span><span class="syn-tag">&gt;</span>
+      <span class="syn-tag">&lt;div</span> <span class="syn-attr">class</span>=<span class="syn-val">"user-card"</span><span class="syn-tag">&gt;</span>
+        <span class="syn-tag">&lt;img</span> <span class="syn-attr">xh-attr-src</span>=<span class="syn-val">"avatar"</span> <span class="syn-attr">xh-attr-alt</span>=<span class="syn-val">"name"</span><span class="syn-tag">&gt;</span>
+        <span class="syn-tag">&lt;h3</span> <span class="syn-attr">xh-text</span>=<span class="syn-val">"name"</span><span class="syn-tag">&gt;&lt;/h3&gt;</span>
+        <span class="syn-tag">&lt;p</span> <span class="syn-attr">xh-text</span>=<span class="syn-val">"email"</span><span class="syn-tag">&gt;&lt;/p&gt;</span>
+        <span class="syn-tag">&lt;span</span> <span class="syn-attr">xh-if</span>=<span class="syn-val">"is_admin"</span> <span class="syn-attr">class</span>=<span class="syn-val">"badge"</span><span class="syn-tag">&gt;</span>Admin<span class="syn-tag">&lt;/span&gt;</span>
+      <span class="syn-tag">&lt;/div&gt;</span>
+    <span class="syn-tag">&lt;/div&gt;</span>
+  <span class="syn-tag">&lt;/template&gt;</span>
+  <span class="syn-tag">&lt;span</span> <span class="syn-attr">class</span>=<span class="syn-val">"xh-indicator"</span><span class="syn-tag">&gt;</span>Loading...<span class="syn-tag">&lt;/span&gt;</span>
+<span class="syn-tag">&lt;/div&gt;</span>
+
+<span class="syn-tag">&lt;div</span> <span class="syn-attr">id</span>=<span class="syn-val">"user-list"</span><span class="syn-tag">&gt;&lt;/div&gt;</span></pre>
+          </div>
+          <div class="code-block">
+            <div class="code-block-header">
+              <span class="code-block-label">JSON Response from /api/users</span>
+            </div>
+            <pre><span class="syn-punct">{</span>
+  <span class="syn-key">"users"</span><span class="syn-punct">:</span> <span class="syn-punct">[</span>
+    <span class="syn-punct">{</span> <span class="syn-key">"name"</span><span class="syn-punct">:</span> <span class="syn-str">"Alice"</span><span class="syn-punct">,</span> <span class="syn-key">"email"</span><span class="syn-punct">:</span> <span class="syn-str">"alice@co.io"</span><span class="syn-punct">,</span> <span class="syn-key">"avatar"</span><span class="syn-punct">:</span> <span class="syn-str">"/img/alice.jpg"</span><span class="syn-punct">,</span> <span class="syn-key">"is_admin"</span><span class="syn-punct">:</span> <span class="syn-bool">true</span> <span class="syn-punct">},</span>
+    <span class="syn-punct">{</span> <span class="syn-key">"name"</span><span class="syn-punct">:</span> <span class="syn-str">"Bob"</span><span class="syn-punct">,</span> <span class="syn-key">"email"</span><span class="syn-punct">:</span> <span class="syn-str">"bob@co.io"</span><span class="syn-punct">,</span> <span class="syn-key">"avatar"</span><span class="syn-punct">:</span> <span class="syn-str">"/img/bob.jpg"</span><span class="syn-punct">,</span> <span class="syn-key">"is_admin"</span><span class="syn-punct">:</span> <span class="syn-bool">false</span> <span class="syn-punct">}</span>
+  <span class="syn-punct">]</span>
+<span class="syn-punct">}</span></pre>
+          </div>
+        </div>
+
+        <!-- Example 2: CRUD -->
+        <div class="example-panel" id="ex2">
+          <div class="example-title">Full CRUD with forms and REST verbs</div>
+          <div class="example-desc">Create, read, update, and delete records using nothing but HTML attributes and standard forms.</div>
+          <div class="code-block">
+            <div class="code-block-header">
+              <span class="code-block-label">Create + List</span>
+            </div>
+            <pre><span class="syn-comment">&lt;!-- Create a new user --&gt;</span>
+<span class="syn-tag">&lt;form</span> <span class="syn-attr">xh-post</span>=<span class="syn-val">"/api/users"</span>
+      <span class="syn-attr">xh-target</span>=<span class="syn-val">"#user-list"</span>
+      <span class="syn-attr">xh-swap</span>=<span class="syn-val">"beforeend"</span>
+      <span class="syn-attr">xh-template</span>=<span class="syn-val">"/templates/user-row.html"</span><span class="syn-tag">&gt;</span>
+  <span class="syn-tag">&lt;input</span> <span class="syn-attr">name</span>=<span class="syn-val">"name"</span> <span class="syn-attr">placeholder</span>=<span class="syn-val">"Name"</span> <span class="syn-attr">required</span><span class="syn-tag">&gt;</span>
+  <span class="syn-tag">&lt;input</span> <span class="syn-attr">name</span>=<span class="syn-val">"email"</span> <span class="syn-attr">type</span>=<span class="syn-val">"email"</span> <span class="syn-attr">placeholder</span>=<span class="syn-val">"Email"</span><span class="syn-tag">&gt;</span>
+  <span class="syn-tag">&lt;button</span> <span class="syn-attr">type</span>=<span class="syn-val">"submit"</span><span class="syn-tag">&gt;</span>Add User<span class="syn-tag">&lt;/button&gt;</span>
+<span class="syn-tag">&lt;/form&gt;</span>
+
+<span class="syn-comment">&lt;!-- List existing users --&gt;</span>
+<span class="syn-tag">&lt;div</span> <span class="syn-attr">xh-get</span>=<span class="syn-val">"/api/users"</span> <span class="syn-attr">xh-trigger</span>=<span class="syn-val">"load"</span>
+     <span class="syn-attr">xh-template</span>=<span class="syn-val">"/templates/user-table.html"</span>
+     <span class="syn-attr">xh-target</span>=<span class="syn-val">"#user-list"</span><span class="syn-tag">&gt;&lt;/div&gt;</span>
+<span class="syn-tag">&lt;div</span> <span class="syn-attr">id</span>=<span class="syn-val">"user-list"</span><span class="syn-tag">&gt;&lt;/div&gt;</span></pre>
+          </div>
+          <div class="code-block">
+            <div class="code-block-header">
+              <span class="code-block-label">/templates/user-row.html (Update + Delete)</span>
+            </div>
+            <pre><span class="syn-tag">&lt;tr</span> <span class="syn-attr">id</span>=<span class="syn-val">"user-<span class="syn-interp">{{id}}</span>"</span><span class="syn-tag">&gt;</span>
+  <span class="syn-tag">&lt;td</span> <span class="syn-attr">xh-text</span>=<span class="syn-val">"name"</span><span class="syn-tag">&gt;&lt;/td&gt;</span>
+  <span class="syn-tag">&lt;td</span> <span class="syn-attr">xh-text</span>=<span class="syn-val">"email"</span><span class="syn-tag">&gt;&lt;/td&gt;</span>
+  <span class="syn-tag">&lt;td&gt;</span>
+    <span class="syn-tag">&lt;button</span> <span class="syn-attr">xh-put</span>=<span class="syn-val">"/api/users/<span class="syn-interp">{{id}}</span>"</span>
+            <span class="syn-attr">xh-vals</span>=<span class="syn-val">'{"role": "admin"}'</span>
+            <span class="syn-attr">xh-target</span>=<span class="syn-val">"#user-<span class="syn-interp">{{id}}</span>"</span>
+            <span class="syn-attr">xh-swap</span>=<span class="syn-val">"outerHTML"</span>
+            <span class="syn-attr">xh-template</span>=<span class="syn-val">"/templates/user-row.html"</span><span class="syn-tag">&gt;</span>Promote<span class="syn-tag">&lt;/button&gt;</span>
+
+    <span class="syn-tag">&lt;button</span> <span class="syn-attr">xh-delete</span>=<span class="syn-val">"/api/users/<span class="syn-interp">{{id}}</span>"</span>
+            <span class="syn-attr">xh-target</span>=<span class="syn-val">"#user-<span class="syn-interp">{{id}}</span>"</span>
+            <span class="syn-attr">xh-swap</span>=<span class="syn-val">"delete"</span><span class="syn-tag">&gt;</span>Remove<span class="syn-tag">&lt;/button&gt;</span>
+  <span class="syn-tag">&lt;/td&gt;</span>
+<span class="syn-tag">&lt;/tr&gt;</span></pre>
+          </div>
+        </div>
+
+        <!-- Example 3: Nested Templates -->
+        <div class="example-panel" id="ex3">
+          <div class="example-title">Nested templates with cascading API calls</div>
+          <div class="example-desc">Templates can trigger additional API calls, creating a composition tree. Child templates access parent data via $parent.</div>
+          <div class="code-block">
+            <div class="code-block-header">
+              <span class="code-block-label">index.html</span>
+            </div>
+            <pre><span class="syn-tag">&lt;div</span> <span class="syn-attr">xh-get</span>=<span class="syn-val">"/api/users/1"</span>
+     <span class="syn-attr">xh-trigger</span>=<span class="syn-val">"load"</span>
+     <span class="syn-attr">xh-template</span>=<span class="syn-val">"/templates/user-profile.html"</span><span class="syn-tag">&gt;&lt;/div&gt;</span></pre>
+          </div>
+          <div class="code-block">
+            <div class="code-block-header">
+              <span class="code-block-label">/templates/user-profile.html</span>
+            </div>
+            <pre><span class="syn-tag">&lt;div</span> <span class="syn-attr">class</span>=<span class="syn-val">"profile"</span><span class="syn-tag">&gt;</span>
+  <span class="syn-tag">&lt;h1</span> <span class="syn-attr">xh-text</span>=<span class="syn-val">"name"</span><span class="syn-tag">&gt;&lt;/h1&gt;</span>
+  <span class="syn-tag">&lt;p</span> <span class="syn-attr">xh-text</span>=<span class="syn-val">"bio"</span><span class="syn-tag">&gt;&lt;/p&gt;</span>
+
+  <span class="syn-comment">&lt;!-- Nested: load this user's posts --&gt;</span>
+  <span class="syn-tag">&lt;div</span> <span class="syn-attr">xh-get</span>=<span class="syn-val">"/api/users/<span class="syn-interp">{{id}}</span>/posts"</span>
+       <span class="syn-attr">xh-trigger</span>=<span class="syn-val">"load"</span><span class="syn-tag">&gt;</span>
+    <span class="syn-tag">&lt;template&gt;</span>
+      <span class="syn-tag">&lt;div</span> <span class="syn-attr">xh-each</span>=<span class="syn-val">"posts"</span><span class="syn-tag">&gt;</span>
+        <span class="syn-tag">&lt;h3</span> <span class="syn-attr">xh-text</span>=<span class="syn-val">"title"</span><span class="syn-tag">&gt;&lt;/h3&gt;</span>
+        <span class="syn-tag">&lt;small&gt;</span>by <span class="syn-tag">&lt;span</span> <span class="syn-attr">xh-text</span>=<span class="syn-val">"$parent.name"</span><span class="syn-tag">&gt;&lt;/span&gt;&lt;/small&gt;</span>
+      <span class="syn-tag">&lt;/div&gt;</span>
+    <span class="syn-tag">&lt;/template&gt;</span>
+  <span class="syn-tag">&lt;/div&gt;</span>
+<span class="syn-tag">&lt;/div&gt;</span></pre>
+          </div>
+        </div>
+
+        <!-- Example 4: Search with Debounce -->
+        <div class="example-panel" id="ex4">
+          <div class="example-title">Live search with debounce</div>
+          <div class="example-desc">Trigger a search API call on every keystroke, debounced by 300ms. Only fires when the value actually changes.</div>
+          <div class="code-block">
+            <div class="code-block-header">
+              <span class="code-block-label">search.html</span>
+            </div>
+            <pre><span class="syn-tag">&lt;input</span> <span class="syn-attr">type</span>=<span class="syn-val">"search"</span>
+       <span class="syn-attr">name</span>=<span class="syn-val">"q"</span>
+       <span class="syn-attr">placeholder</span>=<span class="syn-val">"Search users..."</span>
+       <span class="syn-attr">xh-get</span>=<span class="syn-val">"/api/search"</span>
+       <span class="syn-attr">xh-trigger</span>=<span class="syn-val">"keyup changed delay:300ms"</span>
+       <span class="syn-attr">xh-target</span>=<span class="syn-val">"#search-results"</span>
+       <span class="syn-attr">xh-indicator</span>=<span class="syn-val">"#search-spinner"</span><span class="syn-tag">&gt;</span>
+
+<span class="syn-tag">&lt;span</span> <span class="syn-attr">id</span>=<span class="syn-val">"search-spinner"</span> <span class="syn-attr">class</span>=<span class="syn-val">"xh-indicator"</span><span class="syn-tag">&gt;</span>Searching...<span class="syn-tag">&lt;/span&gt;</span>
+
+<span class="syn-tag">&lt;div</span> <span class="syn-attr">id</span>=<span class="syn-val">"search-results"</span><span class="syn-tag">&gt;</span>
+  <span class="syn-comment">&lt;!-- Results appear here --&gt;</span>
+<span class="syn-tag">&lt;/div&gt;</span>
+
+<span class="syn-comment">&lt;!-- Auto-refresh every 30s --&gt;</span>
+<span class="syn-tag">&lt;div</span> <span class="syn-attr">xh-get</span>=<span class="syn-val">"/api/stats"</span>
+     <span class="syn-attr">xh-trigger</span>=<span class="syn-val">"every 30s"</span><span class="syn-tag">&gt;</span>
+  <span class="syn-tag">&lt;template&gt;</span>
+    <span class="syn-tag">&lt;span&gt;</span>Online: <span class="syn-tag">&lt;b</span> <span class="syn-attr">xh-text</span>=<span class="syn-val">"count"</span><span class="syn-tag">&gt;&lt;/b&gt;&lt;/span&gt;</span>
+  <span class="syn-tag">&lt;/template&gt;</span>
+<span class="syn-tag">&lt;/div&gt;</span></pre>
+          </div>
+        </div>
+
+        <!-- Example 5: Error Handling -->
+        <div class="example-panel" id="ex5">
+          <div class="example-title">Granular error handling with boundaries</div>
+          <div class="example-desc">Handle specific HTTP status codes differently. Use error boundaries to catch errors from any child widget.</div>
+          <div class="code-block">
+            <div class="code-block-header">
+              <span class="code-block-label">dashboard.html</span>
+            </div>
+            <pre><span class="syn-comment">&lt;!-- Error boundary catches unhandled errors from children --&gt;</span>
+<span class="syn-tag">&lt;div</span> <span class="syn-attr">xh-error-boundary</span>
+     <span class="syn-attr">xh-error-template</span>=<span class="syn-val">"/templates/error.html"</span>
+     <span class="syn-attr">xh-error-target</span>=<span class="syn-val">"#dashboard-errors"</span><span class="syn-tag">&gt;</span>
+  <span class="syn-tag">&lt;div</span> <span class="syn-attr">id</span>=<span class="syn-val">"dashboard-errors"</span><span class="syn-tag">&gt;&lt;/div&gt;</span>
+
+  <span class="syn-comment">&lt;!-- Widget with status-specific error templates --&gt;</span>
+  <span class="syn-tag">&lt;div</span> <span class="syn-attr">xh-get</span>=<span class="syn-val">"/api/profile"</span>
+       <span class="syn-attr">xh-trigger</span>=<span class="syn-val">"load"</span>
+       <span class="syn-attr">xh-template</span>=<span class="syn-val">"/templates/profile.html"</span>
+       <span class="syn-attr">xh-error-template-404</span>=<span class="syn-val">"/templates/not-found.html"</span>
+       <span class="syn-attr">xh-error-template-4xx</span>=<span class="syn-val">"/templates/client-error.html"</span>
+       <span class="syn-attr">xh-error-template</span>=<span class="syn-val">"/templates/error.html"</span><span class="syn-tag">&gt;&lt;/div&gt;</span>
+
+  <span class="syn-comment">&lt;!-- This widget has no error template --&gt;</span>
+  <span class="syn-comment">&lt;!-- If it fails, the boundary catches it --&gt;</span>
+  <span class="syn-tag">&lt;div</span> <span class="syn-attr">xh-get</span>=<span class="syn-val">"/api/stats"</span> <span class="syn-attr">xh-trigger</span>=<span class="syn-val">"load"</span><span class="syn-tag">&gt;</span>
+    <span class="syn-tag">&lt;template&gt;&lt;span</span> <span class="syn-attr">xh-text</span>=<span class="syn-val">"total"</span><span class="syn-tag">&gt;&lt;/span&gt;&lt;/template&gt;</span>
+  <span class="syn-tag">&lt;/div&gt;</span>
+<span class="syn-tag">&lt;/div&gt;</span></pre>
+          </div>
+          <div class="code-block">
+            <div class="code-block-header">
+              <span class="code-block-label">/templates/error.html</span>
+            </div>
+            <pre><span class="syn-tag">&lt;div</span> <span class="syn-attr">class</span>=<span class="syn-val">"error-box"</span><span class="syn-tag">&gt;</span>
+  <span class="syn-tag">&lt;h3&gt;</span>Error <span class="syn-tag">&lt;span</span> <span class="syn-attr">xh-text</span>=<span class="syn-val">"status"</span><span class="syn-tag">&gt;&lt;/span&gt;</span>
+      &mdash; <span class="syn-tag">&lt;span</span> <span class="syn-attr">xh-text</span>=<span class="syn-val">"statusText"</span><span class="syn-tag">&gt;&lt;/span&gt;&lt;/h3&gt;</span>
+  <span class="syn-tag">&lt;p</span> <span class="syn-attr">xh-text</span>=<span class="syn-val">"body.message"</span><span class="syn-tag">&gt;&lt;/p&gt;</span>
+  <span class="syn-tag">&lt;ul</span> <span class="syn-attr">xh-if</span>=<span class="syn-val">"body.fields"</span><span class="syn-tag">&gt;</span>
+    <span class="syn-tag">&lt;li</span> <span class="syn-attr">xh-each</span>=<span class="syn-val">"body.fields"</span><span class="syn-tag">&gt;</span>
+      <span class="syn-tag">&lt;strong</span> <span class="syn-attr">xh-text</span>=<span class="syn-val">"name"</span><span class="syn-tag">&gt;&lt;/strong&gt;</span>: <span class="syn-tag">&lt;span</span> <span class="syn-attr">xh-text</span>=<span class="syn-val">"message"</span><span class="syn-tag">&gt;&lt;/span&gt;</span>
+    <span class="syn-tag">&lt;/li&gt;</span>
+  <span class="syn-tag">&lt;/ul&gt;</span>
+<span class="syn-tag">&lt;/div&gt;</span></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== Installation ==================== -->
+<section class="section" id="install">
+  <div class="container">
+    <div class="text-center fade-in">
+      <div class="section-label">Installation</div>
+      <h2 class="section-title">Add one line. Start building.</h2>
+      <p class="section-subtitle mx-auto">
+        No build tools, no configuration, no package managers required. But they work too.
+      </p>
+    </div>
+
+    <div class="install-grid fade-in">
+      <div class="install-card">
+        <div class="install-card-header">
+          <span class="install-card-icon">&lt;/&gt;</span>
+          <span class="install-card-title">CDN / Script Tag</span>
+          <span class="install-card-desc">Easiest</span>
+        </div>
+        <pre><span class="syn-comment">&lt;!-- Add to your HTML --&gt;</span>
+<span class="syn-tag">&lt;script</span> <span class="syn-attr">src</span>=<span class="syn-val">"https://unpkg.com/xhtmlx"</span><span class="syn-tag">&gt;&lt;/script&gt;</span>
+
+<span class="syn-comment">&lt;!-- Or pin a specific version --&gt;</span>
+<span class="syn-tag">&lt;script</span> <span class="syn-attr">src</span>=<span class="syn-val">"https://unpkg.com/xhtmlx@1.0.0"</span><span class="syn-tag">&gt;&lt;/script&gt;</span></pre>
+      </div>
+      <div class="install-card">
+        <div class="install-card-header">
+          <span class="install-card-icon">&#9641;</span>
+          <span class="install-card-title">npm</span>
+          <span class="install-card-desc">Package manager</span>
+        </div>
+        <pre><span class="syn-comment"># Install</span>
+<span class="syn-kw">npm</span> install xhtmlx
+
+<span class="syn-comment"># Then add to your HTML</span>
+<span class="syn-tag">&lt;script</span> <span class="syn-attr">src</span>=<span class="syn-val">"node_modules/xhtmlx/xhtmlx.js"</span><span class="syn-tag">&gt;&lt;/script&gt;</span></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== Comparison Table ==================== -->
+<section class="section examples-section" id="comparison">
+  <div class="container">
+    <div class="text-center fade-in">
+      <div class="section-label">Comparison</div>
+      <h2 class="section-title">How xhtmlx compares</h2>
+      <p class="section-subtitle mx-auto">
+        Different tools make different tradeoffs. Here is where xhtmlx sits in the landscape.
+      </p>
+    </div>
+
+    <div class="comparison-wrapper fade-in">
+      <table class="comparison-table">
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th class="highlight">xhtmlx</th>
+            <th>htmx</th>
+            <th>React</th>
+            <th>Alpine.js</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Server returns</td>
+            <td class="highlight">JSON</td>
+            <td>HTML</td>
+            <td>JSON</td>
+            <td class="table-na">N/A</td>
+          </tr>
+          <tr>
+            <td>Build step required</td>
+            <td class="highlight"><span class="table-check">No</span></td>
+            <td><span class="table-check">No</span></td>
+            <td><span class="table-cross">Yes</span></td>
+            <td><span class="table-check">No</span></td>
+          </tr>
+          <tr>
+            <td>Client-side rendering</td>
+            <td class="highlight"><span class="table-check">Yes</span></td>
+            <td><span class="table-cross">No</span></td>
+            <td><span class="table-check">Yes</span></td>
+            <td><span class="table-check">Yes</span></td>
+          </tr>
+          <tr>
+            <td>External template files</td>
+            <td class="highlight"><span class="table-check">Yes</span></td>
+            <td class="table-na">N/A</td>
+            <td>JSX</td>
+            <td><span class="table-cross">No</span></td>
+          </tr>
+          <tr>
+            <td>Declarative HTML</td>
+            <td class="highlight"><span class="table-check">Yes</span></td>
+            <td><span class="table-check">Yes</span></td>
+            <td><span class="table-cross">No</span></td>
+            <td><span class="table-check">Yes</span></td>
+          </tr>
+          <tr>
+            <td>REST API friendly</td>
+            <td class="highlight"><span class="table-check">Yes</span></td>
+            <td><span class="table-cross">No</span></td>
+            <td><span class="table-check">Yes</span></td>
+            <td><span class="table-check">Yes</span></td>
+          </tr>
+          <tr>
+            <td>File size (gzipped)</td>
+            <td class="highlight">~5KB</td>
+            <td>~14KB</td>
+            <td>~40KB+</td>
+            <td>~15KB</td>
+          </tr>
+          <tr>
+            <td>Dependencies</td>
+            <td class="highlight">0</td>
+            <td>0</td>
+            <td>Many</td>
+            <td>0</td>
+          </tr>
+          <tr>
+            <td>Learning curve</td>
+            <td class="highlight">HTML only</td>
+            <td>HTML only</td>
+            <td>JS + JSX + tooling</td>
+            <td>HTML + JS</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== Footer ==================== -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <span class="footer-logo">xhtmlx</span>
+        <span class="footer-copy">MIT License</span>
+      </div>
+      <ul class="footer-links">
+        <li><a href="https://github.com/dkropachev/xhtmlx" target="_blank" rel="noopener">GitHub</a></li>
+        <li><a href="https://www.npmjs.com/package/xhtmlx" target="_blank" rel="noopener">npm</a></li>
+        <li><a href="https://github.com/dkropachev/xhtmlx/issues" target="_blank" rel="noopener">Issues</a></li>
+      </ul>
+      <span class="footer-badge">Built with zero dependencies</span>
+    </div>
+  </div>
+</footer>
+
+<!-- ==================== JavaScript ==================== -->
+<script>
+(function() {
+  "use strict";
+
+  // --- Navigation scroll effect ---
+  var nav = document.getElementById("nav");
+  var lastScroll = 0;
+  function onScroll() {
+    var y = window.scrollY || window.pageYOffset;
+    if (y > 40) {
+      nav.classList.add("scrolled");
+    } else {
+      nav.classList.remove("scrolled");
+    }
+    lastScroll = y;
+  }
+  window.addEventListener("scroll", onScroll, { passive: true });
+  onScroll();
+
+  // --- Mobile menu toggle ---
+  var toggle = document.getElementById("navToggle");
+  var links = document.getElementById("navLinks");
+  toggle.addEventListener("click", function() {
+    toggle.classList.toggle("active");
+    links.classList.toggle("open");
+  });
+  // Close menu when a link is clicked
+  var navAnchors = links.querySelectorAll("a");
+  for (var i = 0; i < navAnchors.length; i++) {
+    navAnchors[i].addEventListener("click", function() {
+      toggle.classList.remove("active");
+      links.classList.remove("open");
+    });
+  }
+
+  // --- Scroll-triggered fade-in animations ---
+  var fadeEls = document.querySelectorAll(".fade-in");
+  if ("IntersectionObserver" in window) {
+    var observer = new IntersectionObserver(function(entries) {
+      for (var j = 0; j < entries.length; j++) {
+        if (entries[j].isIntersecting) {
+          entries[j].target.classList.add("visible");
+          observer.unobserve(entries[j].target);
+        }
+      }
+    }, {
+      threshold: 0.1,
+      rootMargin: "0px 0px -40px 0px"
+    });
+    for (var k = 0; k < fadeEls.length; k++) {
+      observer.observe(fadeEls[k]);
+    }
+  } else {
+    // Fallback: show everything
+    for (var m = 0; m < fadeEls.length; m++) {
+      fadeEls[m].classList.add("visible");
+    }
+  }
+
+  // --- Code example tabs ---
+  var tabs = document.querySelectorAll(".example-tab");
+  var panels = document.querySelectorAll(".example-panel");
+
+  function activateTab(tabId) {
+    for (var t = 0; t < tabs.length; t++) {
+      tabs[t].classList.toggle("active", tabs[t].getAttribute("data-tab") === tabId);
+    }
+    for (var p = 0; p < panels.length; p++) {
+      panels[p].classList.toggle("active", panels[p].id === tabId);
+    }
+  }
+
+  for (var n = 0; n < tabs.length; n++) {
+    tabs[n].addEventListener("click", function() {
+      activateTab(this.getAttribute("data-tab"));
+    });
+  }
+
+  // --- Smooth scroll for anchor links ---
+  var anchors = document.querySelectorAll('a[href^="#"]');
+  for (var a = 0; a < anchors.length; a++) {
+    anchors[a].addEventListener("click", function(e) {
+      var href = this.getAttribute("href");
+      if (href === "#") return;
+      var target = document.querySelector(href);
+      if (target) {
+        e.preventDefault();
+        var offset = nav.offsetHeight + 16;
+        var top = target.getBoundingClientRect().top + window.scrollY - offset;
+        window.scrollTo({ top: top, behavior: "smooth" });
+      }
+    });
+  }
+})();
+</script>
+</body>
+</html>
