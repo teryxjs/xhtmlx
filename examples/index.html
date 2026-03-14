@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>xhtmlx Examples</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; color: #333; line-height: 1.6; }
+    h1 { margin-bottom: 0.5rem; }
+    .subtitle { color: #666; margin-bottom: 2rem; }
+    .examples { list-style: none; }
+    .examples li { margin-bottom: 1rem; }
+    .examples a { display: block; padding: 1rem 1.25rem; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 6px; text-decoration: none; color: #0066cc; font-weight: 500; transition: background 0.15s, border-color 0.15s; }
+    .examples a:hover { background: #e9ecef; border-color: #adb5bd; }
+    .examples .desc { display: block; font-weight: 400; font-size: 0.875rem; color: #666; margin-top: 0.25rem; }
+  </style>
+</head>
+<body>
+  <h1>xhtmlx Examples</h1>
+  <p class="subtitle">Declarative HTML attributes for REST API driven UIs</p>
+
+  <ul class="examples">
+    <li>
+      <a href="/basic-get.html">
+        Basic GET &amp; Data Binding
+        <span class="desc">Load a user on page load, display fields with xh-text and xh-attr-*, loading indicator.</span>
+      </a>
+    </li>
+    <li>
+      <a href="/crud-app.html">
+        CRUD Application
+        <span class="desc">Full create, read, update, delete operations with external templates.</span>
+      </a>
+    </li>
+    <li>
+      <a href="/nested-templates.html">
+        Nested Templates
+        <span class="desc">Users &rarr; posts &rarr; comments with nested API calls and $parent access.</span>
+      </a>
+    </li>
+    <li>
+      <a href="/iteration.html">
+        Iteration (xh-each)
+        <span class="desc">Simple lists, nested iteration, $index usage.</span>
+      </a>
+    </li>
+    <li>
+      <a href="/conditionals.html">
+        Conditionals (xh-if / xh-unless)
+        <span class="desc">Show/hide elements based on data fields: admin badges, verified status.</span>
+      </a>
+    </li>
+    <li>
+      <a href="/triggers.html">
+        Triggers
+        <span class="desc">click, load, keyup with delay (live search), every 5s (polling), revealed.</span>
+      </a>
+    </li>
+    <li>
+      <a href="/indicators.html">
+        Loading Indicators
+        <span class="desc">Spinner and skeleton styles shown during requests.</span>
+      </a>
+    </li>
+    <li>
+      <a href="/error-handling.html">
+        Error Handling
+        <span class="desc">Per-status-code error templates, validation errors, generic fallback.</span>
+      </a>
+    </li>
+    <li>
+      <a href="/error-boundaries.html">
+        Error Boundaries
+        <span class="desc">Three levels of error handling: element-level, error boundaries, and global config.</span>
+      </a>
+    </li>
+  </ul>
+</body>
+</html>

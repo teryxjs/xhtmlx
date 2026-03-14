@@ -1,0 +1,9 @@
+<div class="error-box validation-error">
+  <h3>Validation Failed</h3>
+  <p xh-text="body.message"></p>
+  <ul class="field-errors">
+    <li xh-each="body.fields">
+      <strong xh-text="name"></strong>: <span xh-text="message"></span>
+    </li>
+  </ul>
+</div>

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nested Templates - xhtmlx Examples</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; color: #333; line-height: 1.6; }
+    h1 { margin-bottom: 0.5rem; }
+    .subtitle { color: #666; margin-bottom: 2rem; }
+    a.back { color: #0066cc; text-decoration: none; display: inline-block; margin-bottom: 1rem; }
+    a.back:hover { text-decoration: underline; }
+
+    .user-section { border: 1px solid #dee2e6; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; background: #fff; }
+    .user-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+    .avatar { width: 48px; height: 48px; border-radius: 50%; }
+    .user-name { font-size: 1.25rem; font-weight: 600; }
+    .user-email { font-size: 0.875rem; color: #666; }
+
+    .post-item { background: #f8f9fa; border-radius: 6px; padding: 1rem; margin-bottom: 0.75rem; margin-left: 1rem; border-left: 3px solid #0066cc; }
+    .post-item h4 { margin-bottom: 0.25rem; color: #1a1a1a; }
+    .post-body { font-size: 0.875rem; color: #555; margin-bottom: 0.5rem; }
+    .post-meta { font-size: 0.75rem; color: #999; }
+
+    .comments-section { margin-top: 0.5rem; padding-left: 1rem; border-left: 2px solid #e0e0e0; }
+    .comment-list { list-style: none; padding: 0; }
+    .comment-item { font-size: 0.825rem; padding: 0.25rem 0; color: #555; }
+    .comment-item strong { color: #333; }
+
+    .post-list { margin: 0; }
+    .empty-message { color: #999; font-style: italic; font-size: 0.875rem; }
+    .xh-indicator { font-style: italic; color: #999; font-size: 0.875rem; }
+
+    .badge { display: inline-block; padding: 0.1rem 0.4rem; border-radius: 3px; font-size: 0.7rem; font-weight: 600; }
+    .badge.admin { background: #e3f2fd; color: #1565c0; }
+
+    pre { background: #f5f5f5; padding: 1rem; border-radius: 6px; overflow-x: auto; font-size: 0.85rem; margin-top: 0.5rem; }
+    .section { margin-top: 2rem; }
+  </style>
+</head>
+<body>
+  <a href="/index.html" class="back">&larr; Back to Examples</a>
+  <h1>Nested Templates</h1>
+  <p class="subtitle">Users &rarr; Posts &rarr; Comments. Three levels of nested API calls demonstrating template composition and $parent access.</p>
+
+  <!-- ===================================================================
+       Load all users, each user loads their posts, each post loads comments
+       =================================================================== -->
+  <div xh-get="/api/users"
+       xh-trigger="load"
+       xh-indicator="#main-spinner">
+    <template>
+      <div xh-each="users" class="user-section">
+        <div class="user-header">
+          <img xh-attr-src="avatar" xh-attr-alt="name" class="avatar">
+          <div>
+            <span class="user-name" xh-text="name"></span>
+            <span xh-if="is_admin" class="badge admin">Admin</span>
+            <div class="user-email" xh-text="email"></div>
+          </div>
+        </div>
+
+        <!-- Nested: load posts for this user -->
+        <div xh-get="/api/users/{{id}}/posts"
+             xh-trigger="load"
+             xh-template="/examples/templates/post-list.html">
+          <span class="xh-indicator">Loading posts...</span>
+        </div>
+      </div>
+    </template>
+    <span id="main-spinner" class="xh-indicator">Loading users...</span>
+  </div>
+
+  <!-- ===================================================================
+       Explanation
+       =================================================================== -->
+  <div class="section">
+    <h3>How it works</h3>
+    <pre><code>&lt;!-- Level 1: Load users --&gt;
+&lt;div xh-get="/api/users" xh-trigger="load"&gt;
+  &lt;template&gt;
+    &lt;div xh-each="users"&gt;
+      &lt;span xh-text="name"&gt;&lt;/span&gt;
+
+      &lt;!-- Level 2: Load posts per user --&gt;
+      &lt;div xh-get="/api/users/{{id}}/posts"
+           xh-trigger="load"
+           xh-template="/templates/post-list.html"&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/template&gt;
+&lt;/div&gt;
+
+&lt;!-- post-list.html: Level 3 loads comments --&gt;
+&lt;div xh-each="posts"&gt;
+  &lt;h4 xh-text="title"&gt;&lt;/h4&gt;
+  &lt;div xh-get="/api/posts/{{id}}/comments"
+       xh-trigger="load"
+       xh-template="/templates/comment-list.html"&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+  </div>
+
+  <script src="/xhtmlx.js"></script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+<ul class="comment-list">
+  <li xh-each="comments" class="comment-item">
+    <strong xh-text="author"></strong>: <span xh-text="text"></span>
+  </li>
+</ul>
+<p xh-unless="comments" class="empty-message">No comments.</p>

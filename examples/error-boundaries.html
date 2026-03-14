@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Error Boundaries - xhtmlx Examples</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 900px; margin: 0 auto; padding: 2rem; color: #333; line-height: 1.6; }
+    h1 { margin-bottom: 0.5rem; }
+    h2 { margin-top: 2.5rem; margin-bottom: 0.75rem; color: #1a1a2e; border-bottom: 2px solid #dee2e6; padding-bottom: 0.5rem; }
+    .subtitle { color: #666; margin-bottom: 2rem; }
+    a.back { color: #0066cc; text-decoration: none; display: inline-block; margin-bottom: 1rem; }
+    a.back:hover { text-decoration: underline; }
+
+    .section { margin-bottom: 2.5rem; }
+    .section > p.description { margin-bottom: 1rem; font-size: 0.875rem; color: #666; }
+
+    .btn { display: inline-block; padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer; font-size: 0.875rem; margin-right: 0.5rem; margin-bottom: 0.5rem; font-weight: 500; transition: background 0.15s; }
+    .btn-success { background: #e8f5e9; color: #2e7d32; }
+    .btn-success:hover { background: #c8e6c9; }
+    .btn-error { background: #ffebee; color: #c62828; }
+    .btn-error:hover { background: #ffcdd2; }
+    .btn-warn { background: #fff3e0; color: #e65100; }
+    .btn-warn:hover { background: #ffe0b2; }
+    .btn-server { background: #fce4ec; color: #880e4f; }
+    .btn-server:hover { background: #f8bbd0; }
+    .btn-info { background: #e3f2fd; color: #1565c0; }
+    .btn-info:hover { background: #bbdefb; }
+    .btn-reset { background: #f5f5f5; color: #616161; }
+    .btn-reset:hover { background: #e0e0e0; }
+
+    .widget-box { min-height: 60px; padding: 1rem; border: 1px solid #dee2e6; border-radius: 6px; margin-top: 0.75rem; background: #fff; }
+
+    /* Handler label badges */
+    .handler-label { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 3px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+    .handler-label.element { background: #e3f2fd; color: #1565c0; }
+    .handler-label.boundary { background: #f3e5f5; color: #7b1fa2; }
+    .handler-label.global { background: #fff3e0; color: #e65100; }
+
+    /* Error template styles */
+    .error-box { padding: 1rem 1.25rem; border-radius: 6px; border-left: 4px solid #c62828; background: #ffebee; margin-bottom: 0.5rem; }
+    .error-box h3 { color: #c62828; margin-bottom: 0.5rem; font-size: 1rem; }
+    .error-box p { font-size: 0.875rem; color: #555; }
+    .error-box .error-code { font-size: 0.8rem; color: #999; margin-top: 0.5rem; }
+    .error-box.not-found { border-left-color: #e65100; background: #fff3e0; }
+    .error-box.not-found h3 { color: #e65100; }
+
+    /* Boundary error template styles */
+    .boundary-error { padding: 1rem 1.25rem; border-radius: 6px; border-left: 4px solid #7b1fa2; background: #f3e5f5; margin-bottom: 0.5rem; }
+    .boundary-error h4 { color: #7b1fa2; margin-bottom: 0.5rem; font-size: 0.95rem; }
+    .boundary-error p { font-size: 0.875rem; color: #555; }
+
+    /* Success widget styles */
+    .widget-success { padding: 0.75rem 1rem; background: #e8f5e9; border-radius: 6px; border-left: 4px solid #2e7d32; }
+    .widget-success p { color: #2e7d32; font-size: 0.875rem; }
+
+    /* Boundary container styling */
+    .boundary-container { border: 2px dashed #ce93d8; border-radius: 8px; padding: 1rem; margin-top: 0.75rem; position: relative; }
+    .boundary-container::before { content: attr(data-label); position: absolute; top: -0.6rem; left: 1rem; background: #f3e5f5; color: #7b1fa2; font-size: 0.7rem; padding: 0 0.5rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    .inner-boundary { border: 2px dashed #90caf9; border-radius: 8px; padding: 1rem; margin-top: 0.75rem; position: relative; }
+    .inner-boundary::before { content: attr(data-label); position: absolute; top: -0.6rem; left: 1rem; background: #e3f2fd; color: #1565c0; font-size: 0.7rem; padding: 0 0.5rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    .error-target-area { min-height: 40px; padding: 0.75rem; border: 1px dashed #bdbdbd; border-radius: 4px; margin-top: 0.5rem; background: #fafafa; }
+    .error-target-area.empty::before { content: "Error messages will appear here"; color: #999; font-size: 0.8rem; font-style: italic; }
+
+    /* Global error bar */
+    #global-error { min-height: 40px; padding: 0.75rem; border: 2px solid #ff9800; border-radius: 6px; margin-top: 0.75rem; background: #fff8e1; }
+    #global-error:empty::before { content: "Global error target -- errors without element or boundary handling appear here"; color: #999; font-size: 0.8rem; font-style: italic; }
+
+    .xh-indicator { font-style: italic; color: #999; }
+
+    .resolution-flow { font-family: monospace; font-size: 0.85rem; background: #f5f5f5; padding: 1rem; border-radius: 6px; margin-top: 0.75rem; line-height: 1.8; }
+    .resolution-flow .active { font-weight: bold; color: #1565c0; }
+    .resolution-flow .inactive { color: #bbb; }
+
+    .widget-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; margin-top: 0.75rem; }
+
+    /* Validation field errors */
+    .field-errors { list-style: none; padding: 0; margin-top: 0.75rem; }
+    .field-errors li { padding: 0.35rem 0.5rem; background: rgba(255,255,255,0.7); border-radius: 4px; margin-bottom: 0.35rem; font-size: 0.85rem; }
+    .field-errors li strong { color: #e65100; }
+
+    pre { background: #f5f5f5; padding: 1rem; border-radius: 6px; overflow-x: auto; font-size: 0.85rem; margin-top: 0.75rem; }
+  </style>
+</head>
+<body>
+  <a href="/index.html" class="back">&larr; Back to Examples</a>
+  <h1>Error Boundaries</h1>
+  <p class="subtitle">Three levels of error handling: element-level, error boundaries, and global config.</p>
+
+  <!-- ===========================================================================
+       Section 1: Widget-Level Error Handling
+       =========================================================================== -->
+  <h2>1. Widget-Level Error Handling</h2>
+  <div class="section">
+    <p class="description">
+      Each widget has its own <code>xh-error-template</code> and <code>xh-error-target</code>.
+      The error replaces just that widget's content. This is the same pattern used in the
+      <a href="/error-handling.html">basic error handling</a> example.
+    </p>
+    <span class="handler-label element">Element-Level Handler</span>
+
+    <div class="widget-grid">
+      <!-- Widget with its own error template for 404 -->
+      <div>
+        <button class="btn btn-warn"
+                xh-get="/api/widget/fail-404"
+                xh-target="#widget1-result"
+                xh-error-template-404="/examples/templates/not-found.html"
+                xh-error-template="/examples/templates/error.html"
+                xh-error-target="#widget1-result"
+                xh-indicator="#widget1-indicator">
+          Load Widget (will fail 404)
+        </button>
+        <span id="widget1-indicator" class="xh-indicator">Loading...</span>
+        <div id="widget1-result" class="widget-box">
+          <span style="color:#999;">Widget A - click button to trigger 404</span>
+        </div>
+      </div>
+
+      <!-- Widget with its own error template for 500 -->
+      <div>
+        <button class="btn btn-server"
+                xh-get="/api/widget/fail-500"
+                xh-target="#widget2-result"
+                xh-error-template="/examples/templates/error.html"
+                xh-error-target="#widget2-result"
+                xh-indicator="#widget2-indicator">
+          Load Widget (will fail 500)
+        </button>
+        <span id="widget2-indicator" class="xh-indicator">Loading...</span>
+        <div id="widget2-result" class="widget-box">
+          <span style="color:#999;">Widget B - click button to trigger 500</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===========================================================================
+       Section 2: Error Boundary
+       =========================================================================== -->
+  <h2>2. Error Boundary</h2>
+  <div class="section">
+    <p class="description">
+      A parent <code>&lt;div&gt;</code> with <code>xh-error-boundary</code> catches errors from child
+      widgets that have no element-level error template. The boundary's error template renders into
+      the boundary's <code>xh-error-target</code> container.
+    </p>
+    <span class="handler-label boundary">Boundary Handler</span>
+
+    <div class="boundary-container"
+         data-label="Error Boundary"
+         xh-error-boundary
+         xh-error-template="/examples/templates/boundary-error.html"
+         xh-error-target="#boundary-errors">
+
+      <p style="font-size: 0.85rem; color: #555; margin-bottom: 0.75rem;">
+        Widgets inside this boundary have <strong>no element-level error template</strong>.
+        Errors walk up the DOM and are caught by this boundary.
+      </p>
+
+      <div class="widget-grid">
+        <!-- Widget that succeeds -->
+        <div>
+          <button class="btn btn-success"
+                  xh-get="/api/widget/success"
+                  xh-template="#success-template"
+                  xh-target="#boundary-widget1">
+            Load Widget (success)
+          </button>
+          <div id="boundary-widget1" class="widget-box">
+            <span style="color:#999;">Widget 1 - will succeed</span>
+          </div>
+        </div>
+
+        <!-- Widget that fails with 404 -->
+        <div>
+          <button class="btn btn-warn"
+                  xh-get="/api/widget/fail-404"
+                  xh-target="#boundary-widget2">
+            Load Widget (will fail 404)
+          </button>
+          <div id="boundary-widget2" class="widget-box">
+            <span style="color:#999;">Widget 2 - will fail 404</span>
+          </div>
+        </div>
+
+        <!-- Widget that fails with 500 -->
+        <div>
+          <button class="btn btn-server"
+                  xh-get="/api/widget/fail-500"
+                  xh-target="#boundary-widget3">
+            Load Widget (will fail 500)
+          </button>
+          <div id="boundary-widget3" class="widget-box">
+            <span style="color:#999;">Widget 3 - will fail 500</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top: 1rem;">
+        <strong style="font-size: 0.85rem; color: #7b1fa2;">Boundary Error Container:</strong>
+        <div id="boundary-errors" class="error-target-area empty"></div>
+      </div>
+    </div>
+
+    <!-- Nested boundary example -->
+    <h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem; font-size: 1rem;">Nested Boundaries</h3>
+    <p class="description">
+      Inner boundaries catch their own errors. If the inner boundary does not match, the error
+      continues up to the outer boundary.
+    </p>
+
+    <div class="boundary-container"
+         data-label="Outer Boundary"
+         xh-error-boundary
+         xh-error-template="/examples/templates/boundary-error.html"
+         xh-error-target="#outer-boundary-errors">
+
+      <div class="inner-boundary"
+           data-label="Inner Boundary (catches 404 only)"
+           xh-error-boundary
+           xh-error-template-404="/examples/templates/not-found.html"
+           xh-error-target="#inner-boundary-errors">
+
+        <div class="widget-grid">
+          <div>
+            <button class="btn btn-warn"
+                    xh-get="/api/widget/fail-404"
+                    xh-target="#nested-widget1">
+              Fail 404 (inner catches)
+            </button>
+            <div id="nested-widget1" class="widget-box">
+              <span style="color:#999;">404 error goes to inner boundary</span>
+            </div>
+          </div>
+          <div>
+            <button class="btn btn-server"
+                    xh-get="/api/widget/fail-500"
+                    xh-target="#nested-widget2">
+              Fail 500 (outer catches)
+            </button>
+            <div id="nested-widget2" class="widget-box">
+              <span style="color:#999;">500 error goes to outer boundary</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 0.75rem;">
+          <strong style="font-size: 0.8rem; color: #1565c0;">Inner Boundary Errors:</strong>
+          <div id="inner-boundary-errors" class="error-target-area empty"></div>
+        </div>
+      </div>
+
+      <div style="margin-top: 0.75rem;">
+        <strong style="font-size: 0.8rem; color: #7b1fa2;">Outer Boundary Errors:</strong>
+        <div id="outer-boundary-errors" class="error-target-area empty"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===========================================================================
+       Section 3: Global Error Handler
+       =========================================================================== -->
+  <h2>3. Global Error Handler</h2>
+  <div class="section">
+    <p class="description">
+      When <code>xhtmlx.config.defaultErrorTemplate</code> and
+      <code>xhtmlx.config.defaultErrorTarget</code> are set, any widget that has no element-level
+      error template and no error boundary ancestor will use the global fallback.
+    </p>
+    <span class="handler-label global">Global Handler</span>
+
+    <div style="margin-bottom: 0.75rem;">
+      <strong style="font-size: 0.85rem; color: #e65100;">Global Error Target (#global-error):</strong>
+      <div id="global-error"></div>
+    </div>
+
+    <div class="widget-grid">
+      <div>
+        <button class="btn btn-error"
+                xh-get="/api/widget/fail-400"
+                xh-target="#global-widget1">
+          Load Widget (will fail 400)
+        </button>
+        <div id="global-widget1" class="widget-box">
+          <span style="color:#999;">No error template, no boundary -- global catches it</span>
+        </div>
+      </div>
+      <div>
+        <button class="btn btn-server"
+                xh-get="/api/widget/fail-500"
+                xh-target="#global-widget2">
+          Load Widget (will fail 500)
+        </button>
+        <div id="global-widget2" class="widget-box">
+          <span style="color:#999;">No error template, no boundary -- global catches it</span>
+        </div>
+      </div>
+      <div>
+        <button class="btn btn-info"
+                xh-get="/api/widget/fail-422"
+                xh-target="#global-widget3">
+          Load Widget (will fail 422)
+        </button>
+        <div id="global-widget3" class="widget-box">
+          <span style="color:#999;">No error template, no boundary -- global catches it</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===========================================================================
+       Section 4: Resolution Order Demo
+       =========================================================================== -->
+  <h2>4. Resolution Order Demo</h2>
+  <div class="section">
+    <p class="description">
+      This section demonstrates the full resolution chain. All three levels are active:
+      global config is set, a boundary wraps the area, and one widget has its own element-level
+      error template. The element-level handler wins over the boundary, which wins over the global.
+    </p>
+
+    <div class="resolution-flow">
+      Resolution order:<br>
+      1. <code>xh-error-template-{code}</code> on the element itself<br>
+      2. <code>xh-error-template-{class}</code> (e.g. 4xx) on the element<br>
+      3. <code>xh-error-template</code> on the element<br>
+      4. Nearest <code>xh-error-boundary</code> ancestor with matching template<br>
+      5. <code>xhtmlx.config.defaultErrorTemplate</code> (global)<br>
+      6. No template found: just adds <code>xh-error</code> CSS class
+    </div>
+
+    <div class="boundary-container"
+         data-label="Boundary (level 4)"
+         xh-error-boundary
+         xh-error-template="/examples/templates/boundary-error.html"
+         xh-error-target="#resolution-boundary-errors"
+         style="margin-top: 1rem;">
+
+      <div class="widget-grid">
+        <!-- Widget WITH element-level error template (level 1-3 wins) -->
+        <div>
+          <span class="handler-label element">Element-Level Wins</span>
+          <button class="btn btn-warn"
+                  xh-get="/api/widget/fail-404"
+                  xh-target="#resolution-widget1"
+                  xh-error-template-404="/examples/templates/not-found.html"
+                  xh-error-target="#resolution-widget1">
+            Fail 404 (element handles)
+          </button>
+          <div id="resolution-widget1" class="widget-box">
+            <span style="color:#999;">Has xh-error-template-404, so element-level handles it</span>
+          </div>
+        </div>
+
+        <!-- Widget WITHOUT element-level error template (boundary catches, level 4) -->
+        <div>
+          <span class="handler-label boundary">Boundary Catches</span>
+          <button class="btn btn-server"
+                  xh-get="/api/widget/fail-500"
+                  xh-target="#resolution-widget2">
+            Fail 500 (boundary handles)
+          </button>
+          <div id="resolution-widget2" class="widget-box">
+            <span style="color:#999;">No element-level template, boundary catches it</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top: 0.75rem;">
+        <strong style="font-size: 0.8rem; color: #7b1fa2;">Boundary Error Container:</strong>
+        <div id="resolution-boundary-errors" class="error-target-area empty"></div>
+      </div>
+    </div>
+
+    <!-- Widget outside the boundary: global catches it (level 5) -->
+    <div style="margin-top: 1rem;">
+      <span class="handler-label global">Global Catches</span>
+      <button class="btn btn-error"
+              xh-get="/api/widget/fail-400"
+              xh-target="#resolution-widget3">
+        Fail 400 (global handles)
+      </button>
+      <div id="resolution-widget3" class="widget-box">
+        <span style="color:#999;">Outside any boundary, no element template -- global catches it</span>
+      </div>
+      <p style="font-size: 0.8rem; color: #999; margin-top: 0.25rem;">
+        Error appears in the global error target (#global-error) above.
+      </p>
+    </div>
+  </div>
+
+  <!-- ===========================================================================
+       Source Reference
+       =========================================================================== -->
+  <div class="section">
+    <h2>Error Handling Architecture</h2>
+    <pre><code>&lt;!-- Level 1-3: Element-level --&gt;
+&lt;button xh-get="/api/data"
+        xh-error-template-404="/templates/not-found.html"
+        xh-error-template="/templates/error.html"
+        xh-error-target="#my-error"&gt;
+  Load
+&lt;/button&gt;
+
+&lt;!-- Level 4: Error boundary --&gt;
+&lt;div xh-error-boundary
+     xh-error-template="/templates/boundary-error.html"
+     xh-error-target="#boundary-errors"&gt;
+  &lt;button xh-get="/api/data"&gt;Load&lt;/button&gt;
+  &lt;div id="boundary-errors"&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;!-- Level 5: Global config --&gt;
+&lt;script&gt;
+  xhtmlx.config.defaultErrorTemplate = "/templates/error.html";
+  xhtmlx.config.defaultErrorTarget = "#global-error";
+&lt;/script&gt;
+
+Resolution chain:
+  element xh-error-template-{code}
+    &rarr; element xh-error-template-{class}
+      &rarr; element xh-error-template
+        &rarr; nearest xh-error-boundary
+          &rarr; xhtmlx.config.defaultErrorTemplate
+            &rarr; add xh-error CSS class</code></pre>
+  </div>
+
+  <!-- Inline template for successful widget -->
+  <template id="success-template">
+    <div class="widget-success">
+      <p><strong>Success!</strong> <span xh-text="message"></span></p>
+      <p>Data: <span xh-text="data"></span></p>
+    </div>
+  </template>
+
+  <script src="/xhtmlx.js"></script>
+  <script>
+    // Set global error config (Level 5)
+    xhtmlx.config.defaultErrorTemplate = "/examples/templates/error.html";
+    xhtmlx.config.defaultErrorTarget = "#global-error";
+  </script>
+</body>
+</html>

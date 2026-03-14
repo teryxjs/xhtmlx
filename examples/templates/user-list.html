@@ -1,0 +1,39 @@
+<table class="user-table">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Avatar</th>
+      <th>Name</th>
+      <th>Email</th>
+      <th>Role</th>
+      <th>Status</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr xh-each="users" class="user-row">
+      <td xh-text="id"></td>
+      <td><img xh-attr-src="avatar" xh-attr-alt="name" class="avatar-sm"></td>
+      <td xh-text="name"></td>
+      <td xh-text="email"></td>
+      <td>
+        <span xh-if="is_admin" class="badge admin">Admin</span>
+        <span xh-unless="is_admin" class="badge user">User</span>
+      </td>
+      <td>
+        <span xh-if="verified" class="badge verified">Verified</span>
+        <span xh-unless="verified" class="badge unverified">Unverified</span>
+      </td>
+      <td class="actions">
+        <button class="btn btn-sm btn-edit"
+                xh-get="/api/users/{{id}}"
+                xh-target="#edit-form"
+                xh-template="/examples/templates/user-form.html">Edit</button>
+        <button class="btn btn-sm btn-delete"
+                xh-delete="/api/users/{{id}}"
+                xh-swap="none"
+                onclick="if(!confirm('Delete this user?')){event.preventDefault();return;} this.closest('tr').remove();">Delete</button>
+      </td>
+    </tr>
+  </tbody>
+</table>

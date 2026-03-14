@@ -1,0 +1,10 @@
+<div class="user-card">
+  <img xh-attr-src="avatar" xh-attr-alt="name" class="avatar">
+  <div class="user-info">
+    <h3 xh-text="name"></h3>
+    <p class="email" xh-text="email"></p>
+    <span xh-if="is_admin" class="badge admin">Admin</span>
+    <span xh-if="verified" class="badge verified">Verified</span>
+    <span xh-unless="verified" class="badge unverified">Unverified</span>
+  </div>
+</div>

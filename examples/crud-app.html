@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CRUD Application - xhtmlx Examples</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 900px; margin: 0 auto; padding: 2rem; color: #333; line-height: 1.6; }
+    h1 { margin-bottom: 0.5rem; }
+    .subtitle { color: #666; margin-bottom: 2rem; }
+    a.back { color: #0066cc; text-decoration: none; display: inline-block; margin-bottom: 1rem; }
+    a.back:hover { text-decoration: underline; }
+
+    .user-table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
+    .user-table th, .user-table td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid #dee2e6; }
+    .user-table th { background: #f8f9fa; font-weight: 600; font-size: 0.85rem; text-transform: uppercase; color: #666; }
+    .user-table tr:hover { background: #f8f9fa; }
+    .avatar-sm { width: 32px; height: 32px; border-radius: 50%; vertical-align: middle; }
+
+    .badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+    .badge.admin { background: #e3f2fd; color: #1565c0; }
+    .badge.user { background: #f5f5f5; color: #666; }
+    .badge.verified { background: #e8f5e9; color: #2e7d32; }
+    .badge.unverified { background: #fff3e0; color: #e65100; }
+
+    .actions { white-space: nowrap; }
+    .btn { display: inline-block; padding: 0.4rem 0.75rem; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: 500; }
+    .btn-primary { background: #0066cc; color: #fff; }
+    .btn-primary:hover { background: #0052a3; }
+    .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.75rem; }
+    .btn-edit { background: #e3f2fd; color: #1565c0; }
+    .btn-edit:hover { background: #bbdefb; }
+    .btn-delete { background: #ffebee; color: #c62828; }
+    .btn-delete:hover { background: #ffcdd2; }
+
+    .section { margin-top: 2rem; }
+    .section h3 { margin-bottom: 1rem; }
+
+    .user-form { padding: 1.5rem; border: 1px solid #dee2e6; border-radius: 8px; background: #f8f9fa; margin-bottom: 1rem; }
+    .user-form h3 { margin-bottom: 1rem; }
+    .form-group { margin-bottom: 0.75rem; }
+    .form-group label { display: block; font-weight: 500; margin-bottom: 0.25rem; font-size: 0.875rem; }
+    .form-group input[type="text"],
+    .form-group input[type="email"] { width: 100%; padding: 0.5rem; border: 1px solid #ced4da; border-radius: 4px; font-size: 0.875rem; }
+    .form-group input[type="text"]:focus,
+    .form-group input[type="email"]:focus { border-color: #0066cc; outline: none; box-shadow: 0 0 0 2px rgba(0,102,204,0.2); }
+    .form-actions { margin-top: 1rem; display: flex; gap: 0.5rem; }
+
+    .xh-indicator { font-style: italic; color: #999; }
+    .status-message { padding: 0.75rem 1rem; border-radius: 4px; margin-bottom: 1rem; background: #e8f5e9; color: #2e7d32; }
+  </style>
+</head>
+<body>
+  <a href="/index.html" class="back">&larr; Back to Examples</a>
+  <h1>CRUD Application</h1>
+  <p class="subtitle">Full create, read, update, delete operations using xhtmlx with external templates.</p>
+
+  <!-- ===================================================================
+       Create new user form
+       =================================================================== -->
+  <div class="section">
+    <h3>Create New User</h3>
+    <form class="user-form"
+          xh-post="/api/users"
+          xh-swap="none"
+          xh-indicator="#create-spinner">
+      <div class="form-group">
+        <label>Name</label>
+        <input type="text" name="name" placeholder="Enter name" required>
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" name="email" placeholder="Enter email" required>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Create User</button>
+        <span id="create-spinner" class="xh-indicator">Creating...</span>
+      </div>
+    </form>
+  </div>
+
+  <!-- ===================================================================
+       Edit form area (populated by clicking Edit on a row)
+       =================================================================== -->
+  <div id="edit-form"></div>
+
+  <!-- ===================================================================
+       User list
+       =================================================================== -->
+  <div class="section">
+    <h3>
+      User List
+      <button class="btn btn-sm btn-primary" id="refresh-btn"
+              xh-get="/api/users"
+              xh-target="#user-list-container"
+              xh-template="/examples/templates/user-list.html"
+              xh-indicator="#list-spinner"
+              style="margin-left:0.5rem; vertical-align:middle;">
+        Refresh
+      </button>
+      <span id="list-spinner" class="xh-indicator">Loading...</span>
+    </h3>
+    <div id="user-list-container"
+         xh-get="/api/users"
+         xh-trigger="load"
+         xh-template="/examples/templates/user-list.html"
+         xh-indicator="#list-spinner">
+      <span class="xh-indicator">Loading users...</span>
+    </div>
+  </div>
+
+  <script src="/xhtmlx.js"></script>
+  <script>
+    // After a POST (create) or DELETE, reload the user list.
+    document.body.addEventListener("xh:afterRequest", function(e) {
+      var el = e.target;
+      var method = "";
+      if (el.hasAttribute("xh-post")) method = "POST";
+      if (el.hasAttribute("xh-delete")) method = "DELETE";
+      if (el.hasAttribute("xh-put")) method = "PUT";
+
+      if (method === "POST" || method === "DELETE" || method === "PUT") {
+        // Re-trigger the user list load
+        var refreshBtn = document.getElementById("refresh-btn");
+        if (refreshBtn) refreshBtn.click();
+
+        // Clear the edit form after PUT
+        if (method === "PUT") {
+          document.getElementById("edit-form").innerHTML = "";
+        }
+
+        // Reset the create form after POST
+        if (method === "POST" && el.tagName === "FORM") {
+          el.reset();
+        }
+      }
+    });
+  </script>
+</body>
+</html>

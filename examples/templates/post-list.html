@@ -1,0 +1,13 @@
+<div class="post-list">
+  <div xh-each="posts" class="post-item">
+    <h4 xh-text="title"></h4>
+    <p class="post-body" xh-text="body"></p>
+    <div class="comments-section"
+         xh-get="/api/posts/{{id}}/comments"
+         xh-trigger="load"
+         xh-template="/examples/templates/comment-list.html">
+      <span class="xh-indicator">Loading comments...</span>
+    </div>
+  </div>
+</div>
+<p xh-unless="posts" class="empty-message">No posts yet.</p>

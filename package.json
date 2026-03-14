@@ -1,0 +1,59 @@
+{
+  "name": "xhtmlx",
+  "version": "0.1.0",
+  "description": "Declarative HTML attributes for REST API driven UIs. Like htmx, but with JSON APIs and client-side rendering.",
+  "main": "xhtmlx.js",
+  "browser": "xhtmlx.js",
+  "unpkg": "xhtmlx.min.js",
+  "jsdelivr": "xhtmlx.min.js",
+  "files": [
+    "xhtmlx.js",
+    "xhtmlx.min.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "jest --verbose",
+    "test:unit": "jest tests/unit --verbose",
+    "test:integration": "jest tests/integration --verbose",
+    "lint": "eslint xhtmlx.js tests/ --ext .js",
+    "check": "node --check xhtmlx.js",
+    "build": "npx terser xhtmlx.js -o xhtmlx.min.js --compress --mangle",
+    "prepublishOnly": "npm run check && npm run lint && npm test && npm run build",
+    "examples": "node examples/server.js"
+  },
+  "keywords": [
+    "htmx",
+    "rest",
+    "api",
+    "declarative",
+    "html",
+    "attributes",
+    "template",
+    "client-side",
+    "rendering",
+    "json",
+    "ajax",
+    "fetch",
+    "spa",
+    "lightweight",
+    "no-build"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dkropachev/xhtmlx.git"
+  },
+  "homepage": "https://github.com/dkropachev/xhtmlx#readme",
+  "bugs": {
+    "url": "https://github.com/dkropachev/xhtmlx/issues"
+  },
+  "author": "dkropachev",
+  "license": "MIT",
+  "devDependencies": {
+    "eslint": "^8.56.0",
+    "express": "^4.18.2",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "terser": "^5.27.0"
+  }
+}

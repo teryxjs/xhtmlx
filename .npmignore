@@ -1,0 +1,8 @@
+tests/
+examples/
+coverage/
+.eslintrc.json
+.github/
+Makefile
+DESIGN.md
+*.tgz

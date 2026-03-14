@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Conditionals (xh-if / xh-unless) - xhtmlx Examples</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; color: #333; line-height: 1.6; }
+    h1 { margin-bottom: 0.5rem; }
+    .subtitle { color: #666; margin-bottom: 2rem; }
+    a.back { color: #0066cc; text-decoration: none; display: inline-block; margin-bottom: 1rem; }
+    a.back:hover { text-decoration: underline; }
+
+    .section { margin-bottom: 2.5rem; }
+    .section h3 { margin-bottom: 1rem; border-bottom: 1px solid #eee; padding-bottom: 0.5rem; }
+    .section > p { margin-bottom: 1rem; font-size: 0.875rem; color: #666; }
+
+    .user-card { display: flex; gap: 1rem; align-items: flex-start; padding: 1rem; border: 1px solid #dee2e6; border-radius: 6px; margin-bottom: 0.75rem; background: #fff; }
+    .avatar { width: 48px; height: 48px; border-radius: 50%; }
+    .user-info { flex: 1; }
+    .name { font-weight: 600; }
+    .email { font-size: 0.85rem; color: #666; }
+
+    .badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; margin-right: 0.25rem; }
+    .badge.admin { background: #e3f2fd; color: #1565c0; }
+    .badge.verified { background: #e8f5e9; color: #2e7d32; }
+    .badge.unverified { background: #fff3e0; color: #e65100; }
+    .badge.regular { background: #f5f5f5; color: #666; }
+
+    .status-row { margin-top: 0.5rem; }
+    .warning { color: #e65100; font-size: 0.85rem; font-weight: 500; }
+    .success { color: #2e7d32; font-size: 0.85rem; font-weight: 500; }
+    .admin-panel { margin-top: 0.5rem; padding: 0.5rem; background: #e3f2fd; border-radius: 4px; font-size: 0.85rem; color: #1565c0; }
+
+    .xh-indicator { font-style: italic; color: #999; }
+    pre { background: #f5f5f5; padding: 1rem; border-radius: 6px; overflow-x: auto; font-size: 0.85rem; margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+  <a href="/index.html" class="back">&larr; Back to Examples</a>
+  <h1>Conditionals</h1>
+  <p class="subtitle">Show and hide elements based on data fields using xh-if and xh-unless.</p>
+
+  <!-- ===================================================================
+       Example 1: Badges with xh-if and xh-unless
+       =================================================================== -->
+  <div class="section">
+    <h3>1. Role &amp; verification badges</h3>
+    <p>Each user shows different badges depending on their is_admin and verified fields.</p>
+    <div xh-get="/api/users" xh-trigger="load">
+      <template>
+        <div xh-each="users" class="user-card">
+          <img xh-attr-src="avatar" xh-attr-alt="name" class="avatar">
+          <div class="user-info">
+            <div>
+              <span class="name" xh-text="name"></span>
+              <span xh-if="is_admin" class="badge admin">Admin</span>
+              <span xh-unless="is_admin" class="badge regular">User</span>
+            </div>
+            <div class="email" xh-text="email"></div>
+            <div class="status-row">
+              <span xh-if="verified" class="badge verified">Verified</span>
+              <span xh-unless="verified" class="badge unverified">Unverified</span>
+            </div>
+          </div>
+        </div>
+      </template>
+      <span class="xh-indicator">Loading users...</span>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       Example 2: Conditional content blocks
+       =================================================================== -->
+  <div class="section">
+    <h3>2. Conditional content blocks</h3>
+    <p>Admin users see an admin panel; unverified users see a warning.</p>
+    <div xh-get="/api/users" xh-trigger="load">
+      <template>
+        <div xh-each="users" class="user-card">
+          <img xh-attr-src="avatar" xh-attr-alt="name" class="avatar">
+          <div class="user-info">
+            <span class="name" xh-text="name"></span>
+            <div class="email" xh-text="email"></div>
+
+            <!-- Only admins see this panel -->
+            <div xh-if="is_admin" class="admin-panel">
+              Admin Controls: Manage users, view logs, configure settings.
+            </div>
+
+            <!-- Warning for unverified users -->
+            <p xh-unless="verified" class="warning">
+              This account has not been verified. Please check your email.
+            </p>
+
+            <!-- Success message for verified users -->
+            <p xh-if="verified" class="success">
+              Account verified and in good standing.
+            </p>
+          </div>
+        </div>
+      </template>
+      <span class="xh-indicator">Loading users...</span>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       Example 3: Single user conditional rendering
+       =================================================================== -->
+  <div class="section">
+    <h3>3. Single user with detailed conditionals</h3>
+    <p>Load user #1 (Alice - admin, verified) and user #3 (Carol - not admin, not verified) side by side.</p>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+      <div xh-get="/api/users/1" xh-trigger="load">
+        <template>
+          <div class="user-card" style="flex-direction: column;">
+            <div style="display:flex; gap:0.75rem; align-items:center;">
+              <img xh-attr-src="avatar" xh-attr-alt="name" class="avatar">
+              <div>
+                <div class="name" xh-text="name"></div>
+                <div class="email" xh-text="email"></div>
+              </div>
+            </div>
+            <div class="status-row">
+              <span xh-if="is_admin" class="badge admin">Admin</span>
+              <span xh-if="verified" class="badge verified">Verified</span>
+              <span xh-unless="verified" class="badge unverified">Unverified</span>
+            </div>
+            <div xh-if="is_admin" class="admin-panel">Has admin privileges.</div>
+            <p xh-unless="verified" class="warning">Unverified account!</p>
+          </div>
+        </template>
+        <span class="xh-indicator">Loading...</span>
+      </div>
+
+      <div xh-get="/api/users/3" xh-trigger="load">
+        <template>
+          <div class="user-card" style="flex-direction: column;">
+            <div style="display:flex; gap:0.75rem; align-items:center;">
+              <img xh-attr-src="avatar" xh-attr-alt="name" class="avatar">
+              <div>
+                <div class="name" xh-text="name"></div>
+                <div class="email" xh-text="email"></div>
+              </div>
+            </div>
+            <div class="status-row">
+              <span xh-if="is_admin" class="badge admin">Admin</span>
+              <span xh-unless="is_admin" class="badge regular">Regular User</span>
+              <span xh-if="verified" class="badge verified">Verified</span>
+              <span xh-unless="verified" class="badge unverified">Unverified</span>
+            </div>
+            <div xh-if="is_admin" class="admin-panel">Has admin privileges.</div>
+            <p xh-unless="verified" class="warning">Unverified account!</p>
+          </div>
+        </template>
+        <span class="xh-indicator">Loading...</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       Source reference
+       =================================================================== -->
+  <div class="section">
+    <h3>Key syntax</h3>
+    <pre><code>&lt;!-- Show only if field is truthy --&gt;
+&lt;span xh-if="is_admin" class="badge"&gt;Admin&lt;/span&gt;
+
+&lt;!-- Show only if field is falsy --&gt;
+&lt;span xh-unless="verified" class="warning"&gt;Unverified&lt;/span&gt;
+
+&lt;!-- Conditional block --&gt;
+&lt;div xh-if="is_admin" class="admin-panel"&gt;
+  Admin content here...
+&lt;/div&gt;</code></pre>
+  </div>
+
+  <script src="/xhtmlx.js"></script>
+</body>
+</html>

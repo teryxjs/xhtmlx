@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Error Handling - xhtmlx Examples</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; color: #333; line-height: 1.6; }
+    h1 { margin-bottom: 0.5rem; }
+    .subtitle { color: #666; margin-bottom: 2rem; }
+    a.back { color: #0066cc; text-decoration: none; display: inline-block; margin-bottom: 1rem; }
+    a.back:hover { text-decoration: underline; }
+
+    .section { margin-bottom: 2.5rem; }
+    .section h3 { margin-bottom: 0.5rem; border-bottom: 1px solid #eee; padding-bottom: 0.5rem; }
+    .section > p { margin-bottom: 1rem; font-size: 0.875rem; color: #666; }
+
+    .btn { display: inline-block; padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer; font-size: 0.875rem; margin-right: 0.5rem; margin-bottom: 0.5rem; font-weight: 500; }
+    .btn-error { background: #ffebee; color: #c62828; }
+    .btn-error:hover { background: #ffcdd2; }
+    .btn-warn { background: #fff3e0; color: #e65100; }
+    .btn-warn:hover { background: #ffe0b2; }
+    .btn-info { background: #e3f2fd; color: #1565c0; }
+    .btn-info:hover { background: #bbdefb; }
+    .btn-server { background: #fce4ec; color: #880e4f; }
+    .btn-server:hover { background: #f8bbd0; }
+
+    .result-box { min-height: 80px; padding: 1rem; border: 1px solid #dee2e6; border-radius: 6px; margin-top: 0.75rem; background: #fff; }
+
+    /* Error template styles */
+    .error-box { padding: 1rem 1.25rem; border-radius: 6px; border-left: 4px solid #c62828; background: #ffebee; }
+    .error-box h3 { color: #c62828; margin-bottom: 0.5rem; font-size: 1rem; }
+    .error-box p { font-size: 0.875rem; color: #555; }
+    .error-box .error-code { font-size: 0.8rem; color: #999; margin-top: 0.5rem; }
+
+    .error-box.not-found { border-left-color: #e65100; background: #fff3e0; }
+    .error-box.not-found h3 { color: #e65100; }
+
+    .error-box.validation-error { border-left-color: #f57c00; background: #fff8e1; }
+    .error-box.validation-error h3 { color: #f57c00; }
+    .field-errors { list-style: none; padding: 0; margin-top: 0.75rem; }
+    .field-errors li { padding: 0.35rem 0.5rem; background: rgba(255,255,255,0.7); border-radius: 4px; margin-bottom: 0.35rem; font-size: 0.85rem; }
+    .field-errors li strong { color: #e65100; }
+
+    .xh-indicator { font-style: italic; color: #999; }
+
+    .event-log { font-family: monospace; font-size: 0.8rem; max-height: 200px; overflow-y: auto; padding: 0.75rem; background: #1a1a2e; color: #00ff88; border-radius: 6px; margin-top: 0.75rem; }
+    .event-log div { padding: 0.15rem 0; border-bottom: 1px solid #333; }
+
+    pre { background: #f5f5f5; padding: 1rem; border-radius: 6px; overflow-x: auto; font-size: 0.85rem; margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+  <a href="/index.html" class="back">&larr; Back to Examples</a>
+  <h1>Error Handling</h1>
+  <p class="subtitle">Per-status-code error templates, validation errors, and generic fallback.</p>
+
+  <!-- ===================================================================
+       Example 1: 400 Bad Request with generic error template
+       =================================================================== -->
+  <div class="section">
+    <h3>1. Generic error template (400 Bad Request)</h3>
+    <p>Uses xh-error-template to show a generic error template for any error.</p>
+    <button class="btn btn-error"
+            xh-get="/api/error/400"
+            xh-target="#error-400-result"
+            xh-error-template="/examples/templates/error.html"
+            xh-error-target="#error-400-result"
+            xh-indicator="#indicator-400">
+      Trigger 400 Error
+    </button>
+    <span id="indicator-400" class="xh-indicator">Loading...</span>
+    <div id="error-400-result" class="result-box">
+      <span style="color:#999;">Click the button to see the error.</span>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       Example 2: 404 Not Found with specific template
+       =================================================================== -->
+  <div class="section">
+    <h3>2. Status-specific template (404 Not Found)</h3>
+    <p>Uses xh-error-template-404 for a customized 404 message, falling back to the generic template for other errors.</p>
+    <button class="btn btn-warn"
+            xh-get="/api/error/404"
+            xh-target="#error-404-result"
+            xh-error-template="/examples/templates/error.html"
+            xh-error-template-404="/examples/templates/not-found.html"
+            xh-error-target="#error-404-result"
+            xh-indicator="#indicator-404">
+      Trigger 404 Error
+    </button>
+    <span id="indicator-404" class="xh-indicator">Loading...</span>
+    <div id="error-404-result" class="result-box">
+      <span style="color:#999;">Click the button to see the 404 error.</span>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       Example 3: 422 Validation errors with field list
+       =================================================================== -->
+  <div class="section">
+    <h3>3. Validation errors (422) with field iteration</h3>
+    <p>Uses xh-error-template-422 to show a validation error template that iterates over the fields array.</p>
+    <button class="btn btn-info"
+            xh-get="/api/error/422"
+            xh-target="#error-422-result"
+            xh-error-template="/examples/templates/error.html"
+            xh-error-template-422="/examples/templates/validation-error.html"
+            xh-error-target="#error-422-result"
+            xh-indicator="#indicator-422">
+      Trigger 422 Validation Error
+    </button>
+    <span id="indicator-422" class="xh-indicator">Loading...</span>
+    <div id="error-422-result" class="result-box">
+      <span style="color:#999;">Click to see validation errors with field details.</span>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       Example 4: 500 Server Error
+       =================================================================== -->
+  <div class="section">
+    <h3>4. Server error (500)</h3>
+    <p>Uses the generic error template for a 500 internal server error.</p>
+    <button class="btn btn-server"
+            xh-get="/api/error/500"
+            xh-target="#error-500-result"
+            xh-error-template="/examples/templates/error.html"
+            xh-error-target="#error-500-result"
+            xh-indicator="#indicator-500">
+      Trigger 500 Error
+    </button>
+    <span id="indicator-500" class="xh-indicator">Loading...</span>
+    <div id="error-500-result" class="result-box">
+      <span style="color:#999;">Click to see a server error.</span>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       Example 5: Error events
+       =================================================================== -->
+  <div class="section">
+    <h3>5. Error events (xh:responseError)</h3>
+    <p>The xh:responseError event fires on any error. The log below captures events from all buttons above.</p>
+    <div id="event-log" class="event-log">
+      <div style="color:#666;">Event log - click any error button above...</div>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       Example 6: All error buttons with shared error target
+       =================================================================== -->
+  <div class="section">
+    <h3>6. Multiple errors, shared error area</h3>
+    <p>All buttons share the same error target. Try clicking different errors to see the template change.</p>
+    <div>
+      <button class="btn btn-error"
+              xh-get="/api/error/400"
+              xh-error-template="/examples/templates/error.html"
+              xh-error-target="#shared-error">400</button>
+      <button class="btn btn-warn"
+              xh-get="/api/error/404"
+              xh-error-template-404="/examples/templates/not-found.html"
+              xh-error-template="/examples/templates/error.html"
+              xh-error-target="#shared-error">404</button>
+      <button class="btn btn-info"
+              xh-get="/api/error/422"
+              xh-error-template-422="/examples/templates/validation-error.html"
+              xh-error-template="/examples/templates/error.html"
+              xh-error-target="#shared-error">422</button>
+      <button class="btn btn-server"
+              xh-get="/api/error/500"
+              xh-error-template="/examples/templates/error.html"
+              xh-error-target="#shared-error">500</button>
+    </div>
+    <div id="shared-error" class="result-box">
+      <span style="color:#999;">Click any button to see its error rendered here.</span>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       Source reference
+       =================================================================== -->
+  <div class="section">
+    <h3>Error template resolution order</h3>
+    <pre><code>&lt;div xh-get="/api/data"
+     xh-template="/templates/data.html"
+     xh-error-template="/templates/error.html"
+     xh-error-template-404="/templates/not-found.html"
+     xh-error-template-422="/templates/validation.html"
+     xh-error-target="#error-area"&gt;
+&lt;/div&gt;
+
+Resolution order:
+1. xh-error-template-{exact code}  (e.g. xh-error-template-404)
+2. xh-error-template-{class}       (e.g. xh-error-template-4xx)
+3. xh-error-template               (generic fallback)
+4. No template: adds xh-error class, emits xh:responseError
+
+Error data context:
+{
+  "status": 422,
+  "statusText": "Unprocessable Entity",
+  "body": { "error": "...", "fields": [...] }
+}</code></pre>
+  </div>
+
+  <script src="/xhtmlx.js"></script>
+  <script>
+    // Log xh:responseError events
+    document.body.addEventListener("xh:responseError", function(e) {
+      var log = document.getElementById("event-log");
+      var entry = document.createElement("div");
+      var detail = e.detail || {};
+      var time = new Date().toLocaleTimeString();
+      entry.textContent = "[" + time + "] xh:responseError — status: " +
+        detail.status + ", error: " + (detail.body && detail.body.error || "unknown");
+      log.appendChild(entry);
+      log.scrollTop = log.scrollHeight;
+    });
+  </script>
+</body>
+</html>

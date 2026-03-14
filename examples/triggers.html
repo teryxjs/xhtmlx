@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Triggers - xhtmlx Examples</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; color: #333; line-height: 1.6; }
+    h1 { margin-bottom: 0.5rem; }
+    .subtitle { color: #666; margin-bottom: 2rem; }
+    a.back { color: #0066cc; text-decoration: none; display: inline-block; margin-bottom: 1rem; }
+    a.back:hover { text-decoration: underline; }
+
+    .section { margin-bottom: 2.5rem; }
+    .section h3 { margin-bottom: 0.5rem; border-bottom: 1px solid #eee; padding-bottom: 0.5rem; }
+    .section > p { margin-bottom: 1rem; font-size: 0.875rem; color: #666; }
+
+    .btn { display: inline-block; padding: 0.5rem 1rem; background: #0066cc; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 0.875rem; }
+    .btn:hover { background: #0052a3; }
+
+    .result-box { min-height: 60px; padding: 1rem; border: 1px solid #dee2e6; border-radius: 6px; margin-top: 0.75rem; background: #fff; }
+    .user-item { padding: 0.25rem 0; }
+    .user-item .name { font-weight: 500; }
+    .user-item .email { color: #666; font-size: 0.85rem; }
+
+    input[type="text"] { padding: 0.5rem 0.75rem; border: 1px solid #ced4da; border-radius: 4px; font-size: 0.875rem; width: 300px; }
+    input[type="text"]:focus { border-color: #0066cc; outline: none; box-shadow: 0 0 0 2px rgba(0,102,204,0.2); }
+
+    .poll-box { padding: 1rem; border: 2px dashed #dee2e6; border-radius: 6px; background: #fafafa; min-height: 60px; }
+    .poll-box .timestamp { font-size: 0.75rem; color: #999; }
+
+    .revealed-box { margin-top: 100vh; padding: 2rem; border: 2px dashed #0066cc; border-radius: 8px; background: #e3f2fd; text-align: center; }
+
+    .xh-indicator { font-style: italic; color: #999; }
+    pre { background: #f5f5f5; padding: 1rem; border-radius: 6px; overflow-x: auto; font-size: 0.85rem; margin-top: 0.5rem; }
+    .badge { display: inline-block; padding: 0.1rem 0.4rem; border-radius: 3px; font-size: 0.7rem; font-weight: 600; background: #e3f2fd; color: #1565c0; }
+  </style>
+</head>
+<body>
+  <a href="/index.html" class="back">&larr; Back to Examples</a>
+  <h1>Triggers</h1>
+  <p class="subtitle">Different trigger types: click, load, keyup with delay, polling, revealed, and once.</p>
+
+  <!-- ===================================================================
+       Example 1: click trigger (default for buttons)
+       =================================================================== -->
+  <div class="section">
+    <h3>1. Click trigger</h3>
+    <p>Buttons default to click trigger. Click to load user data.</p>
+    <button class="btn"
+            xh-get="/api/users/1"
+            xh-target="#click-result">
+      Load User #1
+    </button>
+    <button class="btn"
+            xh-get="/api/users/2"
+            xh-target="#click-result">
+      Load User #2
+    </button>
+    <div id="click-result" class="result-box">
+      <template>
+        <div class="user-item">
+          <span class="name" xh-text="name"></span>
+          &mdash; <span class="email" xh-text="email"></span>
+          <span xh-if="is_admin" class="badge">Admin</span>
+        </div>
+      </template>
+      <span style="color:#999;">Click a button above.</span>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       Example 2: load trigger
+       =================================================================== -->
+  <div class="section">
+    <h3>2. Load trigger (auto-fires on page load)</h3>
+    <p>This section loads automatically when the page loads.</p>
+    <div xh-get="/api/users"
+         xh-trigger="load"
+         class="result-box">
+      <template>
+        <div xh-each="users" class="user-item">
+          <span class="name" xh-text="name"></span>
+          &mdash; <span class="email" xh-text="email"></span>
+        </div>
+      </template>
+      <span class="xh-indicator">Loading users...</span>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       Example 3: keyup with delay (search)
+       =================================================================== -->
+  <div class="section">
+    <h3>3. Keyup with delay (live search)</h3>
+    <p>Type to search users. The request fires 300ms after you stop typing.</p>
+    <input type="text"
+           name="q"
+           placeholder="Search users..."
+           xh-get="/api/search"
+           xh-trigger="keyup changed delay:300ms"
+           xh-target="#search-results"
+           xh-indicator="#search-spinner">
+    <span id="search-spinner" class="xh-indicator">Searching...</span>
+    <div id="search-results" class="result-box">
+      <template>
+        <div xh-each="users" class="user-item">
+          <span class="name" xh-text="name"></span>
+          &mdash; <span class="email" xh-text="email"></span>
+        </div>
+        <div xh-unless="users" style="color:#999; font-style:italic;">
+          No results found.
+        </div>
+      </template>
+      <span style="color:#999;">Start typing to search.</span>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       Example 4: every Ns (polling)
+       =================================================================== -->
+  <div class="section">
+    <h3>4. Polling (every 5s)</h3>
+    <p>This section refreshes every 5 seconds. Watch the user count (it changes if you add/delete users from the CRUD example).</p>
+    <div xh-get="/api/users"
+         xh-trigger="every 5s"
+         class="poll-box">
+      <template>
+        <div>
+          <strong>User count:</strong> <span xh-text="users.length"></span>
+        </div>
+        <div xh-each="users" class="user-item">
+          <span class="name" xh-text="name"></span>
+        </div>
+        <div class="timestamp">Last updated: <span id="poll-time"></span></div>
+      </template>
+      <span class="xh-indicator">Polling...</span>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       Example 5: click once
+       =================================================================== -->
+  <div class="section">
+    <h3>5. Click once</h3>
+    <p>This button only fires once. After the first click, it will not trigger again.</p>
+    <button class="btn"
+            xh-get="/api/users/4"
+            xh-trigger="click once"
+            xh-target="#once-result">
+      Load User #4 (once only)
+    </button>
+    <div id="once-result" class="result-box">
+      <template>
+        <div class="user-item">
+          <span class="name" xh-text="name"></span>
+          &mdash; <span class="email" xh-text="email"></span>
+        </div>
+      </template>
+      <span style="color:#999;">Click the button (works only once).</span>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       Example 6: revealed (scroll into view)
+       =================================================================== -->
+  <div class="section">
+    <h3>6. Revealed (scroll into view)</h3>
+    <p>Scroll down to see this example. The data loads when the element becomes visible.</p>
+  </div>
+
+  <div class="revealed-box"
+       xh-get="/api/users/5"
+       xh-trigger="revealed">
+    <template>
+      <div>
+        <h3>Revealed!</h3>
+        <p>This loaded when you scrolled here.</p>
+        <p><strong xh-text="name"></strong> &mdash; <span xh-text="email"></span></p>
+      </div>
+    </template>
+    <span class="xh-indicator">Waiting to be revealed...</span>
+  </div>
+
+  <div style="height: 2rem;"></div>
+
+  <!-- ===================================================================
+       Source reference
+       =================================================================== -->
+  <div class="section">
+    <h3>Trigger syntax summary</h3>
+    <pre><code>&lt;!-- Default: click for buttons --&gt;
+&lt;button xh-get="/api/data"&gt;Click me&lt;/button&gt;
+
+&lt;!-- Auto-load on page load --&gt;
+&lt;div xh-get="/api/data" xh-trigger="load"&gt;&lt;/div&gt;
+
+&lt;!-- Debounced keyup for search --&gt;
+&lt;input xh-get="/api/search" xh-trigger="keyup changed delay:300ms"&gt;
+
+&lt;!-- Polling every 5 seconds --&gt;
+&lt;div xh-get="/api/feed" xh-trigger="every 5s"&gt;&lt;/div&gt;
+
+&lt;!-- Fire only once --&gt;
+&lt;button xh-get="/api/data" xh-trigger="click once"&gt;&lt;/button&gt;
+
+&lt;!-- Load when scrolled into view --&gt;
+&lt;div xh-get="/api/more" xh-trigger="revealed"&gt;&lt;/div&gt;</code></pre>
+  </div>
+
+  <script src="/xhtmlx.js"></script>
+  <script>
+    // Update the poll timestamp whenever the poll-box swaps
+    document.body.addEventListener("xh:afterSwap", function() {
+      var el = document.getElementById("poll-time");
+      if (el) el.textContent = new Date().toLocaleTimeString();
+    });
+  </script>
+</body>
+</html>
