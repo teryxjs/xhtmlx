@@ -937,6 +937,178 @@ img { max-width: 100%; }
   .footer-brand { flex-direction: column; }
 }
 
+/* ========== Live Demo ========== */
+.live-demo-section { background: var(--bg-primary); }
+
+.demo-container {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  margin-top: 48px;
+}
+@media (min-width: 900px) {
+  .demo-container { grid-template-columns: 1fr 1fr; }
+}
+
+.demo-widget {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color 0.3s;
+}
+.demo-widget:hover { border-color: var(--border-color-hover); }
+
+.demo-widget-header {
+  padding: 14px 20px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.demo-widget-title {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+.demo-widget-verb {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+}
+
+.demo-widget-body {
+  padding: 20px;
+  min-height: 120px;
+}
+
+.demo-widget-source {
+  padding: 12px 20px;
+  background: var(--bg-code);
+  border-top: 1px solid rgba(255,255,255,0.04);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+  overflow-x: auto;
+}
+.demo-widget-source summary {
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  margin-bottom: 8px;
+  user-select: none;
+}
+.demo-widget-source summary:hover { color: var(--accent-3); }
+
+.demo-network-log {
+  margin-top: 48px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.demo-network-header {
+  padding: 12px 20px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  font-weight: 700;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.demo-network-header .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4ade80;
+  animation: pulse-dot 2s infinite;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+.demo-network-body {
+  padding: 16px 20px;
+  max-height: 200px;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.8;
+}
+.demo-network-body:empty::after {
+  content: "Network requests will appear here...";
+  color: var(--text-muted);
+  font-style: italic;
+}
+.net-entry { display: flex; gap: 10px; align-items: center; }
+.net-method {
+  font-weight: 700;
+  font-size: 0.65rem;
+  padding: 1px 6px;
+  border-radius: 3px;
+  min-width: 50px;
+  text-align: center;
+}
+.net-url { color: var(--text-secondary); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.net-status { font-weight: 600; }
+.net-status-ok { color: #4ade80; }
+.net-time { color: var(--text-muted); }
+
+.demo-user-card {
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin: 6px 0;
+  border-left: 3px solid var(--accent-3);
+}
+.demo-user-name { font-weight: 600; color: var(--text-primary); }
+.demo-user-email { font-size: 0.8rem; color: var(--text-secondary); }
+.demo-user-company { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+
+.demo-post-card {
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin: 6px 0;
+  border-left: 3px solid var(--accent-2);
+}
+.demo-post-title { font-weight: 600; font-size: 0.85rem; color: var(--text-primary); }
+.demo-post-body { font-size: 0.78rem; color: var(--text-secondary); margin-top: 4px; }
+
+.demo-todo-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  margin: 4px 0;
+  background: var(--bg-secondary);
+  border-radius: 6px;
+  font-size: 0.82rem;
+  color: var(--text-primary);
+}
+
+.demo-btn {
+  background: var(--gradient-accent);
+  border: none;
+  border-radius: 6px;
+  padding: 8px 18px;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: opacity 0.2s;
+}
+.demo-btn:hover { opacity: 0.85; }
+.demo-loading { color: var(--accent-3); font-size: 0.8rem; }
+
 /* ========== Utility ========== */
 @media (max-width: 600px) {
   .hide-mobile { display: none; }
@@ -1229,6 +1401,7 @@ img { max-width: 100%; }
       <li><a href="#rest-api">REST API</a></li>
       <li><a href="#features">Features</a></li>
       <li><a href="#examples">Examples</a></li>
+      <li><a href="#live-demo">Live Demo</a></li>
       <li><a href="#install">Install</a></li>
       <li><a href="#comparison">Compare</a></li>
       <li>
@@ -1956,6 +2129,279 @@ img { max-width: 100%; }
     </div>
   </div>
 </section>
+
+<!-- ==================== Live Demo ==================== -->
+<section class="section live-demo-section" id="live-demo">
+  <div class="container">
+    <div class="text-center fade-in">
+      <div class="section-label">Live Demo</div>
+      <h2 class="section-title">Real API calls, right here</h2>
+      <p class="section-subtitle mx-auto">
+        These widgets use the actual xhtmlx library to make real HTTP requests to
+        <a href="https://jsonplaceholder.typicode.com" target="_blank" rel="noopener" style="color:var(--accent-3)">JSONPlaceholder</a>.
+        Open DevTools Network tab to see the requests fly.
+      </p>
+    </div>
+
+    <div class="demo-container fade-in">
+      <!-- Widget 1: GET users -->
+      <div class="demo-widget">
+        <div class="demo-widget-header">
+          <span class="demo-widget-title">Load Users</span>
+          <span class="demo-widget-verb method-get">GET</span>
+        </div>
+        <div class="demo-widget-body">
+          <button class="demo-btn"
+                  xh-get="https://jsonplaceholder.typicode.com/users?_limit=4"
+                  xh-target="#demo-users"
+                  xh-indicator="#demo-users-loading">
+            Fetch Users
+          </button>
+          <span id="demo-users-loading" class="xh-indicator demo-loading"> Loading...</span>
+          <div id="demo-users" style="margin-top:12px">
+            <template>
+              <div xh-each="$self">
+                <div class="demo-user-card">
+                  <div class="demo-user-name" xh-text="name"></div>
+                  <div class="demo-user-email" xh-text="email"></div>
+                  <div class="demo-user-company" xh-text="company.name"></div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+        <div class="demo-widget-source">
+          <details>
+            <summary>View source HTML</summary>
+            <pre>&lt;button xh-get="https://jsonplaceholder.typicode.com/users?_limit=4"
+        xh-target="#demo-users"
+        xh-indicator="#loading"&gt;
+  Fetch Users
+&lt;/button&gt;
+&lt;div id="demo-users"&gt;
+  &lt;template&gt;
+    &lt;div xh-each="$self"&gt;
+      &lt;div class="user-card"&gt;
+        &lt;span xh-text="name"&gt;&lt;/span&gt;
+        &lt;span xh-text="email"&gt;&lt;/span&gt;
+        &lt;span xh-text="company.name"&gt;&lt;/span&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/template&gt;
+&lt;/div&gt;</pre>
+          </details>
+        </div>
+      </div>
+
+      <!-- Widget 2: GET posts for user -->
+      <div class="demo-widget">
+        <div class="demo-widget-header">
+          <span class="demo-widget-title">Load Posts (User 1)</span>
+          <span class="demo-widget-verb method-get">GET</span>
+        </div>
+        <div class="demo-widget-body">
+          <button class="demo-btn"
+                  xh-get="https://jsonplaceholder.typicode.com/posts?userId=1&_limit=3"
+                  xh-target="#demo-posts"
+                  xh-indicator="#demo-posts-loading">
+            Fetch Posts
+          </button>
+          <span id="demo-posts-loading" class="xh-indicator demo-loading"> Loading...</span>
+          <div id="demo-posts" style="margin-top:12px">
+            <template>
+              <div xh-each="$self">
+                <div class="demo-post-card">
+                  <div class="demo-post-title" xh-text="title"></div>
+                  <div class="demo-post-body" xh-text="body"></div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+        <div class="demo-widget-source">
+          <details>
+            <summary>View source HTML</summary>
+            <pre>&lt;button xh-get=".../posts?userId=1&amp;_limit=3"
+        xh-target="#demo-posts"&gt;
+  Fetch Posts
+&lt;/button&gt;
+&lt;div id="demo-posts"&gt;
+  &lt;template&gt;
+    &lt;div xh-each="$self"&gt;
+      &lt;span xh-text="title"&gt;&lt;/span&gt;
+      &lt;span xh-text="body"&gt;&lt;/span&gt;
+    &lt;/div&gt;
+  &lt;/template&gt;
+&lt;/div&gt;</pre>
+          </details>
+        </div>
+      </div>
+
+      <!-- Widget 3: POST create -->
+      <div class="demo-widget">
+        <div class="demo-widget-header">
+          <span class="demo-widget-title">Create Post</span>
+          <span class="demo-widget-verb method-post">POST</span>
+        </div>
+        <div class="demo-widget-body">
+          <div xh-post="https://jsonplaceholder.typicode.com/posts"
+               xh-vals='{"title":"Hello from xhtmlx!","body":"This post was created by a declarative HTML attribute.","userId":1}'
+               xh-target="#demo-create-result"
+               xh-indicator="#demo-create-loading"
+               xh-trigger="click"
+               class="demo-btn" style="display:inline-block">
+            Create Post
+          </div>
+          <span id="demo-create-loading" class="xh-indicator demo-loading"> Sending...</span>
+          <div id="demo-create-result" style="margin-top:12px">
+            <template>
+              <div class="demo-post-card" style="border-left-color:#4ade80">
+                <div style="font-size:0.7rem;color:#4ade80;font-weight:700;margin-bottom:4px">CREATED (id: <span xh-text="id"></span>)</div>
+                <div class="demo-post-title" xh-text="title"></div>
+                <div class="demo-post-body" xh-text="body"></div>
+              </div>
+            </template>
+          </div>
+        </div>
+        <div class="demo-widget-source">
+          <details>
+            <summary>View source HTML</summary>
+            <pre>&lt;div xh-post=".../posts"
+     xh-vals='{"title":"Hello!","body":"..."}'
+     xh-target="#result"
+     xh-trigger="click"&gt;
+  Create Post
+&lt;/div&gt;
+&lt;div id="result"&gt;
+  &lt;template&gt;
+    &lt;span xh-text="id"&gt;&lt;/span&gt;
+    &lt;span xh-text="title"&gt;&lt;/span&gt;
+  &lt;/template&gt;
+&lt;/div&gt;</pre>
+          </details>
+        </div>
+      </div>
+
+      <!-- Widget 4: GET todos with auto-load -->
+      <div class="demo-widget">
+        <div class="demo-widget-header">
+          <span class="demo-widget-title">Todos (auto-load)</span>
+          <span class="demo-widget-verb method-get">GET</span>
+        </div>
+        <div class="demo-widget-body">
+          <div xh-get="https://jsonplaceholder.typicode.com/todos?_limit=5"
+               xh-trigger="load"
+               xh-target="#demo-todos"
+               xh-indicator="#demo-todos-loading">
+            <span id="demo-todos-loading" class="xh-indicator demo-loading">Loading todos...</span>
+          </div>
+          <div id="demo-todos">
+            <template>
+              <div xh-each="$self">
+                <div class="demo-todo-item">
+                  <span xh-if="completed" style="color:#4ade80">&#10003;</span>
+                  <span xh-unless="completed" style="color:var(--text-muted)">&#9675;</span>
+                  <span xh-text="title"></span>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+        <div class="demo-widget-source">
+          <details>
+            <summary>View source HTML</summary>
+            <pre>&lt;div xh-get=".../todos?_limit=5"
+     xh-trigger="load"
+     xh-target="#todos"&gt;
+&lt;/div&gt;
+&lt;div id="todos"&gt;
+  &lt;template&gt;
+    &lt;div xh-each="$self"&gt;
+      &lt;span xh-if="completed"&gt;&#10003;&lt;/span&gt;
+      &lt;span xh-unless="completed"&gt;&#9675;&lt;/span&gt;
+      &lt;span xh-text="title"&gt;&lt;/span&gt;
+    &lt;/div&gt;
+  &lt;/template&gt;
+&lt;/div&gt;</pre>
+          </details>
+        </div>
+      </div>
+    </div>
+
+    <!-- Network log -->
+    <div class="demo-network-log fade-in">
+      <div class="demo-network-header"><div class="dot"></div> Network Log</div>
+      <div class="demo-network-body" id="demo-network-log"></div>
+    </div>
+  </div>
+</section>
+
+<script src="xhtmlx.js"></script>
+<script>
+(function() {
+  // Intercept fetch to log requests in the network panel
+  var origFetch = window.fetch;
+  var logEl = document.getElementById("demo-network-log");
+
+  window.fetch = function(url, opts) {
+    var method = (opts && opts.method) || "GET";
+    var start = performance.now();
+
+    return origFetch.apply(this, arguments).then(function(response) {
+      var duration = Math.round(performance.now() - start);
+      if (logEl) {
+        var shortUrl = url.replace("https://jsonplaceholder.typicode.com", "");
+        var methodClass = "method-" + method.toLowerCase();
+        var entry = document.createElement("div");
+        entry.className = "net-entry";
+        entry.innerHTML =
+          '<span class="net-method ' + methodClass + '">' + method + '</span>' +
+          '<span class="net-url">' + shortUrl + '</span>' +
+          '<span class="net-status net-status-ok">' + response.status + '</span>' +
+          '<span class="net-time">' + duration + 'ms</span>';
+        logEl.appendChild(entry);
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+      return response;
+    });
+  };
+
+  // JSONPlaceholder returns arrays for list endpoints. xhtmlx expects objects
+  // for data context, so we use "$self" in xh-each to iterate the root array.
+  // We need to handle this: when the response is an array, wrap it so
+  // DataContext can resolve "$self" as the array itself.
+  // Actually, xhtmlx already sets the data as-is in DataContext. For arrays,
+  // we use xh-each="$self" — but DataContext.resolve("$self") won't find it.
+  // Let's patch: when the JSON is an array, wrap as { $self: [...] }.
+  var origProcess = xhtmlx.process;
+  var origXhtmlxFetch = window.fetch;
+
+  // We'll handle this by intercepting at a different level: override
+  // the template rendering to detect arrays. Actually, the simplest approach
+  // is a tiny fetch wrapper that wraps array responses.
+  var realFetch = window.fetch;
+  window.fetch = function(url, opts) {
+    return realFetch.apply(this, arguments).then(function(response) {
+      // Clone the response so we can read it twice if needed
+      var cloned = response.clone();
+      // Override text() to wrap arrays
+      var origText = response.text.bind(response);
+      response.text = function() {
+        return origText().then(function(text) {
+          try {
+            var parsed = JSON.parse(text);
+            if (Array.isArray(parsed)) {
+              return JSON.stringify({ "$self": parsed });
+            }
+          } catch(e) {}
+          return text;
+        });
+      };
+      return response;
+    });
+  };
+})();
+</script>
 
 <!-- ==================== Installation ==================== -->
 <section class="section" id="install">
