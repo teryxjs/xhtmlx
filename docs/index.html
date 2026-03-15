@@ -1481,6 +1481,199 @@ html[data-theme="light"] ::selection {
   color: #1e293b;
 }
 
+/* ========== Flow Step Links ========== */
+a.flow-step-link {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+a.flow-step-link:hover {
+  border-color: var(--accent-3);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(6, 182, 212, 0.15);
+}
+
+/* ========== JSON Response Section ========== */
+.data-context-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-top: 48px;
+}
+@media (max-width: 700px) {
+  .data-context-grid { grid-template-columns: 1fr; }
+}
+
+.context-chain {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin-top: 48px;
+  flex-wrap: wrap;
+}
+.context-chain-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 16px 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  min-width: 140px;
+}
+.context-chain-item-label {
+  font-weight: 700;
+  font-size: 0.9rem;
+  margin-bottom: 4px;
+}
+.context-chain-item-desc {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+.context-chain-arrow {
+  color: var(--accent-2);
+  font-size: 1.3rem;
+  padding: 0 8px;
+  font-family: var(--font-mono);
+}
+@media (max-width: 640px) {
+  .context-chain { flex-direction: column; }
+  .context-chain-arrow { transform: rotate(90deg); }
+}
+
+/* ========== Templates Section ========== */
+.templates-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-top: 48px;
+}
+@media (max-width: 900px) {
+  .templates-grid { grid-template-columns: 1fr; }
+}
+.template-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: all var(--transition);
+}
+.template-card:hover {
+  border-color: var(--border-color-hover);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-glow);
+}
+.template-card-header {
+  padding: 20px 24px 16px;
+}
+.template-card-title {
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin-bottom: 6px;
+}
+.template-card-desc {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.template-card-code {
+  padding: 0 16px 16px;
+}
+
+.template-highlights {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 48px;
+  justify-content: center;
+}
+.template-highlight-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 100px;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+.template-highlight-tag .tag-icon {
+  color: var(--accent-3);
+  font-size: 0.9rem;
+}
+
+/* ========== Rendering Section ========== */
+.swap-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-top: 48px;
+}
+@media (max-width: 900px) {
+  .swap-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 500px) {
+  .swap-grid { grid-template-columns: 1fr; }
+}
+.swap-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 20px;
+  text-align: center;
+  transition: all var(--transition);
+}
+.swap-card:hover {
+  border-color: var(--border-color-hover);
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-glow);
+}
+.swap-card-name {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.9rem;
+  margin-bottom: 10px;
+  color: var(--accent-3);
+}
+.swap-card-diagram {
+  background: var(--bg-code);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 12px 8px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+  min-height: 70px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.swap-card-diagram .target-line {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.swap-card-diagram .new-line {
+  color: var(--accent-4);
+  font-weight: 600;
+}
+.swap-card-attr {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+.swap-card.is-default .swap-card-name::after {
+  content: " (default)";
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
 /* Syntax highlighting - light mode variants */
 html[data-theme="light"] .syn-tag { color: #1d4ed8; }
 html[data-theme="light"] .syn-attr { color: #7c3aed; }
@@ -1632,35 +1825,35 @@ html[data-theme="light"] .syn-kw { color: #9333ea; font-weight: 600; }
     </div>
 
     <div class="flow-diagram fade-in">
-      <div class="flow-step">
+      <a href="#features" class="flow-step flow-step-link">
         <div class="flow-icon">&lt;/&gt;</div>
         <div class="flow-step-title">HTML Attributes</div>
         <div class="flow-step-desc">xh-get, xh-trigger</div>
-      </div>
+      </a>
       <div class="flow-connector">&#8594;</div>
-      <div class="flow-step">
+      <a href="#rest-api" class="flow-step flow-step-link">
         <div class="flow-icon">&#9889;</div>
         <div class="flow-step-title">REST API Call</div>
         <div class="flow-step-desc">fetch() with config</div>
-      </div>
+      </a>
       <div class="flow-connector">&#8594;</div>
-      <div class="flow-step">
+      <a href="#json-response" class="flow-step flow-step-link">
         <div class="flow-icon">{ }</div>
         <div class="flow-step-title">JSON Response</div>
         <div class="flow-step-desc">Structured data</div>
-      </div>
+      </a>
       <div class="flow-connector">&#8594;</div>
-      <div class="flow-step">
+      <a href="#templates" class="flow-step flow-step-link">
         <div class="flow-icon">&#9998;</div>
         <div class="flow-step-title">Template</div>
         <div class="flow-step-desc">Inline or external</div>
-      </div>
+      </a>
       <div class="flow-connector">&#8594;</div>
-      <div class="flow-step">
+      <a href="#rendering" class="flow-step flow-step-link">
         <div class="flow-icon">&#9745;</div>
         <div class="flow-step-title">Rendered UI</div>
         <div class="flow-step-desc">Swapped into DOM</div>
-      </div>
+      </a>
     </div>
 
     <div class="compare-grid">
@@ -1921,6 +2114,188 @@ html[data-theme="light"] .syn-kw { color: #9333ea; font-weight: 600; }
   </div>
 </section>
 
+<!-- ==================== JSON Response ==================== -->
+<section class="section" id="json-response" style="background: var(--bg-secondary); border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);">
+  <div class="container">
+    <div class="text-center fade-in">
+      <div class="section-label">Data Flow</div>
+      <h2 class="section-title">JSON becomes your data context</h2>
+      <p class="section-subtitle mx-auto">
+        Every field in the JSON response is accessible via dot notation. Navigate parent chains with <code>$parent</code>, reach the top with <code>$root</code>, and track position with <code>$index</code>.
+      </p>
+    </div>
+
+    <div class="data-context-grid fade-in">
+      <!-- Left: JSON response example -->
+      <div>
+        <div class="code-block">
+          <div class="code-block-header">
+            <span class="code-block-label">JSON Response</span>
+          </div>
+          <pre><span class="syn-punct">{</span>
+  <span class="syn-key">"user"</span><span class="syn-punct">:</span> <span class="syn-punct">{</span>
+    <span class="syn-key">"name"</span><span class="syn-punct">:</span> <span class="syn-str">"Alice Chen"</span><span class="syn-punct">,</span>
+    <span class="syn-key">"role"</span><span class="syn-punct">:</span> <span class="syn-str">"admin"</span><span class="syn-punct">,</span>
+    <span class="syn-key">"team"</span><span class="syn-punct">:</span> <span class="syn-punct">{</span>
+      <span class="syn-key">"name"</span><span class="syn-punct">:</span> <span class="syn-str">"Engineering"</span><span class="syn-punct">,</span>
+      <span class="syn-key">"members"</span><span class="syn-punct">:</span> <span class="syn-punct">[</span>
+        <span class="syn-punct">{</span> <span class="syn-key">"name"</span><span class="syn-punct">:</span> <span class="syn-str">"Bob"</span> <span class="syn-punct">},</span>
+        <span class="syn-punct">{</span> <span class="syn-key">"name"</span><span class="syn-punct">:</span> <span class="syn-str">"Carol"</span> <span class="syn-punct">}</span>
+      <span class="syn-punct">]</span>
+    <span class="syn-punct">}</span>
+  <span class="syn-punct">}</span>
+<span class="syn-punct">}</span></pre>
+        </div>
+      </div>
+
+      <!-- Right: How fields are accessed -->
+      <div>
+        <div class="code-block">
+          <div class="code-block-header">
+            <span class="code-block-label">Template Access</span>
+          </div>
+          <pre><span class="syn-comment">&lt;!-- Dot notation for nested fields --&gt;</span>
+<span class="syn-tag">&lt;h1</span> <span class="syn-attr">xh-text</span>=<span class="syn-val">"user.name"</span><span class="syn-tag">&gt;&lt;/h1&gt;</span>
+<span class="syn-comment">&lt;!-- Renders: Alice Chen --&gt;</span>
+
+<span class="syn-tag">&lt;span</span> <span class="syn-attr">xh-text</span>=<span class="syn-val">"user.team.name"</span><span class="syn-tag">&gt;&lt;/span&gt;</span>
+<span class="syn-comment">&lt;!-- Renders: Engineering --&gt;</span>
+
+<span class="syn-comment">&lt;!-- Inside xh-each, $parent accesses outer scope --&gt;</span>
+<span class="syn-tag">&lt;div</span> <span class="syn-attr">xh-each</span>=<span class="syn-val">"user.team.members"</span><span class="syn-tag">&gt;</span>
+  <span class="syn-tag">&lt;span</span> <span class="syn-attr">xh-text</span>=<span class="syn-val">"name"</span><span class="syn-tag">&gt;&lt;/span&gt;</span>
+  <span class="syn-comment">&lt;!-- $index: 0, 1, ... --&gt;</span>
+  <span class="syn-tag">&lt;span</span> <span class="syn-attr">xh-text</span>=<span class="syn-val">"$parent.user.role"</span><span class="syn-tag">&gt;&lt;/span&gt;</span>
+  <span class="syn-comment">&lt;!-- Renders: admin --&gt;</span>
+  <span class="syn-tag">&lt;span</span> <span class="syn-attr">xh-text</span>=<span class="syn-val">"$root.user.name"</span><span class="syn-tag">&gt;&lt;/span&gt;</span>
+  <span class="syn-comment">&lt;!-- Renders: Alice Chen --&gt;</span>
+<span class="syn-tag">&lt;/div&gt;</span></pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="context-chain fade-in">
+      <div class="context-chain-item">
+        <div class="context-chain-item-label">Root Context</div>
+        <div class="context-chain-item-desc">$root &middot; full JSON</div>
+      </div>
+      <div class="context-chain-arrow">&#8594;</div>
+      <div class="context-chain-item">
+        <div class="context-chain-item-label">Child Context</div>
+        <div class="context-chain-item-desc">$parent &middot; dot path</div>
+      </div>
+      <div class="context-chain-arrow">&#8594;</div>
+      <div class="context-chain-item">
+        <div class="context-chain-item-label">Each Item Context</div>
+        <div class="context-chain-item-desc">$index &middot; current item</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== Templates ==================== -->
+<section class="section" id="templates">
+  <div class="container">
+    <div class="text-center fade-in">
+      <div class="section-label">Templates</div>
+      <h2 class="section-title">Compose UIs from reusable template files</h2>
+      <p class="section-subtitle mx-auto">
+        Three ways to define templates: load from a file, embed inline, or bind directly to the element. All support xhtmlx attributes for recursive composition.
+      </p>
+    </div>
+
+    <div class="templates-grid fade-in">
+      <!-- 1. External file -->
+      <div class="template-card">
+        <div class="template-card-header">
+          <div class="template-card-title">External file</div>
+          <div class="template-card-desc">Load a reusable template from a separate HTML file. Cached after first fetch.</div>
+        </div>
+        <div class="template-card-code">
+          <div class="code-block">
+            <div class="code-block-header">
+              <span class="code-block-label">index.html</span>
+            </div>
+            <pre><span class="syn-tag">&lt;div</span> <span class="syn-attr">xh-get</span>=<span class="syn-val">"/api/user/1"</span>
+     <span class="syn-attr">xh-trigger</span>=<span class="syn-val">"load"</span>
+     <span class="syn-attr">xh-template</span>=<span class="syn-val">"/templates/user.html"</span><span class="syn-tag">&gt;
+&lt;/div&gt;</span></pre>
+          </div>
+          <div class="code-block">
+            <div class="code-block-header">
+              <span class="code-block-label">/templates/user.html</span>
+            </div>
+            <pre><span class="syn-tag">&lt;div</span> <span class="syn-attr">class</span>=<span class="syn-val">"card"</span><span class="syn-tag">&gt;</span>
+  <span class="syn-tag">&lt;h2</span> <span class="syn-attr">xh-text</span>=<span class="syn-val">"name"</span><span class="syn-tag">&gt;&lt;/h2&gt;</span>
+  <span class="syn-tag">&lt;p</span> <span class="syn-attr">xh-text</span>=<span class="syn-val">"email"</span><span class="syn-tag">&gt;&lt;/p&gt;</span>
+<span class="syn-tag">&lt;/div&gt;</span></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Inline template -->
+      <div class="template-card">
+        <div class="template-card-header">
+          <div class="template-card-title">Inline template</div>
+          <div class="template-card-desc">Embed a <code>&lt;template&gt;</code> tag inside the element. No extra file needed.</div>
+        </div>
+        <div class="template-card-code">
+          <div class="code-block">
+            <div class="code-block-header">
+              <span class="code-block-label">index.html</span>
+            </div>
+            <pre><span class="syn-tag">&lt;div</span> <span class="syn-attr">xh-get</span>=<span class="syn-val">"/api/user/1"</span>
+     <span class="syn-attr">xh-trigger</span>=<span class="syn-val">"load"</span><span class="syn-tag">&gt;</span>
+  <span class="syn-tag">&lt;template&gt;</span>
+    <span class="syn-tag">&lt;div</span> <span class="syn-attr">class</span>=<span class="syn-val">"card"</span><span class="syn-tag">&gt;</span>
+      <span class="syn-tag">&lt;h2</span> <span class="syn-attr">xh-text</span>=<span class="syn-val">"name"</span><span class="syn-tag">&gt;&lt;/h2&gt;</span>
+      <span class="syn-tag">&lt;p</span> <span class="syn-attr">xh-text</span>=<span class="syn-val">"email"</span><span class="syn-tag">&gt;&lt;/p&gt;</span>
+    <span class="syn-tag">&lt;/div&gt;</span>
+  <span class="syn-tag">&lt;/template&gt;</span>
+<span class="syn-tag">&lt;/div&gt;</span></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Self-binding -->
+      <div class="template-card">
+        <div class="template-card-header">
+          <div class="template-card-title">Self-binding</div>
+          <div class="template-card-desc">The element itself is the template. Use xh-text, xh-attr-* directly on it or its children.</div>
+        </div>
+        <div class="template-card-code">
+          <div class="code-block">
+            <div class="code-block-header">
+              <span class="code-block-label">index.html</span>
+            </div>
+            <pre><span class="syn-tag">&lt;span</span> <span class="syn-attr">xh-get</span>=<span class="syn-val">"/api/count"</span>
+      <span class="syn-attr">xh-trigger</span>=<span class="syn-val">"load"</span>
+      <span class="syn-attr">xh-text</span>=<span class="syn-val">"total"</span><span class="syn-tag">&gt;
+&lt;/span&gt;</span>
+
+<span class="syn-tag">&lt;img</span> <span class="syn-attr">xh-get</span>=<span class="syn-val">"/api/user/1"</span>
+     <span class="syn-attr">xh-trigger</span>=<span class="syn-val">"load"</span>
+     <span class="syn-attr">xh-attr-src</span>=<span class="syn-val">"avatar"</span>
+     <span class="syn-attr">xh-attr-alt</span>=<span class="syn-val">"name"</span><span class="syn-tag">&gt;</span></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="template-highlights fade-in">
+      <div class="template-highlight-tag">
+        <span class="tag-icon">&#9889;</span> Templates are cached after first load
+      </div>
+      <div class="template-highlight-tag">
+        <span class="tag-icon">&#128257;</span> Templates can contain xhtmlx attributes (recursive)
+      </div>
+      <div class="template-highlight-tag">
+        <span class="tag-icon">&#123;&#123;&#125;&#125;</span> Supports {{field}} URL interpolation
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ==================== Features ==================== -->
 <section class="section" id="features">
   <div class="container">
@@ -2016,6 +2391,112 @@ html[data-theme="light"] .syn-kw { color: #9333ea; font-weight: 600; }
         <div class="feature-desc">A single file at approximately 5KB gzipped. No build step, no framework, no toolchain. Just add a script tag and go.</div>
         <span class="feature-attr">&lt;script src="xhtmlx.js"&gt;</span>
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== Rendering ==================== -->
+<section class="section" id="rendering" style="background: var(--bg-secondary); border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);">
+  <div class="container">
+    <div class="text-center fade-in">
+      <div class="section-label">Rendering</div>
+      <h2 class="section-title">Eight ways to update the DOM</h2>
+      <p class="section-subtitle mx-auto">
+        Control exactly where rendered content lands with <code>xh-swap</code>. Combine with <code>xh-target</code> to direct output to any element on the page.
+      </p>
+    </div>
+
+    <div class="swap-grid fade-in">
+      <div class="swap-card is-default">
+        <div class="swap-card-name">innerHTML</div>
+        <div class="swap-card-diagram">
+          <div class="target-line">&lt;div id="target"&gt;</div>
+          <div class="new-line">&nbsp;&nbsp;new content</div>
+          <div class="target-line">&lt;/div&gt;</div>
+        </div>
+        <div class="swap-card-attr">xh-swap="innerHTML"</div>
+      </div>
+
+      <div class="swap-card">
+        <div class="swap-card-name">outerHTML</div>
+        <div class="swap-card-diagram">
+          <div style="color:var(--text-muted); text-decoration: line-through;">&lt;div id="target"&gt;...&lt;/div&gt;</div>
+          <div class="new-line">new content replaces element</div>
+        </div>
+        <div class="swap-card-attr">xh-swap="outerHTML"</div>
+      </div>
+
+      <div class="swap-card">
+        <div class="swap-card-name">beforeend</div>
+        <div class="swap-card-diagram">
+          <div class="target-line">&lt;div id="target"&gt;</div>
+          <div style="color:var(--text-muted)">&nbsp;&nbsp;existing content</div>
+          <div class="new-line">&nbsp;&nbsp;new content &#8592;</div>
+          <div class="target-line">&lt;/div&gt;</div>
+        </div>
+        <div class="swap-card-attr">xh-swap="beforeend"</div>
+      </div>
+
+      <div class="swap-card">
+        <div class="swap-card-name">afterbegin</div>
+        <div class="swap-card-diagram">
+          <div class="target-line">&lt;div id="target"&gt;</div>
+          <div class="new-line">&nbsp;&nbsp;&#8594; new content</div>
+          <div style="color:var(--text-muted)">&nbsp;&nbsp;existing content</div>
+          <div class="target-line">&lt;/div&gt;</div>
+        </div>
+        <div class="swap-card-attr">xh-swap="afterbegin"</div>
+      </div>
+
+      <div class="swap-card">
+        <div class="swap-card-name">beforebegin</div>
+        <div class="swap-card-diagram">
+          <div class="new-line">new content &#8592;</div>
+          <div class="target-line">&lt;div id="target"&gt;</div>
+          <div style="color:var(--text-muted)">&nbsp;&nbsp;existing content</div>
+          <div class="target-line">&lt;/div&gt;</div>
+        </div>
+        <div class="swap-card-attr">xh-swap="beforebegin"</div>
+      </div>
+
+      <div class="swap-card">
+        <div class="swap-card-name">afterend</div>
+        <div class="swap-card-diagram">
+          <div class="target-line">&lt;div id="target"&gt;</div>
+          <div style="color:var(--text-muted)">&nbsp;&nbsp;existing content</div>
+          <div class="target-line">&lt;/div&gt;</div>
+          <div class="new-line">new content &#8592;</div>
+        </div>
+        <div class="swap-card-attr">xh-swap="afterend"</div>
+      </div>
+
+      <div class="swap-card">
+        <div class="swap-card-name">delete</div>
+        <div class="swap-card-diagram">
+          <div style="color:var(--text-muted); text-decoration: line-through;">&lt;div id="target"&gt;</div>
+          <div style="color:var(--text-muted); text-decoration: line-through;">&nbsp;&nbsp;content</div>
+          <div style="color:var(--text-muted); text-decoration: line-through;">&lt;/div&gt;</div>
+          <div class="new-line" style="color: #ef4444;">removed from DOM</div>
+        </div>
+        <div class="swap-card-attr">xh-swap="delete"</div>
+      </div>
+
+      <div class="swap-card">
+        <div class="swap-card-name">none</div>
+        <div class="swap-card-diagram">
+          <div class="target-line">&lt;div id="target"&gt;</div>
+          <div style="color:var(--text-muted)">&nbsp;&nbsp;unchanged</div>
+          <div class="target-line">&lt;/div&gt;</div>
+          <div class="new-line" style="color: var(--accent-2);">events still fire</div>
+        </div>
+        <div class="swap-card-attr">xh-swap="none"</div>
+      </div>
+    </div>
+
+    <div style="text-align: center; margin-top: 36px;" class="fade-in">
+      <p style="font-size: 0.9rem; color: var(--text-secondary);">
+        Use <code style="background: rgba(99,102,241,0.1); padding: 2px 8px; border-radius: 4px; color: var(--accent-3); font-size: 0.82rem;">xh-target="#other-element"</code> to direct rendered output to a different element on the page.
+      </p>
     </div>
   </div>
 </section>
