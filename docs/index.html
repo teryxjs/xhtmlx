@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -36,6 +36,30 @@
   --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* ========== Light Theme ========== */
+html[data-theme="light"] {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f1f5f9;
+  --bg-code: #f1f5f9;
+  --bg-code-header: #e2e8f0;
+  --text-primary: #1e293b;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --accent-1: #4f46e5;
+  --accent-2: #7c3aed;
+  --accent-3: #0891b2;
+  --accent-4: #06b6d4;
+  --gradient-accent: linear-gradient(135deg, #4f46e5, #7c3aed, #0891b2);
+  --gradient-subtle: linear-gradient(135deg, rgba(79,70,229,0.06), rgba(8,145,178,0.06));
+  --gradient-glow: linear-gradient(135deg, rgba(79,70,229,0.1), rgba(8,145,178,0.1));
+  --border-color: rgba(79,70,229,0.12);
+  --border-color-hover: rgba(79,70,229,0.25);
+  --shadow-lg: 0 25px 50px -12px rgba(0,0,0,0.1);
+  --shadow-glow: 0 0 40px rgba(79,70,229,0.08);
+}
+
 /* ========== Reset & Base ========== */
 *, *::before, *::after {
   box-sizing: border-box;
@@ -56,6 +80,7 @@ body {
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 a {
@@ -137,7 +162,7 @@ img { max-width: 100%; }
   right: 0;
   z-index: 100;
   padding: 0 24px;
-  transition: background var(--transition), box-shadow var(--transition);
+  transition: background var(--transition), box-shadow var(--transition), background-color 0.3s ease, color 0.3s ease;
 }
 .nav.scrolled {
   background: rgba(11, 14, 23, 0.85);
@@ -1385,6 +1410,89 @@ img { max-width: 100%; }
   color: var(--text-muted);
   font-style: italic;
 }
+
+/* ========== Theme Toggle Button ========== */
+.theme-toggle {
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  transition: all 0.3s;
+  line-height: 1;
+}
+.theme-toggle:hover {
+  border-color: var(--border-color-hover);
+  background: var(--gradient-subtle);
+}
+
+/* ========== Light Mode Overrides ========== */
+
+/* Nav background when scrolled in light mode */
+html[data-theme="light"] .nav.scrolled {
+  background: rgba(255, 255, 255, 0.85);
+}
+
+/* Mobile menu background in light mode */
+@media (max-width: 768px) {
+  html[data-theme="light"] .nav-links {
+    background: rgba(255, 255, 255, 0.95);
+  }
+}
+
+/* Hero background glow in light mode */
+html[data-theme="light"] .hero::before {
+  background: radial-gradient(circle, rgba(79,70,229,0.08) 0%, rgba(8,145,178,0.04) 40%, transparent 70%);
+}
+
+/* Hero grid in light mode */
+html[data-theme="light"] .hero-grid-bg {
+  background-image:
+    linear-gradient(rgba(79,70,229,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(79,70,229,0.05) 1px, transparent 1px);
+}
+
+/* Code blocks get visible borders in light mode */
+html[data-theme="light"] .code-block {
+  border-color: rgba(79,70,229,0.18);
+}
+html[data-theme="light"] .rest-code {
+  border-color: rgba(79,70,229,0.12);
+}
+html[data-theme="light"] .rest-url {
+  border-color: rgba(79,70,229,0.12);
+}
+
+/* Demo widget source border in light mode */
+html[data-theme="light"] .demo-widget-source {
+  border-top: 1px solid rgba(0,0,0,0.06);
+}
+
+/* Mock card text in light mode */
+html[data-theme="light"] .rest-rendered-content .mock-card .mock-name {
+  color: var(--text-primary);
+}
+
+/* Selection color in light mode */
+html[data-theme="light"] ::selection {
+  background: rgba(79,70,229,0.2);
+  color: #1e293b;
+}
+
+/* Syntax highlighting - light mode variants */
+html[data-theme="light"] .syn-tag { color: #1d4ed8; }
+html[data-theme="light"] .syn-attr { color: #7c3aed; }
+html[data-theme="light"] .syn-val { color: #16a34a; }
+html[data-theme="light"] .syn-interp { color: #ca8a04; font-weight: 600; }
+html[data-theme="light"] .syn-comment { color: #94a3b8; font-style: italic; }
+html[data-theme="light"] .syn-str { color: #16a34a; }
+html[data-theme="light"] .syn-key { color: #7c3aed; }
+html[data-theme="light"] .syn-num { color: #ca8a04; }
+html[data-theme="light"] .syn-bool { color: #db2777; }
+html[data-theme="light"] .syn-punct { color: #64748b; }
+html[data-theme="light"] .syn-kw { color: #9333ea; font-weight: 600; }
 </style>
 </head>
 <body>
@@ -1409,6 +1517,9 @@ img { max-width: 100%; }
           <svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
           GitHub
         </a>
+      </li>
+      <li>
+        <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark/light mode" title="Toggle dark/light mode">&#9790;</button>
       </li>
     </ul>
   </div>
@@ -2666,6 +2777,23 @@ img { max-width: 100%; }
       }
     });
   }
+
+  // --- Theme toggle ---
+  var themeToggle = document.getElementById("themeToggle");
+  function getPreferredTheme() {
+    var stored = localStorage.getItem("xhtmlx-theme");
+    if (stored) return stored;
+    return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+  }
+  function setTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("xhtmlx-theme", theme);
+    themeToggle.textContent = theme === "dark" ? "\u2600" : "\u263E"; // sun : moon
+  }
+  setTheme(getPreferredTheme());
+  themeToggle.addEventListener("click", function() {
+    setTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark");
+  });
 })();
 </script>
 </body>
