@@ -19,6 +19,8 @@ jobs:
           cache: npm
           registry-url: https://registry.npmjs.org
       - run: npm ci
+      - run: npm --version
+      - run: node --version
       - run: npm run check
       - run: npm run lint
       - run: npm test
@@ -27,7 +29,9 @@ jobs:
         run: npm pack --dry-run
       - name: Publish with OIDC trusted publisher
         run: |
-          # Remove the placeholder token that setup-node creates
-          # so npm falls through to OIDC authentication
-          npm config delete //registry.npmjs.org/:_authToken 2>/dev/null || true
+          # Ensure npm is new enough for OIDC (>=11.5.1)
+          npm install -g npm@latest
+          npm --version
+          # Remove placeholder token from setup-node
+          sed -i '/_authToken/d' $NPM_CONFIG_USERCONFIG 2>/dev/null || true
           npm publish --provenance --access public
