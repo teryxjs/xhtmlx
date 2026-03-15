@@ -3,7 +3,7 @@
  */
 
 const xhtmlx = require('../../xhtmlx.js');
-const { DataContext, processEach, applyBindings, processBindingsInTree } = xhtmlx._internals;
+const { DataContext, processEach } = xhtmlx._internals;
 
 describe('processEach (xh-each)', () => {
   let container;

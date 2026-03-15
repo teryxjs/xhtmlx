@@ -37,10 +37,7 @@ const xhtmlx = require('../../xhtmlx.js');
 const {
   DataContext,
   setupWebSocket,
-  elementStates,
-  applyBindings,
-  processElement,
-  processBindingsInTree
+  elementStates
 } = xhtmlx._internals;
 
 describe('WebSocket support (xh-ws)', () => {

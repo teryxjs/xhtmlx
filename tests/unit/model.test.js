@@ -3,7 +3,7 @@
  */
 
 const xhtmlx = require('../../xhtmlx.js');
-const { DataContext, applyBindings, processEach, processBindingsInTree } = xhtmlx._internals;
+const { DataContext, applyBindings, processEach } = xhtmlx._internals;
 
 describe('xh-model pre-fill (Option C)', () => {
   let container;
@@ -180,14 +180,27 @@ describe('xh-model pre-fill (Option C)', () => {
       expect(el.checked).toBe(false);
     });
 
-    it('uses loose equality for matching (number vs string)', () => {
+    it('uses strict equality — number does not match string value', () => {
       const el = document.createElement('input');
       el.setAttribute('type', 'radio');
       el.setAttribute('xh-model', 'choice');
       el.value = '1';
       container.appendChild(el);
 
-      const ctx = new DataContext({ choice: 1 });
+      const ctx = new DataContext({ choice: 1 }); // number 1 !== string "1"
+      applyBindings(el, ctx);
+
+      expect(el.checked).toBe(false);
+    });
+
+    it('matches when types are the same', () => {
+      const el = document.createElement('input');
+      el.setAttribute('type', 'radio');
+      el.setAttribute('xh-model', 'choice');
+      el.value = '1';
+      container.appendChild(el);
+
+      const ctx = new DataContext({ choice: '1' }); // string === string
       applyBindings(el, ctx);
 
       expect(el.checked).toBe(true);
@@ -221,13 +234,25 @@ describe('xh-model pre-fill (Option C)', () => {
       expect(el.options[1].selected).toBe(true);
     });
 
-    it('uses loose equality for select option matching', () => {
+    it('uses strict equality — number does not match string option value', () => {
       const el = document.createElement('select');
       el.setAttribute('xh-model', 'level');
       el.innerHTML = '<option value="1">One</option><option value="2">Two</option>';
       container.appendChild(el);
 
-      const ctx = new DataContext({ level: 2 });
+      const ctx = new DataContext({ level: 2 }); // number 2 !== string "2"
+      applyBindings(el, ctx);
+
+      expect(el.options[1].selected).toBe(false);
+    });
+
+    it('matches when data type matches option value type', () => {
+      const el = document.createElement('select');
+      el.setAttribute('xh-model', 'level');
+      el.innerHTML = '<option value="1">One</option><option value="2">Two</option>';
+      container.appendChild(el);
+
+      const ctx = new DataContext({ level: '2' }); // string === string
       applyBindings(el, ctx);
 
       expect(el.options[1].selected).toBe(true);

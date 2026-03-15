@@ -3,7 +3,7 @@
  */
 
 const xhtmlx = require('../../xhtmlx.js');
-const { DataContext, resolveDot } = xhtmlx._internals;
+const { DataContext } = xhtmlx._internals;
 
 describe('DataContext', () => {
   describe('constructor', () => {

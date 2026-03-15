@@ -3,7 +3,7 @@
  */
 
 const xhtmlx = require('../../xhtmlx.js');
-const { DataContext, getRestVerb, buildRequestBody, getSwapTarget, interpolate } = xhtmlx._internals;
+const { DataContext, getRestVerb, buildRequestBody, getSwapTarget } = xhtmlx._internals;
 
 describe('getRestVerb', () => {
   describe('detects REST verb attributes', () => {

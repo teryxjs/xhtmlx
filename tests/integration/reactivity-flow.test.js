@@ -3,7 +3,7 @@
  */
 
 const xhtmlx = require('../../xhtmlx.js');
-const { MutableDataContext, applyBindings, processEach, processBindingsInTree } = xhtmlx._internals;
+const { MutableDataContext, applyBindings, processEach } = xhtmlx._internals;
 
 describe('Live reactivity end-to-end', () => {
   let container;

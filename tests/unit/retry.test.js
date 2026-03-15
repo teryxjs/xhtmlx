@@ -5,10 +5,6 @@
 const xhtmlx = require('../../xhtmlx.js');
 const { executeRequest, DataContext, elementStates } = xhtmlx._internals;
 
-function flushPromises() {
-  return new Promise(resolve => setTimeout(resolve, 0));
-}
-
 describe('Retry with backoff on failure', () => {
   let container;
 

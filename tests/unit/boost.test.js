@@ -5,11 +5,7 @@
 const xhtmlx = require('../../xhtmlx.js');
 const {
   DataContext,
-  boostElement,
-  boostLink,
-  boostForm,
-  elementStates,
-  getRestVerb
+  boostElement
 } = xhtmlx._internals;
 
 // Mock fetch globally
@@ -131,8 +127,6 @@ describe('xh-boost — enhance regular links and forms', () => {
     link.setAttribute('data-xh-boosted', '');
     boost.appendChild(link);
     container.appendChild(boost);
-
-    const fetchCallsBefore = global.fetch.mock.calls.length;
 
     const ctx = new DataContext({});
     boostElement(boost, ctx);

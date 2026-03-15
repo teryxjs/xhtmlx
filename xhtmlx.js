@@ -495,12 +495,12 @@
         // Set the matching option as selected
         var options = el.options;
         for (var s = 0; s < options.length; s++) {
-          options[s].selected = (options[s].value == mv);
+          options[s].selected = (options[s].value === mv);
         }
       } else if (type === "checkbox") {
         el.checked = !!mv;
       } else if (type === "radio") {
-        el.checked = (el.value == mv);
+        el.checked = (el.value === mv);
       } else if (tag === "textarea") {
         el.value = mv != null ? String(mv) : "";
       } else {
@@ -2055,7 +2055,7 @@
    * @param {string}  actionStr – The action string (e.g. "toggleClass:active").
    */
   function attachOnHandler(el, event, actionStr) {
-    el.addEventListener(event, function(evt) {
+    el.addEventListener(event, function(_evt) {
       var parts = actionStr.split(":");
       var action = parts[0];
       var arg = parts.slice(1).join(":");

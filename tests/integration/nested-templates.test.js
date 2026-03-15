@@ -20,10 +20,7 @@ afterEach(() => {
 
 describe("Nested template composition", () => {
   test("rendered template with nested xh-get triggers second request", async () => {
-    let callCount = 0;
-
     global.fetch.mockImplementation((url) => {
-      callCount++;
       if (url === "/api/user") {
         return Promise.resolve({
           ok: true,

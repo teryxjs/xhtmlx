@@ -3,7 +3,7 @@
  */
 
 const xhtmlx = require('../../xhtmlx.js');
-const { executeRequest, DataContext, elementStates, performSwap, applySettleClasses } = xhtmlx._internals;
+const { executeRequest, DataContext, elementStates, applySettleClasses } = xhtmlx._internals;
 
 function flushPromises() {
   return new Promise(resolve => setTimeout(resolve, 0));
@@ -51,12 +51,6 @@ describe('CSS transitions on swap (settle classes)', () => {
       statusText: status === 200 ? 'OK' : 'Error',
       text: function () { return Promise.resolve(JSON.stringify(data)); }
     });
-  }
-
-  function makeFragment(html) {
-    var tpl = document.createElement('template');
-    tpl.innerHTML = html;
-    return document.importNode(tpl.content, true);
   }
 
   it('new elements get xh-added class after swap', async () => {

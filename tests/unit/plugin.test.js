@@ -13,8 +13,6 @@ const {
   registerDirective,
   registerHook,
   registerTransform,
-  elementStates,
-  executeRequest
 } = xhtmlx._internals;
 
 describe('Plugin / Extension API', () => {
@@ -28,8 +26,8 @@ describe('Plugin / Extension API', () => {
     for (var key in globalHooks) {
       delete globalHooks[key];
     }
-    for (var key in transforms) {
-      delete transforms[key];
+    for (var tkey in transforms) {
+      delete transforms[tkey];
     }
   });
 

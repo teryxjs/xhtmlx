@@ -18,16 +18,6 @@ afterEach(() => {
   delete global.fetch;
 });
 
-function mockFetchJSON(data, status = 200) {
-  global.fetch.mockResolvedValue({
-    ok: status >= 200 && status < 300,
-    status: status,
-    statusText: status === 200 ? "OK" : "Error",
-    json: () => Promise.resolve(data),
-    text: () => Promise.resolve(JSON.stringify(data))
-  });
-}
-
 function mockFetchError(status, statusText, body) {
   global.fetch.mockResolvedValue({
     ok: false,
@@ -40,7 +30,7 @@ function mockFetchError(status, statusText, body) {
 
 // Mock fetchTemplate for error templates by intercepting fetch calls
 function mockFetchWithErrorTemplate(errorStatus, errorBody, templateHtml) {
-  global.fetch.mockImplementation((url, opts) => {
+  global.fetch.mockImplementation((url, _opts) => {
     // If fetching a template file, return the template HTML
     if (url.endsWith(".html")) {
       return Promise.resolve({

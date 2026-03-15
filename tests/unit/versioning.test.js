@@ -3,7 +3,7 @@
  */
 
 const xhtmlx = require("../../xhtmlx.js");
-const { config, templateCache, responseCache, elementStates, DataContext } = xhtmlx._internals;
+const { config, templateCache, responseCache } = xhtmlx._internals;
 
 beforeEach(() => {
   config.templatePrefix = "";
@@ -258,7 +258,7 @@ describe("UI Versioning", () => {
   describe("full version switch flow", () => {
     it("switchVersion changes template prefix and reload fetches from new path", async () => {
       let callCount = 0;
-      global.fetch.mockImplementation((url) => {
+      global.fetch.mockImplementation((_url) => {
         callCount++;
         return Promise.resolve({
           ok: true, status: 200, statusText: "OK",

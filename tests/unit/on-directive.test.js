@@ -3,7 +3,7 @@
  */
 
 const xhtmlx = require('../../xhtmlx.js');
-const { attachOnHandler, processElement, elementStates } = xhtmlx._internals;
+const { attachOnHandler, processElement } = xhtmlx._internals;
 
 describe('xh-on-* directive', () => {
   let container;
