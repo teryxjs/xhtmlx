@@ -17,6 +17,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
+          registry-url: https://registry.npmjs.org
       - run: npm ci
       - run: npm run check
       - run: npm run lint
@@ -24,6 +25,9 @@ jobs:
       - run: npm run build
       - name: Verify package contents
         run: npm pack --dry-run
-      - name: Configure npm registry
-        run: npm config set registry https://registry.npmjs.org/
-      - run: npm publish --provenance --access public
+      - name: Publish with OIDC trusted publisher
+        run: |
+          # Remove the placeholder token that setup-node creates
+          # so npm falls through to OIDC authentication
+          npm config delete //registry.npmjs.org/:_authToken 2>/dev/null || true
+          npm publish --provenance --access public
