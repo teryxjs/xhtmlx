@@ -1,0 +1,22 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
+<body>
+<input id="search-input" type="text" name="q" placeholder="Search..." />
+<span id="search-loading" class="xh-indicator">Searching...</span>
+
+<div id="search-trigger"
+     xh-get="/api/search"
+     xh-trigger="input from:#search-input changed delay:300ms"
+     xh-target="#search-results"
+     xh-indicator="#search-loading">
+  <template>
+    <div class="search-query">Query: <span xh-text="query"></span></div>
+    <div xh-each="results" class="search-result">
+      <span class="result-name" xh-text="name"></span>
+      <span class="result-email" xh-text="email"></span>
+    </div>
+  </template>
+</div>
+<div id="search-results"></div>
+
+<script src="/xhtmlx.js"></script>
+</body></html>

@@ -1,0 +1,48 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
+<body>
+<!-- Focus management (uses xh-trigger=load) -->
+<div id="focus-test" xh-get="/api/users" xh-trigger="load" xh-target="#focus-result" xh-focus="#focus-input">
+  <template>
+    <input id="focus-input" type="text" value="focused" />
+    <span class="focus-loaded">loaded</span>
+  </template>
+</div>
+<div id="focus-result"></div>
+
+<!-- History -->
+<button id="history-btn" xh-get="/api/users/1" xh-trigger="click" xh-target="#history-result" xh-push-url="/user/1">
+  <template><span class="history-name" xh-text="name"></span></template>
+  Load User
+</button>
+<div id="history-result"></div>
+
+<!-- Native form submit -->
+<form id="native-form" xh-post="/api/users" xh-target="#form-result">
+  <input name="name" value="TestUser" />
+  <input name="email" value="test@test.com" />
+  <button type="submit" id="submit-btn">Submit</button>
+  <template>
+    <span class="form-created">Created: <span xh-text="name"></span></span>
+  </template>
+</form>
+<div id="form-result"></div>
+
+<!-- Settle classes -->
+<button id="settle-btn" xh-get="/api/users" xh-trigger="click" xh-target="#settle-result">
+  <template><div class="settle-item" xh-each="users" xh-text="name"></div></template>
+  Load
+</button>
+<div id="settle-result"></div>
+
+<!-- MutationObserver -->
+<div id="mutation-container"></div>
+
+<!-- Revealed trigger (at bottom of page, behind spacer) -->
+<div style="height:2000px"></div>
+<div id="revealed" xh-get="/api/poll" xh-trigger="revealed" xh-target="#revealed-result">
+  <template><span class="revealed-text" xh-text="timestamp"></span></template>
+</div>
+<div id="revealed-result"></div>
+
+<script src="/xhtmlx.js"></script>
+</body></html>

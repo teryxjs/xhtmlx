@@ -1,0 +1,37 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
+<body>
+<!-- Level 1: Users loaded automatically -->
+<div xh-get="/api/users" xh-trigger="load" xh-target="#users-container">
+  <template>
+    <div xh-each="users" class="user-block">
+      <h3 class="nested-user-name" xh-text="name"></h3>
+    </div>
+  </template>
+</div>
+<div id="users-container"></div>
+
+<!-- Level 2: Posts for user 1 (loaded on click) -->
+<button id="load-posts-btn" xh-get="/api/users/1/posts" xh-trigger="click" xh-target="#posts-container">
+  <template>
+    <div xh-each="posts" class="post-block">
+      <h4 class="nested-post-title" xh-text="title"></h4>
+      <p class="nested-post-body" xh-text="body"></p>
+    </div>
+  </template>
+  Load Posts
+</button>
+<div id="posts-container"></div>
+
+<!-- Level 3: Comments for post 1 (loaded on click) -->
+<button id="load-comments-btn" xh-get="/api/posts/1/comments" xh-trigger="click" xh-target="#comments-container">
+  <template>
+    <div xh-each="comments" class="comment-block">
+      <span class="comment-author" xh-text="author"></span>: <span class="comment-text" xh-text="text"></span>
+    </div>
+  </template>
+  Load Comments
+</button>
+<div id="comments-container"></div>
+
+<script src="/xhtmlx.js"></script>
+</body></html>

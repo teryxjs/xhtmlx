@@ -1,0 +1,22 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
+<body>
+<!-- Polling -->
+<div id="poll-target" xh-get="/api/poll" xh-trigger="every 2s" xh-target="#poll-result">
+  <template>
+    <span class="poll-time" xh-text="timestamp"></span>
+    <span class="poll-count" xh-text="count"></span>
+  </template>
+</div>
+<div id="poll-result"></div>
+
+<!-- i18n -->
+<span id="i18n-greeting" xh-i18n="greeting"></span>
+<span id="i18n-farewell" xh-i18n="farewell"></span>
+
+<script src="/xhtmlx.js"></script>
+<script>
+  xhtmlx.i18n.load("en", { greeting: "Hello", farewell: "Goodbye" });
+  xhtmlx.i18n.load("es", { greeting: "Hola", farewell: "Adiós" });
+  xhtmlx.i18n.locale = "en";
+</script>
+</body></html>

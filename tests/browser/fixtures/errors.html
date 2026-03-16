@@ -1,0 +1,31 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
+<body>
+<!-- Error with external template -->
+<button id="trigger-404" xh-get="/api/error/404" xh-trigger="click" xh-target="#error-result" xh-error-template="/templates/error.html">
+  Trigger 404
+</button>
+<button id="trigger-500" xh-get="/api/error/500" xh-trigger="click" xh-target="#error-result" xh-error-template="/templates/error.html">
+  Trigger 500
+</button>
+<div id="error-result"></div>
+
+<!-- Error boundary -->
+<div id="boundary" xh-error-boundary xh-error-template="/templates/error.html" xh-error-target="#boundary-errors">
+  <div id="boundary-errors"></div>
+  <div xh-get="/api/error/500" xh-trigger="load" xh-target="#boundary-content">
+    <template><span>Should not appear</span></template>
+  </div>
+  <div id="boundary-content"></div>
+</div>
+
+<!-- Recovery: retry after error -->
+<button id="trigger-success" xh-get="/api/users" xh-trigger="click" xh-target="#recovery-result">
+  <template>
+    <div xh-each="users" class="recovery-user" xh-text="name"></div>
+  </template>
+  Load Users (should succeed)
+</button>
+<div id="recovery-result"></div>
+
+<script src="/xhtmlx.js"></script>
+</body></html>

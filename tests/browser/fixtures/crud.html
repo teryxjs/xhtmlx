@@ -1,0 +1,59 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
+<body>
+<h2>Users</h2>
+
+<!-- User list (loads automatically on page load) -->
+<div id="user-loader" xh-get="/api/users" xh-trigger="load" xh-target="#user-list">
+  <template>
+    <div xh-each="users" class="user-row">
+      <span class="user-name" xh-text="name"></span>
+      <span class="user-email" xh-text="email"></span>
+      <span class="user-role" xh-text="role"></span>
+    </div>
+  </template>
+</div>
+<div id="user-list"></div>
+
+<!-- Create form: appends to user-list -->
+<form id="create-form" xh-post="/api/users" xh-target="#user-list" xh-swap="beforeend">
+  <input name="name" id="new-name" placeholder="Name" />
+  <input name="email" id="new-email" placeholder="Email" />
+  <button type="submit" id="create-btn">Create</button>
+  <template>
+    <div class="user-row created-user">
+      <span class="user-name" xh-text="name"></span>
+      <span class="user-email" xh-text="email"></span>
+    </div>
+  </template>
+</form>
+
+<!-- Promote button: promotes user 1 to admin and shows result -->
+<button id="promote-btn" xh-put="/api/users/1" xh-vals='{"role":"admin"}' xh-trigger="click" xh-target="#promote-result">
+  <template>
+    <div class="promoted-user">
+      <span class="promoted-name" xh-text="name"></span>
+      <span class="promoted-role" xh-text="role"></span>
+    </div>
+  </template>
+  Promote Alice
+</button>
+<div id="promote-result"></div>
+
+<!-- Delete button: deletes user 2 -->
+<button id="delete-btn" xh-delete="/api/users/2" xh-trigger="click" xh-swap="none">
+  Delete Bob
+</button>
+<!-- Reload list after delete -->
+<button id="reload-btn" xh-get="/api/users" xh-trigger="click" xh-target="#user-list">
+  <template>
+    <div xh-each="users" class="user-row">
+      <span class="user-name" xh-text="name"></span>
+      <span class="user-email" xh-text="email"></span>
+      <span class="user-role" xh-text="role"></span>
+    </div>
+  </template>
+  Reload
+</button>
+
+<script src="/xhtmlx.js"></script>
+</body></html>
