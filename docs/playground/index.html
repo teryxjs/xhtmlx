@@ -613,6 +613,12 @@ code, pre {
   "use strict";
 
   // =========================================================================
+  // Load xhtmlx source for inlining into iframe
+  // =========================================================================
+  var xhtmlxSource = "";
+  var xhtmlxUrl = location.origin + location.pathname.replace(/playground\/.*$/, "") + "xhtmlx.js";
+
+  // =========================================================================
   // Elements
   // =========================================================================
   var codeEditor    = document.getElementById("codeEditor");
@@ -988,7 +994,7 @@ code, pre {
       '</head>\n' +
       '<body>\n' +
       htmlCode + '\n' +
-      '<script src="' + location.origin + location.pathname.replace(/playground\/.*$/, '') + 'xhtmlx.js"><\/script>\n' +
+      '<script>\n' + xhtmlxSource + '\n<\/script>\n' +
       '</body>\n' +
       '</html>';
 
@@ -1329,8 +1335,19 @@ code, pre {
     // Register service worker (optional, best-effort)
     registerServiceWorker();
 
-    // Initial preview render
-    runPreview();
+    // Load xhtmlx source, then render initial preview
+    fetch(xhtmlxUrl)
+      .then(function(r) { return r.text(); })
+      .then(function(src) {
+        xhtmlxSource = src;
+        runPreview();
+      })
+      .catch(function(err) {
+        console.error("[playground] Failed to load xhtmlx.js:", err);
+        // Fallback: try external script tag
+        xhtmlxSource = 'document.write("<scr"+"ipt src=\\"" + "' + xhtmlxUrl + '" + "\\"><\\/scr"+"ipt>");';
+        runPreview();
+      });
   }
 
   // Start
