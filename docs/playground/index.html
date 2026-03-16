@@ -988,7 +988,7 @@ code, pre {
       '</head>\n' +
       '<body>\n' +
       htmlCode + '\n' +
-      '<script src="../xhtmlx.js"><\/script>\n' +
+      '<script src="' + location.origin + location.pathname.replace(/playground\/.*$/, '') + 'xhtmlx.js"><\/script>\n' +
       '</body>\n' +
       '</html>';
 
