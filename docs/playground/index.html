@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>xhtmlx Playground</title>
+<meta name="description" content="Interactive playground for xhtmlx — write declarative HTML and see it render live with a mock API.">
+<style>
+/* ========== CSS Custom Properties (matched from main site) ========== */
+:root {
+  --bg-primary: #0b0e17;
+  --bg-secondary: #111627;
+  --bg-card: #161b2e;
+  --bg-card-hover: #1c2240;
+  --bg-code: #0d1117;
+  --bg-code-header: #161b2e;
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent-1: #6366f1;
+  --accent-2: #8b5cf6;
+  --accent-3: #06b6d4;
+  --accent-4: #22d3ee;
+  --gradient-accent: linear-gradient(135deg, #6366f1, #8b5cf6, #06b6d4);
+  --gradient-subtle: linear-gradient(135deg, rgba(99,102,241,0.08), rgba(6,182,212,0.08));
+  --gradient-glow: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(6,182,212,0.15));
+  --border-color: rgba(99,102,241,0.15);
+  --border-color-hover: rgba(99,102,241,0.35);
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: "SF Mono", "Cascadia Code", "Fira Code", Consolas, "DejaVu Sans Mono", monospace;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow-lg: 0 25px 50px -12px rgba(0,0,0,0.5);
+  --shadow-glow: 0 0 40px rgba(99,102,241,0.15);
+  --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --topbar-height: 52px;
+  --bottombar-height: 0px;
+  --preview-bg: #ffffff;
+}
+
+html[data-theme="light"] {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f1f5f9;
+  --bg-code: #f1f5f9;
+  --bg-code-header: #e2e8f0;
+  --text-primary: #1e293b;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --accent-1: #4f46e5;
+  --accent-2: #7c3aed;
+  --accent-3: #0891b2;
+  --accent-4: #06b6d4;
+  --gradient-accent: linear-gradient(135deg, #4f46e5, #7c3aed, #0891b2);
+  --gradient-subtle: linear-gradient(135deg, rgba(79,70,229,0.06), rgba(8,145,178,0.06));
+  --gradient-glow: linear-gradient(135deg, rgba(79,70,229,0.1), rgba(8,145,178,0.1));
+  --border-color: rgba(79,70,229,0.12);
+  --border-color-hover: rgba(79,70,229,0.25);
+  --shadow-lg: 0 25px 50px -12px rgba(0,0,0,0.1);
+  --shadow-glow: 0 0 40px rgba(79,70,229,0.08);
+  --preview-bg: #ffffff;
+}
+
+/* ========== Reset ========== */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+a {
+  color: var(--accent-3);
+  text-decoration: none;
+  transition: color var(--transition);
+}
+a:hover { color: var(--accent-4); }
+code, pre {
+  font-family: var(--font-mono);
+}
+
+/* ========== Layout ========== */
+.playground-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* ========== Top Bar ========== */
+.topbar {
+  height: var(--topbar-height);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.topbar-logo {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-weight: 800;
+  background: var(--gradient-accent);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.topbar-back {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  white-space: nowrap;
+  margin-right: 4px;
+}
+
+.topbar-divider {
+  width: 1px;
+  height: 24px;
+  background: var(--border-color);
+  flex-shrink: 0;
+}
+
+.topbar-select {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  font-size: 0.82rem;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  min-width: 160px;
+  max-width: 240px;
+  transition: border-color var(--transition);
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 30px;
+}
+.topbar-select:hover {
+  border-color: var(--border-color-hover);
+}
+.topbar-select:focus {
+  outline: none;
+  border-color: var(--accent-1);
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+}
+
+.topbar-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+  align-items: center;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+.btn:hover {
+  border-color: var(--border-color-hover);
+  background: var(--bg-card-hover);
+}
+.btn-primary {
+  background: var(--accent-1);
+  border-color: var(--accent-1);
+  color: #fff;
+}
+.btn-primary:hover {
+  background: var(--accent-2);
+  border-color: var(--accent-2);
+}
+
+.btn svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.btn-icon {
+  padding: 6px 8px;
+}
+
+/* ========== Main Panes ========== */
+.main-area {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  position: relative;
+}
+
+/* ========== Editor Panel ========== */
+.editor-panel {
+  display: flex;
+  flex-direction: column;
+  width: 50%;
+  min-width: 200px;
+  border-right: 1px solid var(--border-color);
+}
+
+.panel-header {
+  height: 34px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  background: var(--bg-code-header);
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.panel-header .tab {
+  padding: 4px 10px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all var(--transition);
+  user-select: none;
+}
+.panel-header .tab:hover {
+  color: var(--text-secondary);
+  background: rgba(99,102,241,0.08);
+}
+.panel-header .tab.active {
+  color: var(--accent-3);
+  background: rgba(6,182,212,0.1);
+}
+
+.editor-wrapper {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+}
+
+.line-numbers {
+  width: 40px;
+  flex-shrink: 0;
+  background: var(--bg-code);
+  border-right: 1px solid var(--border-color);
+  padding: 12px 0;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-muted);
+  text-align: right;
+  user-select: none;
+  pointer-events: none;
+}
+
+.line-numbers div {
+  padding: 0 8px 0 0;
+  height: 19.5px;
+}
+
+.code-editor {
+  flex: 1;
+  background: var(--bg-code);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 12px;
+  border: none;
+  outline: none;
+  resize: none;
+  tab-size: 2;
+  -moz-tab-size: 2;
+  white-space: pre;
+  overflow: auto;
+  width: 100%;
+}
+
+.code-editor::placeholder {
+  color: var(--text-muted);
+}
+
+/* ========== Mock Config Panel ========== */
+.mock-panel {
+  display: none;
+  flex-direction: column;
+  flex: 1;
+}
+.mock-panel.visible {
+  display: flex;
+}
+
+.html-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.html-panel.hidden {
+  display: none;
+}
+
+.mock-editor {
+  flex: 1;
+  background: var(--bg-code);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 12px;
+  border: none;
+  outline: none;
+  resize: none;
+  tab-size: 2;
+  -moz-tab-size: 2;
+  white-space: pre;
+  overflow: auto;
+}
+
+.mock-status {
+  height: 24px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  background: var(--bg-code-header);
+  border-top: 1px solid var(--border-color);
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+.mock-status.error {
+  color: #ef4444;
+}
+.mock-status.success {
+  color: #22c55e;
+}
+
+/* ========== Resize Handle ========== */
+.resize-handle {
+  width: 5px;
+  cursor: col-resize;
+  background: transparent;
+  position: relative;
+  flex-shrink: 0;
+  z-index: 5;
+  margin-left: -3px;
+  margin-right: -2px;
+}
+.resize-handle:hover,
+.resize-handle.active {
+  background: var(--accent-1);
+  opacity: 0.5;
+}
+
+/* ========== Preview Panel ========== */
+.preview-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 200px;
+}
+
+.preview-iframe {
+  flex: 1;
+  border: none;
+  background: var(--preview-bg);
+  width: 100%;
+}
+
+/* ========== Status Bar ========== */
+.statusbar {
+  height: 24px;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.statusbar-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22c55e;
+}
+.status-dot.pending {
+  background: #f59e0b;
+}
+.status-dot.error {
+  background: #ef4444;
+}
+
+/* ========== Share Toast ========== */
+.toast {
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 10px 20px;
+  font-size: 0.85rem;
+  box-shadow: var(--shadow-lg);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  z-index: 100;
+}
+.toast.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
+}
+
+/* ========== Preview Background Toggle ========== */
+.preview-bg-toggle {
+  font-size: 0.7rem;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 2px 6px;
+  border-radius: 3px;
+  transition: color var(--transition);
+  margin-left: auto;
+  user-select: none;
+}
+.preview-bg-toggle:hover {
+  color: var(--text-secondary);
+}
+
+/* ========== Responsive ========== */
+@media (max-width: 768px) {
+  .main-area {
+    flex-direction: column;
+  }
+  .editor-panel {
+    width: 100%;
+    height: 50%;
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .resize-handle {
+    width: 100%;
+    height: 5px;
+    cursor: row-resize;
+    margin: -2px 0 -3px 0;
+  }
+  .preview-panel {
+    width: 100%;
+  }
+  .topbar {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 8px 12px;
+    gap: 6px;
+  }
+  .topbar-select {
+    min-width: 120px;
+    font-size: 0.78rem;
+  }
+  .topbar-back {
+    display: none;
+  }
+}
+</style>
+</head>
+<body>
+<div class="playground-layout">
+
+  <!-- ==================== Top Bar ==================== -->
+  <div class="topbar">
+    <a href="../" class="topbar-back">Docs</a>
+    <a href="../" class="topbar-logo">xhtmlx Playground</a>
+    <div class="topbar-divider"></div>
+
+    <select id="exampleSelect" class="topbar-select" aria-label="Example selector">
+      <option value="">-- Select example --</option>
+      <option value="basic-get">Basic GET</option>
+      <option value="crud-form">CRUD Form</option>
+      <option value="nested-templates">Nested Templates</option>
+      <option value="search-debounce">Search with Debounce</option>
+      <option value="conditionals">Conditionals</option>
+      <option value="error-handling">Error Handling</option>
+      <option value="polling">Polling</option>
+      <option value="model-reactivity">xh-model + Reactivity</option>
+    </select>
+
+    <div class="topbar-actions">
+      <button class="btn btn-primary" id="btnRun" title="Run (Ctrl+Enter)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+        Run
+      </button>
+      <button class="btn" id="btnShare" title="Copy shareable URL">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
+        Share
+      </button>
+      <button class="btn btn-icon" id="btnTheme" title="Toggle light/dark theme">
+        <svg id="iconMoon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <svg id="iconSun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ==================== Main Area ==================== -->
+  <div class="main-area">
+
+    <!-- Editor Panel -->
+    <div class="editor-panel" id="editorPanel">
+      <div class="panel-header">
+        <span class="tab active" id="tabHtml" data-tab="html">HTML</span>
+        <span class="tab" id="tabMock" data-tab="mock">Mock API</span>
+      </div>
+
+      <!-- HTML Editor -->
+      <div class="html-panel" id="htmlPanel">
+        <div class="editor-wrapper">
+          <div class="line-numbers" id="lineNumbers" aria-hidden="true"></div>
+          <textarea
+            class="code-editor"
+            id="codeEditor"
+            spellcheck="false"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+            placeholder="Write your xhtmlx HTML here..."
+          ></textarea>
+        </div>
+      </div>
+
+      <!-- Mock API Editor -->
+      <div class="mock-panel" id="mockPanel">
+        <textarea
+          class="mock-editor"
+          id="mockEditor"
+          spellcheck="false"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+        ></textarea>
+        <div class="mock-status" id="mockStatus">Valid JSON</div>
+      </div>
+    </div>
+
+    <!-- Resize Handle -->
+    <div class="resize-handle" id="resizeHandle"></div>
+
+    <!-- Preview Panel -->
+    <div class="preview-panel" id="previewPanel">
+      <div class="panel-header">
+        <span>Preview</span>
+        <span class="preview-bg-toggle" id="previewBgToggle" title="Toggle preview background">bg: light</span>
+      </div>
+      <iframe class="preview-iframe" id="previewIframe" sandbox="allow-scripts allow-same-origin" title="Preview"></iframe>
+    </div>
+  </div>
+
+  <!-- ==================== Status Bar ==================== -->
+  <div class="statusbar">
+    <div class="statusbar-item">
+      <span class="status-dot" id="swStatus"></span>
+      <span id="swLabel">Service Worker: loading...</span>
+    </div>
+    <div class="statusbar-item" id="autoRunLabel">Auto-run: on</div>
+  </div>
+
+</div>
+
+<!-- Toast notification -->
+<div class="toast" id="toast"></div>
+
+<script>
+(function() {
+  "use strict";
+
+  // =========================================================================
+  // Elements
+  // =========================================================================
+  var codeEditor    = document.getElementById("codeEditor");
+  var mockEditor    = document.getElementById("mockEditor");
+  var previewIframe = document.getElementById("previewIframe");
+  var exampleSelect = document.getElementById("exampleSelect");
+  var btnRun        = document.getElementById("btnRun");
+  var btnShare      = document.getElementById("btnShare");
+  var btnTheme      = document.getElementById("btnTheme");
+  var iconMoon      = document.getElementById("iconMoon");
+  var iconSun       = document.getElementById("iconSun");
+  var lineNumbers   = document.getElementById("lineNumbers");
+  var editorPanel   = document.getElementById("editorPanel");
+  var previewPanel  = document.getElementById("previewPanel");
+  var resizeHandle  = document.getElementById("resizeHandle");
+  var tabHtml       = document.getElementById("tabHtml");
+  var tabMock       = document.getElementById("tabMock");
+  var htmlPanel     = document.getElementById("htmlPanel");
+  var mockPanel     = document.getElementById("mockPanel");
+  var mockStatus    = document.getElementById("mockStatus");
+  var swStatus      = document.getElementById("swStatus");
+  var swLabel       = document.getElementById("swLabel");
+  var toast         = document.getElementById("toast");
+  var previewBgToggle = document.getElementById("previewBgToggle");
+
+  // =========================================================================
+  // Preloaded Examples
+  // =========================================================================
+  var EXAMPLES = {
+    "basic-get": {
+      title: "Basic GET",
+      html: '<div xh-get="/api/users" xh-trigger="load">\n  <template>\n    <h3 style="margin-bottom:12px;color:#e2e8f0">Users</h3>\n    <div xh-each="users">\n      <div style="padding:10px 14px;margin:6px 0;background:#1e293b;border-radius:6px;display:flex;align-items:center;gap:12px">\n        <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#06b6d4);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px" xh-text="name.0"></div>\n        <div>\n          <strong xh-text="name" style="color:#e2e8f0"></strong>\n          <div style="font-size:13px;color:#94a3b8" xh-text="email"></div>\n        </div>\n        <span style="margin-left:auto;font-size:12px;padding:2px 8px;border-radius:4px;background:#312e81;color:#a5b4fc" xh-text="role"></span>\n      </div>\n    </div>\n  </template>\n  <span class="xh-indicator" style="color:#94a3b8">Loading users...</span>\n</div>'
+    },
+    "crud-form": {
+      title: "CRUD Form",
+      html: '<div style="max-width:500px">\n  <h3 style="margin-bottom:16px;color:#e2e8f0">Create User</h3>\n\n  <!-- Form -->\n  <form xh-post="/api/users" xh-trigger="submit" xh-target="#result" xh-swap="innerHTML">\n    <div style="margin-bottom:12px">\n      <label style="display:block;font-size:13px;color:#94a3b8;margin-bottom:4px">Name</label>\n      <input name="name" type="text" value="Jane Doe"\n             style="width:100%;padding:8px 12px;background:#1e293b;border:1px solid #334155;border-radius:6px;color:#e2e8f0;font-size:14px;outline:none" />\n    </div>\n    <div style="margin-bottom:12px">\n      <label style="display:block;font-size:13px;color:#94a3b8;margin-bottom:4px">Email</label>\n      <input name="email" type="email" value="jane@example.com"\n             style="width:100%;padding:8px 12px;background:#1e293b;border:1px solid #334155;border-radius:6px;color:#e2e8f0;font-size:14px;outline:none" />\n    </div>\n    <button type="submit"\n            style="padding:8px 20px;background:#6366f1;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-weight:600">\n      Create User\n    </button>\n    <template>\n      <div style="margin-top:16px;padding:12px;background:#14532d;border:1px solid #22c55e;border-radius:6px;color:#86efac">\n        Created user <strong xh-text="name"></strong> (ID: <span xh-text="id"></span>)\n      </div>\n    </template>\n  </form>\n\n  <div id="result" style="margin-top:16px"></div>\n\n  <!-- User list -->\n  <hr style="border:none;border-top:1px solid #334155;margin:24px 0" />\n  <div xh-get="/api/users" xh-trigger="load">\n    <template>\n      <h4 style="margin-bottom:8px;color:#94a3b8;font-size:13px;text-transform:uppercase;letter-spacing:0.05em">All Users</h4>\n      <div xh-each="users">\n        <div style="padding:8px 12px;margin:4px 0;background:#1e293b;border-radius:4px;display:flex;justify-content:space-between;align-items:center">\n          <span xh-text="name" style="color:#e2e8f0"></span>\n          <span xh-text="email" style="color:#64748b;font-size:13px"></span>\n        </div>\n      </div>\n    </template>\n    <span class="xh-indicator" style="color:#94a3b8">Loading...</span>\n  </div>\n</div>'
+    },
+    "nested-templates": {
+      title: "Nested Templates",
+      html: '<div style="max-width:600px">\n  <h3 style="margin-bottom:16px;color:#e2e8f0">Users &amp; Their Posts</h3>\n\n  <div xh-get="/api/users" xh-trigger="load">\n    <template>\n      <div xh-each="users">\n        <div style="margin-bottom:20px;background:#1e293b;border-radius:8px;overflow:hidden">\n          <div style="padding:14px 16px;border-bottom:1px solid #334155;display:flex;align-items:center;gap:10px">\n            <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#8b5cf6,#06b6d4);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff" xh-text="name.0"></div>\n            <div>\n              <strong xh-text="name" style="color:#e2e8f0"></strong>\n              <div style="font-size:12px;color:#64748b" xh-text="email"></div>\n            </div>\n          </div>\n          <div style="padding:12px 16px">\n            <!-- Nested request for posts -->\n            <div xh-get="/api/posts" xh-trigger="load">\n              <template>\n                <div xh-each="posts">\n                  <div style="padding:8px 0;border-bottom:1px solid #27303f">\n                    <div style="font-weight:600;color:#e2e8f0;font-size:14px" xh-text="title"></div>\n                    <div style="font-size:13px;color:#94a3b8;margin-top:2px" xh-text="body"></div>\n                  </div>\n                </div>\n              </template>\n              <span class="xh-indicator" style="color:#64748b;font-size:13px">Loading posts...</span>\n            </div>\n          </div>\n        </div>\n      </div>\n    </template>\n    <span class="xh-indicator" style="color:#94a3b8">Loading users...</span>\n  </div>\n</div>'
+    },
+    "search-debounce": {
+      title: "Search with Debounce",
+      html: '<div style="max-width:500px">\n  <h3 style="margin-bottom:16px;color:#e2e8f0">Search Users</h3>\n  <p style="margin-bottom:12px;color:#94a3b8;font-size:14px">Type to search (debounced 500ms). Try typing anything to trigger the API call.</p>\n\n  <input type="text" name="q" placeholder="Search..."\n         xh-get="/api/search"\n         xh-trigger="keyup changed delay:500ms"\n         xh-target="#search-results"\n         style="width:100%;padding:10px 14px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#e2e8f0;font-size:15px;outline:none;margin-bottom:16px"\n  />\n\n  <div id="search-results">\n    <template>\n      <div style="font-size:12px;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">Results</div>\n      <div xh-each="results">\n        <div style="padding:10px 14px;margin:4px 0;background:#1e293b;border-radius:6px;display:flex;justify-content:space-between;align-items:center">\n          <div>\n            <strong xh-text="name" style="color:#e2e8f0"></strong>\n            <span xh-text="email" style="color:#64748b;font-size:13px;margin-left:8px"></span>\n          </div>\n          <span style="font-size:12px;padding:2px 8px;border-radius:4px;background:#312e81;color:#a5b4fc" xh-text="role"></span>\n        </div>\n      </div>\n    </template>\n  </div>\n</div>'
+    },
+    "conditionals": {
+      title: "Conditionals",
+      html: '<div style="max-width:500px">\n  <h3 style="margin-bottom:16px;color:#e2e8f0">Conditional Rendering</h3>\n\n  <div xh-get="/api/users" xh-trigger="load">\n    <template>\n      <div xh-each="users">\n        <div style="padding:12px 16px;margin:8px 0;background:#1e293b;border-radius:8px">\n          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">\n            <strong xh-text="name" style="color:#e2e8f0"></strong>\n\n            <!-- xh-if: Only show badge for admins -->\n            <span xh-if="role" xh-show="role"\n                  style="font-size:11px;padding:2px 8px;border-radius:4px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em"\n                  xh-attr-style="role === \'admin\' ? \'background:#7c2d12;color:#fb923c\' : \'background:#1e3a5f;color:#7dd3fc\'">\n            </span>\n            <!-- Show admin badge -->\n            <span xh-if="role" style="font-size:11px;padding:2px 8px;border-radius:4px;background:#312e81;color:#a5b4fc" xh-text="role"></span>\n          </div>\n\n          <div style="font-size:13px;color:#94a3b8" xh-text="email"></div>\n\n          <!-- xh-show: Conditionally visible -->\n          <div xh-show="role" style="margin-top:6px;font-size:12px;color:#64748b">\n            Role: <span xh-text="role"></span>\n          </div>\n        </div>\n      </div>\n    </template>\n    <span class="xh-indicator" style="color:#94a3b8">Loading...</span>\n  </div>\n</div>'
+    },
+    "error-handling": {
+      title: "Error Handling",
+      html: '<div style="max-width:500px">\n  <h3 style="margin-bottom:16px;color:#e2e8f0">Error Handling</h3>\n\n  <!-- Success request -->\n  <div style="margin-bottom:20px">\n    <h4 style="color:#94a3b8;font-size:13px;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">Successful Request</h4>\n    <div xh-get="/api/users/1" xh-trigger="load">\n      <template>\n        <div style="padding:12px 16px;background:#14532d;border:1px solid #22c55e;border-radius:8px;color:#86efac">\n          Loaded: <strong xh-text="name"></strong> (<span xh-text="email"></span>)\n        </div>\n      </template>\n      <span class="xh-indicator" style="color:#94a3b8">Loading user...</span>\n    </div>\n  </div>\n\n  <!-- 404 error -->\n  <div style="margin-bottom:20px">\n    <h4 style="color:#94a3b8;font-size:13px;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">404 Not Found</h4>\n    <div xh-get="/api/error/404" xh-trigger="load" xh-target="#err404">\n      <template>\n        <div style="padding:12px 16px;background:#14532d;border-radius:8px;color:#86efac">\n          This should not appear!\n        </div>\n      </template>\n      <template xh-error-template>\n        <div style="padding:12px 16px;background:#7f1d1d;border:1px solid #ef4444;border-radius:8px;color:#fca5a5">\n          Error <span xh-text="status"></span>: <span xh-text="message"></span>\n        </div>\n      </template>\n      <span class="xh-indicator" style="color:#94a3b8">Loading...</span>\n    </div>\n    <div id="err404"></div>\n  </div>\n\n  <!-- 500 error -->\n  <div>\n    <h4 style="color:#94a3b8;font-size:13px;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">500 Server Error</h4>\n    <div xh-get="/api/error/500" xh-trigger="load" xh-target="#err500">\n      <template>\n        <div>This should not appear!</div>\n      </template>\n      <template xh-error-template>\n        <div style="padding:12px 16px;background:#7f1d1d;border:1px solid #ef4444;border-radius:8px;color:#fca5a5">\n          Server Error: <span xh-text="message"></span>\n        </div>\n      </template>\n      <span class="xh-indicator" style="color:#94a3b8">Loading...</span>\n    </div>\n    <div id="err500"></div>\n  </div>\n</div>'
+    },
+    "polling": {
+      title: "Polling",
+      html: '<div style="max-width:500px">\n  <h3 style="margin-bottom:16px;color:#e2e8f0">Auto-Refresh (Polling)</h3>\n  <p style="margin-bottom:16px;color:#94a3b8;font-size:14px">This panel refreshes every 3 seconds. Watch the timestamp update.</p>\n\n  <div xh-get="/api/todos" xh-trigger="load, every 3s">\n    <template>\n      <div style="font-size:12px;color:#64748b;margin-bottom:8px">Updated at: <span style="color:#94a3b8" id="timestamp"></span></div>\n      <div xh-each="todos">\n        <div style="padding:10px 14px;margin:6px 0;background:#1e293b;border-radius:6px;display:flex;align-items:center;gap:10px">\n          <span style="font-size:18px" xh-if="completed">&#10004;</span>\n          <span style="font-size:18px;color:#64748b" xh-unless="completed">&#9675;</span>\n          <span xh-text="title" style="color:#e2e8f0;flex:1"></span>\n          <span xh-show="completed" style="font-size:11px;padding:2px 8px;border-radius:4px;background:#14532d;color:#86efac">Done</span>\n          <span xh-unless="completed" style="font-size:11px;padding:2px 8px;border-radius:4px;background:#7f1d1d;color:#fca5a5">Pending</span>\n        </div>\n      </div>\n    </template>\n    <span class="xh-indicator" style="color:#94a3b8">Loading todos...</span>\n  </div>\n</div>'
+    },
+    "model-reactivity": {
+      title: "xh-model + Reactivity",
+      html: '<div style="max-width:500px">\n  <h3 style="margin-bottom:16px;color:#e2e8f0">Two-Way Binding with xh-model</h3>\n  <p style="margin-bottom:16px;color:#94a3b8;font-size:14px">Type in the fields below. The preview card updates in real time.</p>\n\n  <div xh-get="/api/users/1" xh-trigger="load">\n    <template>\n      <div style="display:grid;gap:12px;margin-bottom:20px">\n        <div>\n          <label style="display:block;font-size:13px;color:#94a3b8;margin-bottom:4px">Name</label>\n          <input xh-model="name" type="text"\n                 style="width:100%;padding:8px 12px;background:#1e293b;border:1px solid #334155;border-radius:6px;color:#e2e8f0;font-size:14px;outline:none" />\n        </div>\n        <div>\n          <label style="display:block;font-size:13px;color:#94a3b8;margin-bottom:4px">Email</label>\n          <input xh-model="email" type="text"\n                 style="width:100%;padding:8px 12px;background:#1e293b;border:1px solid #334155;border-radius:6px;color:#e2e8f0;font-size:14px;outline:none" />\n        </div>\n        <div>\n          <label style="display:block;font-size:13px;color:#94a3b8;margin-bottom:4px">Bio</label>\n          <textarea xh-model="bio"\n                    style="width:100%;padding:8px 12px;background:#1e293b;border:1px solid #334155;border-radius:6px;color:#e2e8f0;font-size:14px;outline:none;min-height:60px;resize:vertical"></textarea>\n        </div>\n      </div>\n\n      <!-- Live preview card -->\n      <div style="padding:16px;background:#1e293b;border-radius:8px;border:1px solid #334155">\n        <div style="font-size:12px;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">Live Preview</div>\n        <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">\n          <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#06b6d4);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:18px" xh-text="name.0"></div>\n          <div>\n            <div style="font-weight:700;font-size:16px;color:#e2e8f0" xh-text="name"></div>\n            <div style="font-size:13px;color:#94a3b8" xh-text="email"></div>\n          </div>\n        </div>\n        <div style="font-size:14px;color:#cbd5e1;line-height:1.6" xh-text="bio"></div>\n      </div>\n    </template>\n    <span class="xh-indicator" style="color:#94a3b8">Loading profile...</span>\n  </div>\n</div>'
+    }
+  };
+
+  // =========================================================================
+  // Default mock routes (as JSON text for the editor)
+  // =========================================================================
+  var DEFAULT_MOCK_JSON = {
+    "GET /api/users": {
+      status: 200,
+      body: {
+        users: [
+          { id: 1, name: "Alice", email: "alice@example.com", role: "admin" },
+          { id: 2, name: "Bob", email: "bob@example.com", role: "user" },
+          { id: 3, name: "Charlie", email: "charlie@example.com", role: "user" }
+        ]
+      }
+    },
+    "GET /api/users/1": {
+      status: 200,
+      body: { id: 1, name: "Alice", email: "alice@example.com", role: "admin", bio: "Software engineer" }
+    },
+    "GET /api/users/2": {
+      status: 200,
+      body: { id: 2, name: "Bob", email: "bob@example.com", role: "user", bio: "Designer" }
+    },
+    "GET /api/users/3": {
+      status: 200,
+      body: { id: 3, name: "Charlie", email: "charlie@example.com", role: "user", bio: "Product manager" }
+    },
+    "POST /api/users": {
+      status: 201,
+      body: { id: 4, name: "New User", email: "new@example.com" }
+    },
+    "PUT /api/users/1": {
+      status: 200,
+      body: { id: 1, name: "Alice Updated", email: "alice@example.com", role: "admin" }
+    },
+    "DELETE /api/users/1": {
+      status: 204,
+      body: {}
+    },
+    "GET /api/posts": {
+      status: 200,
+      body: {
+        posts: [
+          { id: 1, title: "Hello World", body: "My first post", userId: 1 },
+          { id: 2, title: "xhtmlx is great", body: "Declarative HTML attributes", userId: 1 },
+          { id: 3, title: "Service Workers", body: "Mocking APIs in the browser", userId: 2 }
+        ]
+      }
+    },
+    "GET /api/posts/1": {
+      status: 200,
+      body: { id: 1, title: "Hello World", body: "My first post", userId: 1, tags: ["intro", "general"] }
+    },
+    "GET /api/todos": {
+      status: 200,
+      body: {
+        todos: [
+          { id: 1, title: "Learn xhtmlx", completed: true },
+          { id: 2, title: "Build an app", completed: false },
+          { id: 3, title: "Deploy to production", completed: false }
+        ]
+      }
+    },
+    "GET /api/search": {
+      status: 200,
+      body: {
+        results: [
+          { id: 1, name: "Alice", email: "alice@example.com", role: "admin" },
+          { id: 2, name: "Bob", email: "bob@example.com", role: "user" },
+          { id: 3, name: "Charlie", email: "charlie@example.com", role: "user" }
+        ]
+      }
+    },
+    "GET /api/error/404": { status: 404, body: { error: "not_found", message: "Resource not found" } },
+    "GET /api/error/500": { status: 500, body: { error: "server_error", message: "Internal server error" } }
+  };
+
+  // =========================================================================
+  // State
+  // =========================================================================
+  var debounceTimer = null;
+  var swReady = false;
+  var previewBgDark = false;
+
+  // =========================================================================
+  // Service Worker Registration
+  // =========================================================================
+  /**
+   * Register the Service Worker (optional, best-effort).
+   * The primary mock mechanism is the fetch/XHR interceptor injected
+   * into the iframe, so the playground works even if SW registration
+   * fails.
+   */
+  function registerServiceWorker() {
+    if (!("serviceWorker" in navigator)) {
+      swLabel.textContent = "Mock API: injected (SW not supported)";
+      return;
+    }
+
+    swStatus.classList.add("pending");
+    swLabel.textContent = "Service Worker: registering...";
+
+    navigator.serviceWorker.register("sw.js")
+      .then(function(reg) {
+        swReady = true;
+        swStatus.classList.remove("pending");
+        swLabel.textContent = "Mock API: active";
+        updateServiceWorkerRoutes();
+      })
+      .catch(function(err) {
+        swStatus.classList.remove("pending");
+        swLabel.textContent = "Mock API: injected (SW unavailable)";
+        console.warn("SW registration skipped:", err.message);
+      });
+  }
+
+  function updateServiceWorkerRoutes() {
+    if (!navigator.serviceWorker || !navigator.serviceWorker.controller) return;
+    try {
+      var routes = JSON.parse(mockEditor.value);
+      navigator.serviceWorker.controller.postMessage({
+        type: "UPDATE_ROUTES",
+        routes: routes
+      });
+    } catch(e) {
+      // Invalid JSON, skip
+    }
+  }
+
+  // =========================================================================
+  // Preview Rendering
+  // =========================================================================
+
+  /**
+   * Build the mock-fetch interceptor script that gets injected into the
+   * iframe *before* xhtmlx.js loads.  This overrides window.fetch and
+   * XMLHttpRequest so every /api/* request is answered from the mock
+   * routes defined in the Mock API panel — no Service Worker needed.
+   */
+  function buildMockScript() {
+    var routes;
+    try {
+      routes = JSON.parse(mockEditor.value);
+    } catch(e) {
+      routes = {};
+    }
+    var routesJSON = JSON.stringify(routes)
+      .replace(/<\//g, "<\\/")   // escape closing script tags inside JSON
+      .replace(/<!--/g, "<\\!--");
+
+    return '(function(){\n' +
+      '  var ROUTES = ' + routesJSON + ';\n' +
+      '  var DELAY_MIN = 80, DELAY_MAX = 250;\n' +
+      '  function rndDelay(){ return DELAY_MIN + Math.floor(Math.random()*(DELAY_MAX-DELAY_MIN)); }\n' +
+      '\n' +
+      '  // ---------- Override fetch ----------\n' +
+      '  var _origFetch = window.fetch;\n' +
+      '  window.fetch = function(input, init) {\n' +
+      '    var url, method;\n' +
+      '    if (typeof input === "string") {\n' +
+      '      url = input;\n' +
+      '      method = (init && init.method) ? init.method.toUpperCase() : "GET";\n' +
+      '    } else if (input instanceof Request) {\n' +
+      '      url = input.url;\n' +
+      '      method = input.method.toUpperCase();\n' +
+      '    } else {\n' +
+      '      return _origFetch.apply(this, arguments);\n' +
+      '    }\n' +
+      '    try { var u = new URL(url, location.href); url = u.pathname; } catch(e){}\n' +
+      '    if (!url.startsWith("/api/")) return _origFetch.apply(this, arguments);\n' +
+      '    var key = method + " " + url;\n' +
+      '    var route = ROUTES[key];\n' +
+      '    if (!route) return _origFetch.apply(this, arguments);\n' +
+      '    return new Promise(function(resolve){\n' +
+      '      setTimeout(function(){\n' +
+      '        resolve(new Response(JSON.stringify(route.body), {\n' +
+      '          status: route.status,\n' +
+      '          headers: {"Content-Type":"application/json"}\n' +
+      '        }));\n' +
+      '      }, rndDelay());\n' +
+      '    });\n' +
+      '  };\n' +
+      '\n' +
+      '  // ---------- Override XMLHttpRequest ----------\n' +
+      '  var _XHR = XMLHttpRequest;\n' +
+      '  function MockXHR() {\n' +
+      '    this._real = new _XHR();\n' +
+      '    this._mock = null;\n' +
+      '    this.readyState = 0;\n' +
+      '    this.status = 0;\n' +
+      '    this.statusText = "";\n' +
+      '    this.responseText = "";\n' +
+      '    this.response = "";\n' +
+      '    this.responseType = "";\n' +
+      '    this.onreadystatechange = null;\n' +
+      '    this.onload = null;\n' +
+      '    this.onerror = null;\n' +
+      '    this.onloadend = null;\n' +
+      '    this._headers = {};\n' +
+      '    this._method = "GET";\n' +
+      '    this._url = "";\n' +
+      '  }\n' +
+      '  MockXHR.prototype.open = function(method, url) {\n' +
+      '    this._method = method.toUpperCase();\n' +
+      '    this._url = url;\n' +
+      '    try { var u = new URL(url, location.href); this._url = u.pathname; } catch(e){}\n' +
+      '    var key = this._method + " " + this._url;\n' +
+      '    if (this._url.startsWith("/api/") && ROUTES[key]) {\n' +
+      '      this._mock = ROUTES[key];\n' +
+      '    } else {\n' +
+      '      this._mock = null;\n' +
+      '      this._real.open.apply(this._real, arguments);\n' +
+      '    }\n' +
+      '  };\n' +
+      '  MockXHR.prototype.setRequestHeader = function(k, v) {\n' +
+      '    this._headers[k] = v;\n' +
+      '    if (!this._mock) this._real.setRequestHeader(k, v);\n' +
+      '  };\n' +
+      '  MockXHR.prototype.getResponseHeader = function(k) {\n' +
+      '    if (this._mock) return k.toLowerCase() === "content-type" ? "application/json" : null;\n' +
+      '    return this._real.getResponseHeader(k);\n' +
+      '  };\n' +
+      '  MockXHR.prototype.getAllResponseHeaders = function() {\n' +
+      '    if (this._mock) return "content-type: application/json\\r\\n";\n' +
+      '    return this._real.getAllResponseHeaders();\n' +
+      '  };\n' +
+      '  MockXHR.prototype.send = function(body) {\n' +
+      '    var self = this;\n' +
+      '    if (this._mock) {\n' +
+      '      setTimeout(function() {\n' +
+      '        self.readyState = 4;\n' +
+      '        self.status = self._mock.status;\n' +
+      '        self.statusText = self._mock.status >= 400 ? "Error" : "OK";\n' +
+      '        var text = JSON.stringify(self._mock.body);\n' +
+      '        self.responseText = text;\n' +
+      '        self.response = text;\n' +
+      '        if (self.onreadystatechange) self.onreadystatechange();\n' +
+      '        if (self.status >= 200 && self.status < 400 && self.onload) self.onload();\n' +
+      '        if (self.status >= 400 && self.onerror) self.onerror();\n' +
+      '        if (self.onloadend) self.onloadend();\n' +
+      '        try {\n' +
+      '          self.dispatchEvent(new Event("readystatechange"));\n' +
+      '          self.dispatchEvent(new Event("load"));\n' +
+      '          self.dispatchEvent(new Event("loadend"));\n' +
+      '        } catch(e){}\n' +
+      '      }, rndDelay());\n' +
+      '    } else {\n' +
+      '      this._real.onreadystatechange = function() {\n' +
+      '        self.readyState = self._real.readyState;\n' +
+      '        self.status = self._real.status;\n' +
+      '        self.statusText = self._real.statusText;\n' +
+      '        self.responseText = self._real.responseText;\n' +
+      '        self.response = self._real.response;\n' +
+      '        if (self.onreadystatechange) self.onreadystatechange();\n' +
+      '      };\n' +
+      '      this._real.onload = function() { if (self.onload) self.onload(); };\n' +
+      '      this._real.onerror = function() { if (self.onerror) self.onerror(); };\n' +
+      '      this._real.onloadend = function() { if (self.onloadend) self.onloadend(); };\n' +
+      '      this._real.send(body);\n' +
+      '    }\n' +
+      '  };\n' +
+      '  MockXHR.prototype.abort = function() {\n' +
+      '    if (!this._mock) this._real.abort();\n' +
+      '  };\n' +
+      '  MockXHR.prototype.addEventListener = function() {\n' +
+      '    if (!this._mock) this._real.addEventListener.apply(this._real, arguments);\n' +
+      '    else {\n' +
+      '      try { EventTarget.prototype.addEventListener.apply(this, arguments); } catch(e){}\n' +
+      '    }\n' +
+      '  };\n' +
+      '  MockXHR.prototype.removeEventListener = function() {\n' +
+      '    if (!this._mock) this._real.removeEventListener.apply(this._real, arguments);\n' +
+      '    else {\n' +
+      '      try { EventTarget.prototype.removeEventListener.apply(this, arguments); } catch(e){}\n' +
+      '    }\n' +
+      '  };\n' +
+      '  // Inherit EventTarget\n' +
+      '  try { Object.setPrototypeOf(MockXHR.prototype, EventTarget.prototype); } catch(e){}\n' +
+      '  MockXHR.UNSENT = 0; MockXHR.OPENED = 1; MockXHR.HEADERS_RECEIVED = 2;\n' +
+      '  MockXHR.LOADING = 3; MockXHR.DONE = 4;\n' +
+      '  window.XMLHttpRequest = MockXHR;\n' +
+      '})();\n';
+  }
+
+  function runPreview() {
+    var htmlCode = codeEditor.value;
+    var bgColor = previewBgDark ? "#0f172a" : "#ffffff";
+    var textColor = previewBgDark ? "#e2e8f0" : "#1e293b";
+
+    var mockScript = buildMockScript();
+
+    var srcdoc = '<!DOCTYPE html>\n' +
+      '<html>\n' +
+      '<head>\n' +
+      '  <meta charset="UTF-8">\n' +
+      '  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n' +
+      '  <style>\n' +
+      '    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }\n' +
+      '    body {\n' +
+      '      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;\n' +
+      '      background: ' + bgColor + ';\n' +
+      '      color: ' + textColor + ';\n' +
+      '      padding: 20px;\n' +
+      '      line-height: 1.5;\n' +
+      '      font-size: 14px;\n' +
+      '    }\n' +
+      '    .xh-indicator { opacity: 0; transition: opacity 200ms ease-in; }\n' +
+      '    .xh-request .xh-indicator, .xh-request.xh-indicator { opacity: 1; }\n' +
+      '  </style>\n' +
+      '  <script>\n' + mockScript + '  <\/script>\n' +
+      '</head>\n' +
+      '<body>\n' +
+      htmlCode + '\n' +
+      '<script src="../xhtmlx.js"><\/script>\n' +
+      '</body>\n' +
+      '</html>';
+
+    previewIframe.srcdoc = srcdoc;
+  }
+
+  // =========================================================================
+  // Line Numbers
+  // =========================================================================
+  function updateLineNumbers() {
+    var lines = codeEditor.value.split("\n");
+    var count = lines.length;
+    var html = "";
+    for (var i = 1; i <= count; i++) {
+      html += "<div>" + i + "</div>";
+    }
+    lineNumbers.innerHTML = html;
+  }
+
+  function syncScroll() {
+    lineNumbers.style.transform = "translateY(-" + codeEditor.scrollTop + "px)";
+  }
+
+  // =========================================================================
+  // Tab Key Handling
+  // =========================================================================
+  function handleTab(e) {
+    if (e.key === "Tab") {
+      e.preventDefault();
+      var start = codeEditor.selectionStart;
+      var end = codeEditor.selectionEnd;
+      var value = codeEditor.value;
+      codeEditor.value = value.substring(0, start) + "  " + value.substring(end);
+      codeEditor.selectionStart = codeEditor.selectionEnd = start + 2;
+      scheduleRun();
+    }
+  }
+
+  // =========================================================================
+  // Debounced Auto-Run
+  // =========================================================================
+  function scheduleRun() {
+    updateLineNumbers();
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(function() {
+      runPreview();
+    }, 500);
+  }
+
+  // =========================================================================
+  // Keyboard Shortcuts
+  // =========================================================================
+  function handleKeyboard(e) {
+    // Ctrl/Cmd + Enter: Run immediately
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+      e.preventDefault();
+      clearTimeout(debounceTimer);
+      runPreview();
+    }
+  }
+
+  // =========================================================================
+  // Example Loading
+  // =========================================================================
+  function loadExample(name) {
+    var example = EXAMPLES[name];
+    if (!example) return;
+    codeEditor.value = example.html;
+    updateLineNumbers();
+    clearTimeout(debounceTimer);
+    runPreview();
+  }
+
+  // =========================================================================
+  // Tab Switching (HTML / Mock API)
+  // =========================================================================
+  function switchTab(tabName) {
+    if (tabName === "html") {
+      tabHtml.classList.add("active");
+      tabMock.classList.remove("active");
+      htmlPanel.classList.remove("hidden");
+      mockPanel.classList.remove("visible");
+    } else {
+      tabMock.classList.add("active");
+      tabHtml.classList.remove("active");
+      htmlPanel.classList.add("hidden");
+      mockPanel.classList.add("visible");
+    }
+  }
+
+  // =========================================================================
+  // Mock Editor Validation
+  // =========================================================================
+  function validateMockJson() {
+    try {
+      JSON.parse(mockEditor.value);
+      mockStatus.textContent = "Valid JSON";
+      mockStatus.className = "mock-status success";
+      updateServiceWorkerRoutes();
+    } catch(e) {
+      mockStatus.textContent = "Invalid JSON: " + e.message;
+      mockStatus.className = "mock-status error";
+    }
+  }
+
+  // =========================================================================
+  // Theme Toggle
+  // =========================================================================
+  function toggleTheme() {
+    var html = document.documentElement;
+    var current = html.getAttribute("data-theme");
+    var next = current === "dark" ? "light" : "dark";
+    html.setAttribute("data-theme", next);
+    localStorage.setItem("xhtmlx-playground-theme", next);
+
+    if (next === "dark") {
+      iconMoon.style.display = "";
+      iconSun.style.display = "none";
+    } else {
+      iconMoon.style.display = "none";
+      iconSun.style.display = "";
+    }
+  }
+
+  function restoreTheme() {
+    var saved = localStorage.getItem("xhtmlx-playground-theme");
+    if (saved) {
+      document.documentElement.setAttribute("data-theme", saved);
+      if (saved === "light") {
+        iconMoon.style.display = "none";
+        iconSun.style.display = "";
+      }
+    }
+  }
+
+  // =========================================================================
+  // Preview Background Toggle
+  // =========================================================================
+  function togglePreviewBg() {
+    previewBgDark = !previewBgDark;
+    previewBgToggle.textContent = "bg: " + (previewBgDark ? "dark" : "light");
+    runPreview();
+  }
+
+  // =========================================================================
+  // Share (URL Hash)
+  // =========================================================================
+  function shareState() {
+    try {
+      var state = {
+        html: codeEditor.value,
+        mock: mockEditor.value
+      };
+      var json = JSON.stringify(state);
+      var encoded = btoa(unescape(encodeURIComponent(json)));
+      var url = window.location.origin + window.location.pathname + "#" + encoded;
+      history.replaceState(null, "", "#" + encoded);
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(function() {
+          showToast("Shareable URL copied to clipboard!");
+        }).catch(function() {
+          showToast("URL updated in address bar");
+        });
+      } else {
+        showToast("URL updated in address bar");
+      }
+    } catch(e) {
+      showToast("Could not encode state: " + e.message);
+    }
+  }
+
+  function restoreFromHash() {
+    var hash = window.location.hash;
+    if (!hash || hash.length < 2) return false;
+
+    try {
+      var encoded = hash.substring(1);
+      var json = decodeURIComponent(escape(atob(encoded)));
+      var state = JSON.parse(json);
+      if (state.html) codeEditor.value = state.html;
+      if (state.mock) mockEditor.value = state.mock;
+      return true;
+    } catch(e) {
+      console.warn("Could not restore state from URL hash:", e);
+      return false;
+    }
+  }
+
+  // =========================================================================
+  // Toast Notification
+  // =========================================================================
+  var toastTimer = null;
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add("visible");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function() {
+      toast.classList.remove("visible");
+    }, 2500);
+  }
+
+  // =========================================================================
+  // Resize Handle
+  // =========================================================================
+  function setupResize() {
+    var isResizing = false;
+    var isVertical = false;
+
+    resizeHandle.addEventListener("mousedown", function(e) {
+      e.preventDefault();
+      isResizing = true;
+      isVertical = window.innerWidth <= 768;
+      resizeHandle.classList.add("active");
+      document.body.style.cursor = isVertical ? "row-resize" : "col-resize";
+      document.body.style.userSelect = "none";
+    });
+
+    document.addEventListener("mousemove", function(e) {
+      if (!isResizing) return;
+
+      if (isVertical) {
+        var containerRect = document.querySelector(".main-area").getBoundingClientRect();
+        var pct = ((e.clientY - containerRect.top) / containerRect.height) * 100;
+        pct = Math.max(20, Math.min(80, pct));
+        editorPanel.style.height = pct + "%";
+        editorPanel.style.width = "100%";
+        previewPanel.style.flex = "1";
+      } else {
+        var containerRect = document.querySelector(".main-area").getBoundingClientRect();
+        var pct = ((e.clientX - containerRect.left) / containerRect.width) * 100;
+        pct = Math.max(20, Math.min(80, pct));
+        editorPanel.style.width = pct + "%";
+        editorPanel.style.height = "";
+        previewPanel.style.flex = "1";
+      }
+    });
+
+    document.addEventListener("mouseup", function() {
+      if (isResizing) {
+        isResizing = false;
+        resizeHandle.classList.remove("active");
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+      }
+    });
+  }
+
+  // =========================================================================
+  // Initialization
+  // =========================================================================
+  function init() {
+    // Restore theme
+    restoreTheme();
+
+    // Set default mock JSON
+    mockEditor.value = JSON.stringify(DEFAULT_MOCK_JSON, null, 2);
+
+    // Try to restore state from URL hash
+    var restored = restoreFromHash();
+
+    // If no state was restored, load the first example
+    if (!restored) {
+      loadExample("basic-get");
+      exampleSelect.value = "basic-get";
+    }
+
+    // Initial line numbers
+    updateLineNumbers();
+
+    // ---- Event Listeners ----
+
+    // Code editor changes
+    codeEditor.addEventListener("input", scheduleRun);
+    codeEditor.addEventListener("keydown", handleTab);
+    codeEditor.addEventListener("scroll", syncScroll);
+
+    // Keyboard shortcuts (on document)
+    document.addEventListener("keydown", handleKeyboard);
+
+    // Run button
+    btnRun.addEventListener("click", function() {
+      clearTimeout(debounceTimer);
+      runPreview();
+    });
+
+    // Share button
+    btnShare.addEventListener("click", shareState);
+
+    // Theme toggle
+    btnTheme.addEventListener("click", toggleTheme);
+
+    // Example selector
+    exampleSelect.addEventListener("change", function() {
+      var val = exampleSelect.value;
+      if (val) loadExample(val);
+    });
+
+    // Tab switching
+    tabHtml.addEventListener("click", function() { switchTab("html"); });
+    tabMock.addEventListener("click", function() { switchTab("mock"); });
+
+    // Mock editor changes
+    var mockDebounce = null;
+    mockEditor.addEventListener("input", function() {
+      clearTimeout(mockDebounce);
+      mockDebounce = setTimeout(function() {
+        validateMockJson();
+      }, 400);
+    });
+
+    // Mock editor tab key
+    mockEditor.addEventListener("keydown", function(e) {
+      if (e.key === "Tab") {
+        e.preventDefault();
+        var start = mockEditor.selectionStart;
+        var end = mockEditor.selectionEnd;
+        var value = mockEditor.value;
+        mockEditor.value = value.substring(0, start) + "  " + value.substring(end);
+        mockEditor.selectionStart = mockEditor.selectionEnd = start + 2;
+      }
+    });
+
+    // Preview background toggle
+    previewBgToggle.addEventListener("click", togglePreviewBg);
+
+    // Resize handle
+    setupResize();
+
+    // Hash change (share links)
+    window.addEventListener("hashchange", function() {
+      if (restoreFromHash()) {
+        updateLineNumbers();
+        runPreview();
+      }
+    });
+
+    // Register service worker (optional, best-effort)
+    registerServiceWorker();
+
+    // Initial preview render
+    runPreview();
+  }
+
+  // Start
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+
+})();
+</script>
+</body>
+</html>
