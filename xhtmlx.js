@@ -691,22 +691,26 @@
 
     var fragment = document.createDocumentFragment();
 
+    var ItemCtxClass = (ctx instanceof MutableDataContext) ? MutableDataContext : DataContext;
+
     var renderItem = function (item, idx) {
       var clone = el.cloneNode(true);
-      // Mark clone so renderTemplate's second pass doesn't rebind with wrong context
+      // Mark only the clone root — descendants are detected via closest()
       clone.setAttribute("data-xh-each-item", "");
-      // Also mark descendants so renderTemplate can use hasAttribute instead of closest()
-      var cloneDesc = clone.querySelectorAll("*");
-      for (var cd = 0; cd < cloneDesc.length; cd++) {
-        cloneDesc[cd].setAttribute("data-xh-each-item", "");
-      }
-      var ItemCtxClass = (ctx instanceof MutableDataContext) ? MutableDataContext : DataContext;
       var itemCtx = new ItemCtxClass(item, ctx, idx);
       applyBindings(clone, itemCtx);
-      // Process children bindings
-      processBindingsInTree(clone, itemCtx);
-      // Recursively process for nested REST verb elements
-      processNode(clone, itemCtx);
+      // Handle xh-on-* event handlers on the clone root itself
+      for (var oa = 0; oa < clone.attributes.length; oa++) {
+        if (clone.attributes[oa].name.indexOf("xh-on-") === 0) {
+          attachOnHandler(clone, clone.attributes[oa].name.slice(6), clone.attributes[oa].value);
+        }
+      }
+      // Mark clone root as processed to prevent re-processing by processNode
+      var cloneState = elementStates.get(clone) || {};
+      cloneState.processed = true;
+      elementStates.set(clone, cloneState);
+      // Single combined pass: bindings + REST triggers for all descendants
+      processEachCloneChildren(clone, itemCtx);
       fragment.appendChild(clone);
     };
 
@@ -727,14 +731,9 @@
         for (var b = offset; b < end; b++) {
           var clone = el.cloneNode(true);
           clone.setAttribute("data-xh-each-item", "");
-          var cloneDesc = clone.querySelectorAll("*");
-          for (var cd = 0; cd < cloneDesc.length; cd++) {
-            cloneDesc[cd].setAttribute("data-xh-each-item", "");
-          }
-          var itemCtx = new (ctx instanceof MutableDataContext ? MutableDataContext : DataContext)(arr[b], ctx, b);
+          var itemCtx = new ItemCtxClass(arr[b], ctx, b);
           applyBindings(clone, itemCtx);
-          processBindingsInTree(clone, itemCtx);
-          processNode(clone, itemCtx);
+          processEachCloneChildren(clone, itemCtx);
           batchFragment.appendChild(clone);
         }
         // Insert after the last inserted batch
@@ -786,6 +785,57 @@
 
       // Apply simple bindings
       applyBindings(el, ctx);
+    }
+  }
+
+  /**
+   * Combined processing pass for xh-each clone children.
+   * Merges processBindingsInTree + processNode into a single querySelectorAll
+   * to avoid 2+ full DOM scans per cloned item.
+   *
+   * @param {Element}     root – The cloned element.
+   * @param {DataContext}  ctx  – Per-item data context.
+   */
+  function processEachCloneChildren(root, ctx) {
+    var elements = Array.prototype.slice.call(root.querySelectorAll("*"));
+    for (var i = 0; i < elements.length; i++) {
+      var el = elements[i];
+      if (!el.parentNode) continue;
+
+      // xh-each (nested iterations)
+      if (el.hasAttribute("xh-each")) {
+        processEach(el, ctx);
+        continue;
+      }
+
+      // Apply bindings (xh-text, xh-html, xh-attr-*, xh-if, etc.)
+      var kept = applyBindings(el, ctx);
+
+      if (kept) {
+        // Check for xh-on-* event handlers
+        for (var oa = 0; oa < el.attributes.length; oa++) {
+          if (el.attributes[oa].name.indexOf("xh-on-") === 0) {
+            attachOnHandler(el, el.attributes[oa].name.slice(6), el.attributes[oa].value);
+          }
+        }
+
+        // Attach REST triggers if element has a REST verb
+        if (getRestVerb(el)) {
+          var state = elementStates.get(el) || {};
+          state.dataContext = ctx;
+          state.requestInFlight = false;
+          state.intervalIds = state.intervalIds || [];
+          state.observers = state.observers || [];
+          elementStates.set(el, state);
+          attachTriggers(el, ctx, []);
+        } else {
+          // Mark non-REST elements as processed to prevent re-processing
+          // by processNode with the wrong parent context
+          var bState = elementStates.get(el) || {};
+          bState.processed = true;
+          elementStates.set(el, bState);
+        }
+      }
     }
   }
 
@@ -1340,8 +1390,10 @@
       // Skip elements with REST verbs — they will be processed by processNode
       if (getRestVerb(bindEls[j])) continue;
       // Skip elements created by xh-each — they were already bound with the
-      // correct per-item context inside processEach
-      if (bindEls[j].hasAttribute("data-xh-each-item")) continue;
+      // correct per-item context inside processEach.
+      // Only the clone root is marked, so check via closest().
+      if (bindEls[j].closest && bindEls[j].closest("[data-xh-each-item]")) continue;
+      if (!bindEls[j].closest && bindEls[j].hasAttribute("data-xh-each-item")) continue;
       applyBindings(bindEls[j], ctx);
     }
 
