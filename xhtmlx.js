@@ -2601,6 +2601,9 @@
       }
     },
 
+    /** Cache of compiled regexes for variable substitution: varName -> RegExp */
+    _varRegexCache: {},
+
     t: function(key, vars) {
       var locales = [i18n._locale, i18n._fallback];
       for (var l = 0; l < locales.length; l++) {
@@ -2611,7 +2614,13 @@
           if (vars) {
             for (var v in vars) {
               if (vars.hasOwnProperty(v)) {
-                text = text.replace(new RegExp("\\{" + v + "\\}", "g"), vars[v]);
+                var re = i18n._varRegexCache[v];
+                if (!re) {
+                  re = new RegExp("\\{" + v + "\\}", "g");
+                  i18n._varRegexCache[v] = re;
+                }
+                re.lastIndex = 0;
+                text = text.replace(re, vars[v]);
               }
             }
           }
@@ -2627,6 +2636,9 @@
    *
    * @param {Element} root – The root element to scan.
    */
+  // Common i18n attribute selectors for targeted scanning
+  var I18N_ATTR_SELECTOR = "[xh-i18n-placeholder],[xh-i18n-title],[xh-i18n-alt],[xh-i18n-label],[xh-i18n-aria-label]";
+
   function applyI18n(root) {
     var els = root.querySelectorAll("[xh-i18n]");
     for (var i = 0; i < els.length; i++) {
@@ -2640,16 +2652,32 @@
     }
 
     // xh-i18n-{attr} for attribute translations
+    // Fast path: use targeted selectors for common i18n attribute names
+    var targeted = root.querySelectorAll(I18N_ATTR_SELECTOR);
+    var seen = new Set();
+    for (var t = 0; t < targeted.length; t++) {
+      seen.add(targeted[t]);
+      applyI18nAttrs(targeted[t]);
+    }
+
+    // Slow path: scan for uncommon xh-i18n-* attributes
     var all = root.querySelectorAll("*");
     for (var j = 0; j < all.length; j++) {
-      var attrs = all[j].attributes;
-      for (var a = 0; a < attrs.length; a++) {
-        var name = attrs[a].name;
-        if (name.indexOf("xh-i18n-") === 0 && name !== "xh-i18n-vars") {
-          var targetAttr = name.slice(8);
-          var attrKey = attrs[a].value;
-          all[j].setAttribute(targetAttr, i18n.t(attrKey));
-        }
+      if (seen.has(all[j])) continue;
+      if (checkElementForI18nAttr(all[j])) {
+        applyI18nAttrs(all[j]);
+      }
+    }
+  }
+
+  function applyI18nAttrs(el) {
+    var attrs = el.attributes;
+    for (var a = 0; a < attrs.length; a++) {
+      var name = attrs[a].name;
+      if (name.indexOf("xh-i18n-") === 0 && name !== "xh-i18n-vars") {
+        var targetAttr = name.slice(8);
+        var attrKey = attrs[a].value;
+        el.setAttribute(targetAttr, i18n.t(attrKey));
       }
     }
   }
