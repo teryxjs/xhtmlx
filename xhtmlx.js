@@ -81,8 +81,10 @@
   /** Map<string, {data: string, timestamp: number}> — response cache (verb:url → body) */
   var responseCache = new Map();
 
-  /** Cache for path.split(".") results in DataContext.resolve */
+  /** Cache for path.split(".") results in DataContext.resolve (bounded) */
   var pathSplitCache = {};
+  var pathSplitCacheSize = 0;
+  var PATH_SPLIT_CACHE_MAX = 1000;
 
   // ---------------------------------------------------------------------------
   // Default CSS injection
@@ -161,7 +163,13 @@
       return rawValue;
     }
 
-    var parts = pathSplitCache[path] || (pathSplitCache[path] = path.split("."));
+    var parts = pathSplitCache[path];
+    if (!parts) {
+      if (pathSplitCacheSize >= PATH_SPLIT_CACHE_MAX) { pathSplitCache = {}; pathSplitCacheSize = 0; }
+      parts = path.split(".");
+      pathSplitCache[path] = parts;
+      pathSplitCacheSize++;
+    }
 
     // --- special variables ---------------------------------------------------
     if (parts[0] === "$index") {
@@ -261,6 +269,14 @@
   MutableDataContext.prototype.subscribe = function(path, callback) {
     if (!this._subscribers[path]) this._subscribers[path] = [];
     this._subscribers[path].push(callback);
+    var self = this;
+    return function unsubscribe() {
+      var subs = self._subscribers[path];
+      if (subs) {
+        var idx = subs.indexOf(callback);
+        if (idx !== -1) subs.splice(idx, 1);
+      }
+    };
   };
 
   /**
@@ -450,6 +466,18 @@
    * @param {DataContext}  ctx
    * @returns {boolean} false if the element was removed by xh-if/xh-unless
    */
+  /**
+   * Subscribe to a MutableDataContext field and track the unsubscribe
+   * function in elementStates for cleanup when the element is removed.
+   */
+  function trackSubscription(el, ctx, path, callback) {
+    var unsub = ctx.subscribe(path, callback);
+    var st = elementStates.get(el);
+    if (!st) { st = {}; elementStates.set(el, st); }
+    if (!st.unsubscribes) st.unsubscribes = [];
+    st.unsubscribes.push(unsub);
+  }
+
   function applyBindings(el, ctx) {
     // -- xh-show ----------------------------------------------------------------
     var showAttr = el.getAttribute("xh-show");
@@ -458,7 +486,7 @@
       el.style.display = sval ? "" : "none";
       if (ctx instanceof MutableDataContext) {
         (function(field, element, context) {
-          context.subscribe(field, function() {
+          trackSubscription(element, context, field, function() {
             var newVal = context.resolve(field);
             element.style.display = newVal ? "" : "none";
           });
@@ -473,7 +501,7 @@
       el.style.display = hdval ? "none" : "";
       if (ctx instanceof MutableDataContext) {
         (function(field, element, context) {
-          context.subscribe(field, function() {
+          trackSubscription(element, context, field, function() {
             var newVal = context.resolve(field);
             element.style.display = newVal ? "none" : "";
           });
@@ -508,7 +536,7 @@
       el.textContent = tv != null ? String(tv) : "";
       if (ctx instanceof MutableDataContext) {
         (function(field, element, context) {
-          context.subscribe(field, function() {
+          trackSubscription(element, context, field, function() {
             var newVal = context.resolve(field);
             element.textContent = newVal != null ? String(newVal) : "";
           });
@@ -527,7 +555,7 @@
         el.innerHTML = hv != null ? String(hv) : "";
         if (ctx instanceof MutableDataContext) {
           (function(field, element, context) {
-            context.subscribe(field, function() {
+            trackSubscription(element, context, field, function() {
               var newVal = context.resolve(field);
               element.innerHTML = newVal != null ? String(newVal) : "";
             });
@@ -536,25 +564,45 @@
       }
     }
 
-    // -- xh-attr-* ------------------------------------------------------------
+    // -- xh-attr-* + xh-class-* (single pass) ----------------------------------
     var attrs = el.attributes;
     for (var i = attrs.length - 1; i >= 0; i--) {
       var aName = attrs[i].name;
       if (aName.indexOf("xh-attr-") === 0) {
-        var targetAttr = aName.slice(8); // after "xh-attr-"
+        var targetAttr = aName.slice(8);
         var aval = ctx.resolve(attrs[i].value);
         if (aval != null) {
           el.setAttribute(targetAttr, String(aval));
         }
         if (ctx instanceof MutableDataContext) {
           (function(field, tAttr, element, context) {
-            context.subscribe(field, function() {
+            trackSubscription(element, context, field, function() {
               var newVal = context.resolve(field);
               if (newVal != null) {
                 element.setAttribute(tAttr, String(newVal));
               }
             });
           })(attrs[i].value, targetAttr, el, ctx);
+        }
+      } else if (aName.indexOf("xh-class-") === 0) {
+        var className = aName.slice(9);
+        var cval = ctx.resolve(attrs[i].value);
+        if (cval) {
+          el.classList.add(className);
+        } else {
+          el.classList.remove(className);
+        }
+        if (ctx instanceof MutableDataContext) {
+          (function(field, clsName, element, context) {
+            trackSubscription(element, context, field, function() {
+              var newVal = context.resolve(field);
+              if (newVal) {
+                element.classList.add(clsName);
+              } else {
+                element.classList.remove(clsName);
+              }
+            });
+          })(attrs[i].value, className, el, ctx);
         }
       }
     }
@@ -600,31 +648,7 @@
       }
     }
 
-    // -- xh-class-* -------------------------------------------------------------
-    for (var c = attrs.length - 1; c >= 0; c--) {
-      var cName = attrs[c].name;
-      if (cName.indexOf("xh-class-") === 0) {
-        var className = cName.slice(9); // after "xh-class-"
-        var cval = ctx.resolve(attrs[c].value);
-        if (cval) {
-          el.classList.add(className);
-        } else {
-          el.classList.remove(className);
-        }
-        if (ctx instanceof MutableDataContext) {
-          (function(field, clsName, element, context) {
-            context.subscribe(field, function() {
-              var newVal = context.resolve(field);
-              if (newVal) {
-                element.classList.add(clsName);
-              } else {
-                element.classList.remove(clsName);
-              }
-            });
-          })(attrs[c].value, className, el, ctx);
-        }
-      }
-    }
+    // xh-class-* is now handled in the xh-attr-* loop above (single pass)
 
     // -- custom directives -------------------------------------------------------
     for (var cd = 0; cd < customDirectives.length; cd++) {
@@ -671,6 +695,11 @@
       var clone = el.cloneNode(true);
       // Mark clone so renderTemplate's second pass doesn't rebind with wrong context
       clone.setAttribute("data-xh-each-item", "");
+      // Also mark descendants so renderTemplate can use hasAttribute instead of closest()
+      var cloneDesc = clone.querySelectorAll("*");
+      for (var cd = 0; cd < cloneDesc.length; cd++) {
+        cloneDesc[cd].setAttribute("data-xh-each-item", "");
+      }
       var ItemCtxClass = (ctx instanceof MutableDataContext) ? MutableDataContext : DataContext;
       var itemCtx = new ItemCtxClass(item, ctx, idx);
       applyBindings(clone, itemCtx);
@@ -1115,6 +1144,12 @@
       state.ws.close(1000);
       state.ws = null;
     }
+    if (state.unsubscribes) {
+      for (var u = 0; u < state.unsubscribes.length; u++) {
+        state.unsubscribes[u]();
+      }
+      state.unsubscribes = [];
+    }
   }
 
   /**
@@ -1263,8 +1298,7 @@
       if (getRestVerb(allEls[j])) continue;
       // Skip elements created by xh-each — they were already bound with the
       // correct per-item context inside processEach
-      if (allEls[j].hasAttribute("data-xh-each-item") ||
-          allEls[j].closest("[data-xh-each-item]")) continue;
+      if (allEls[j].hasAttribute("data-xh-each-item")) continue;
       applyBindings(allEls[j], ctx);
     }
 
@@ -2454,10 +2488,15 @@
    * @returns {boolean}
    */
   function hasXhAttributes(el) {
-    // Check the element itself
+    // Skip nodes owned by xhtmlx (inserted via swap/render)
+    if (el.hasAttribute && el.hasAttribute("data-xh-owned")) return false;
+    // Check the element itself (fast path — avoids full subtree scan)
     if (checkElementForXh(el)) return true;
-    // Check descendants
-    var all = el.querySelectorAll ? el.querySelectorAll("*") : [];
+    // Check descendants — use a targeted selector instead of querySelectorAll("*")
+    var all = el.querySelectorAll ? el.querySelectorAll("[xh-get],[xh-post],[xh-put],[xh-delete],[xh-patch],[xh-text],[xh-each],[xh-trigger],[xh-template],[xh-model],[xh-ws],[xh-router],[xh-i18n],[xh-boost]") : [];
+    if (all.length > 0) return true;
+    // Fallback: check for wildcard xh-* attrs (xh-attr-*, xh-on-*, etc.)
+    all = el.querySelectorAll ? el.querySelectorAll("*") : [];
     for (var i = 0; i < all.length; i++) {
       if (checkElementForXh(all[i])) return true;
     }
