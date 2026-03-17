@@ -1388,6 +1388,7 @@ code, pre {
         var script = document.createElement("script");
         script.textContent = src;
         document.body.appendChild(script);
+        window.__xhtmlxLoaded = true;
       })
       .catch(function(err) {
         console.error("[tutorial] Failed to load xhtmlx.js from " + xhtmlxUrl + ":", err);
@@ -1395,6 +1396,7 @@ code, pre {
         injectDemos();
         var script = document.createElement("script");
         script.src = xhtmlxUrl;
+        script.onload = function() { window.__xhtmlxLoaded = true; };
         document.body.appendChild(script);
       });
   }

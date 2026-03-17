@@ -43,8 +43,8 @@ const server = http.createServer((req, res) => {
       return;
     }
 
-    // API routes
-    if (url.startsWith("/api/")) {
+    // API routes (but not /api/ docs page)
+    if (url.startsWith("/api/") && !fs.existsSync(path.join(DOCS_DIR, url, "index.html")) && !fs.existsSync(path.join(DOCS_DIR, url))) {
       res.setHeader("Content-Type", "application/json");
       handleAPI(method, url, query, body, res);
       return;
