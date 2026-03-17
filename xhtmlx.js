@@ -26,8 +26,41 @@
     templatePrefix: "",         // Prefix prepended to all xh-template URLs
     apiPrefix: "",              // Prefix prepended to all REST verb URLs
     uiVersion: null,            // Current UI version identifier (any string)
-    cspSafe: false              // When true, avoid innerHTML for CSP compliance
+    cspSafe: false,             // When true, avoid innerHTML for CSP compliance
+    breakpoints: { mobile: 768, tablet: 1024 }  // Responsive breakpoint thresholds
   };
+
+  // ---------------------------------------------------------------------------
+  // Responsive breakpoint helpers
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Determine the current breakpoint name based on window width and config.
+   * @returns {string} "mobile", "tablet", or "desktop"
+   */
+  function getCurrentBreakpoint() {
+    if (typeof window === "undefined") return "desktop";
+    var w = window.innerWidth;
+    if (w < config.breakpoints.mobile) return "mobile";
+    if (w < config.breakpoints.tablet) return "tablet";
+    return "desktop";
+  }
+
+  /**
+   * Build a viewport context object with current breakpoint and dimensions.
+   * @returns {Object}
+   */
+  function getViewportContext() {
+    var bp = getCurrentBreakpoint();
+    return {
+      width: typeof window !== "undefined" ? window.innerWidth : 0,
+      height: typeof window !== "undefined" ? window.innerHeight : 0,
+      breakpoint: bp,
+      mobile: bp === "mobile",
+      tablet: bp === "tablet",
+      desktop: bp === "desktop"
+    };
+  }
 
   // ---------------------------------------------------------------------------
   // Internal state
@@ -148,6 +181,12 @@
       while (root.parent) root = root.parent;
       if (parts.length === 1) return root.data;
       return root.resolve(parts.slice(1).join("."));
+    }
+
+    if (parts[0] === "$viewport") {
+      var vp = getViewportContext();
+      if (parts.length === 1) return vp;
+      return resolveDot(vp, parts.slice(1));
     }
 
     // --- local lookup --------------------------------------------------------
@@ -331,6 +370,23 @@
    * @returns {Promise<{html: string|null, isExternal: boolean}>}
    */
   function resolveTemplate(el, templateStack) {
+    // -- breakpoint-specific template -----------------------------------------
+    var bp = getCurrentBreakpoint();
+    if (bp !== "desktop") {
+      var bpTemplate = el.getAttribute("xh-template-" + bp);
+      if (bpTemplate) {
+        if (templateStack.indexOf(bpTemplate) !== -1) {
+          console.error("[xhtmlx] circular template reference detected: " + bpTemplate);
+          return Promise.reject(new Error("Circular template: " + bpTemplate));
+        }
+        var newBpStack = templateStack.concat(bpTemplate);
+        return fetchTemplate(bpTemplate).then(function(html) {
+          return { html: html, isExternal: true, templateStack: newBpStack };
+        });
+      }
+    }
+
+    // -- normal xh-template ---------------------------------------------------
     var url = el.getAttribute("xh-template");
 
     // -- external template ----------------------------------------------------
@@ -1773,6 +1829,22 @@
       return;
     }
 
+    // --- "resize" trigger: debounced window resize ----------------------------
+    if (spec.event === "resize") {
+      var resizeHandler = function() {
+        executeRequest(el, ctx, templateStack);
+      };
+      // Debounce resize by default (use spec.delay or 300ms)
+      var resizeDelay = spec.delay || 300;
+      var resizeTimer = null;
+      window.addEventListener("resize", function() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(resizeHandler, resizeDelay);
+      });
+      state.intervalIds.push(resizeTimer); // for cleanup
+      return;
+    }
+
     // --- Standard DOM event trigger ------------------------------------------
     var listenTarget = el;
     if (spec.from) {
@@ -2776,7 +2848,9 @@
       applyI18n: applyI18n,
       i18n: i18n,
       router: router,
-      injectDefaultCSS: injectDefaultCSS
+      injectDefaultCSS: injectDefaultCSS,
+      getCurrentBreakpoint: getCurrentBreakpoint,
+      getViewportContext: getViewportContext
     }
   };
 
@@ -2854,6 +2928,33 @@
           }).catch(function () {});
         }
       }
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Breakpoint change detection — emits xh:breakpointChanged on resize
+  // ---------------------------------------------------------------------------
+
+  if (typeof window !== "undefined") {
+    var lastBreakpoint = getCurrentBreakpoint();
+    var bpTimer = null;
+    window.addEventListener("resize", function() {
+      clearTimeout(bpTimer);
+      bpTimer = setTimeout(function() {
+        var current = getCurrentBreakpoint();
+        if (current !== lastBreakpoint) {
+          lastBreakpoint = current;
+          if (typeof document !== "undefined") {
+            emitEvent(document.body, "xh:breakpointChanged", {
+              breakpoint: current,
+              width: window.innerWidth,
+              mobile: current === "mobile",
+              tablet: current === "tablet",
+              desktop: current === "desktop"
+            }, false);
+          }
+        }
+      }, 200);
     });
   }
 
