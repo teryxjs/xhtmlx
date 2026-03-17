@@ -3,14 +3,8 @@
  */
 
 const xhtmlx = require('../../xhtmlx.js');
-const { config, templateCache, elementStates } = xhtmlx._internals;
+const { config, templateCache } = xhtmlx._internals;
 
-// Flush multiple rounds of microtasks (fetch has a multi-hop .then chain)
-async function flushPromises() {
-  for (let i = 0; i < 10; i++) {
-    await new Promise(resolve => process.nextTick(resolve));
-  }
-}
 
 beforeEach(() => {
   Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 1200 });

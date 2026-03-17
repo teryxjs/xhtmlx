@@ -7,11 +7,15 @@
   "browser": "xhtmlx.js",
   "unpkg": "xhtmlx.min.js",
   "jsdelivr": "xhtmlx.min.js",
+  "bin": {
+    "xhtmlx-migrate": "./bin/xhtmlx-migrate.js"
+  },
   "files": [
     "xhtmlx.js",
     "xhtmlx.d.ts",
     "xhtmlx.min.js",
     "xhtmlx.min.js.map",
+    "bin/",
     "README.md",
     "LICENSE"
   ],

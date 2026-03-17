@@ -8,7 +8,6 @@ const {
   getViewportContext,
   DataContext,
   resolveTemplate,
-  fetchTemplate,
   templateCache,
   config
 } = xhtmlx._internals;
