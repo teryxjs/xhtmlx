@@ -1,0 +1,1412 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>xhtmlx Tutorial — Build a Task Manager</title>
+<meta name="description" content="Learn xhtmlx step by step by building a Task Manager app. Interactive tutorial with working code examples.">
+<style>
+/* ========== CSS Custom Properties (matched from main site) ========== */
+:root {
+  --bg-primary: #0b0e17;
+  --bg-secondary: #111627;
+  --bg-card: #161b2e;
+  --bg-card-hover: #1c2240;
+  --bg-code: #0d1117;
+  --bg-code-header: #161b2e;
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent-1: #6366f1;
+  --accent-2: #8b5cf6;
+  --accent-3: #06b6d4;
+  --accent-4: #22d3ee;
+  --gradient-accent: linear-gradient(135deg, #6366f1, #8b5cf6, #06b6d4);
+  --gradient-subtle: linear-gradient(135deg, rgba(99,102,241,0.08), rgba(6,182,212,0.08));
+  --gradient-glow: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(6,182,212,0.15));
+  --border-color: rgba(99,102,241,0.15);
+  --border-color-hover: rgba(99,102,241,0.35);
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: "SF Mono", "Cascadia Code", "Fira Code", Consolas, "DejaVu Sans Mono", monospace;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow-lg: 0 25px 50px -12px rgba(0,0,0,0.5);
+  --shadow-glow: 0 0 40px rgba(99,102,241,0.15);
+  --max-width: 860px;
+  --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ========== Reset & Base ========== */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.7;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: var(--accent-3);
+  text-decoration: none;
+  transition: color var(--transition);
+}
+a:hover { color: var(--accent-4); }
+
+code, pre {
+  font-family: var(--font-mono);
+}
+
+/* ========== Navigation ========== */
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  padding: 0 24px;
+  background: rgba(11, 14, 23, 0.92);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 1px 0 var(--border-color);
+}
+.nav-inner {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+}
+.nav-logo {
+  font-family: var(--font-mono);
+  font-size: 1.15rem;
+  font-weight: 800;
+  background: var(--gradient-accent);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.02em;
+}
+.nav-links {
+  display: flex;
+  gap: 24px;
+  list-style: none;
+  align-items: center;
+}
+.nav-links a {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: color var(--transition);
+}
+.nav-links a:hover { color: var(--text-primary); }
+
+/* ========== Progress Bar ========== */
+.progress-bar {
+  position: fixed;
+  top: 56px;
+  left: 0;
+  right: 0;
+  z-index: 99;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  padding: 0 24px;
+}
+.progress-inner {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 36px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.progress-inner::-webkit-scrollbar { display: none; }
+.progress-step {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition);
+  border: none;
+  background: none;
+  font-family: var(--font-sans);
+}
+.progress-step:hover {
+  color: var(--text-secondary);
+  background: var(--bg-card);
+}
+.progress-step.active {
+  color: var(--accent-3);
+  background: rgba(6, 182, 212, 0.1);
+}
+.progress-step.completed {
+  color: #22c55e;
+}
+.progress-step .step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  font-size: 0.6rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.progress-step.completed .step-num {
+  background: #22c55e;
+  border-color: #22c55e;
+  color: #fff;
+}
+.progress-step.completed .step-num::after {
+  content: "\2713";
+}
+.progress-connector {
+  width: 12px;
+  height: 1px;
+  background: var(--border-color);
+  flex-shrink: 0;
+}
+
+/* ========== Main Content ========== */
+.container {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 120px 24px 80px;
+}
+
+/* ========== Tutorial Header ========== */
+.tutorial-header {
+  text-align: center;
+  margin-bottom: 60px;
+  padding-bottom: 40px;
+  border-bottom: 1px solid var(--border-color);
+}
+.tutorial-header h1 {
+  font-size: clamp(1.8rem, 4vw, 2.5rem);
+  font-weight: 800;
+  line-height: 1.2;
+  margin-bottom: 12px;
+  letter-spacing: -0.02em;
+}
+.tutorial-header h1 span {
+  background: var(--gradient-accent);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.tutorial-header p {
+  font-size: 1.05rem;
+  color: var(--text-secondary);
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+/* ========== Step Sections ========== */
+.step-section {
+  margin-bottom: 64px;
+  scroll-margin-top: 110px;
+}
+.step-label {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: var(--gradient-accent);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+}
+.step-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+  letter-spacing: -0.01em;
+}
+.step-description {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.8;
+  margin-bottom: 20px;
+}
+.step-description code {
+  background: var(--bg-code);
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 0.85em;
+  color: var(--accent-4);
+  border: 1px solid var(--border-color);
+}
+
+/* ========== Demo Boxes ========== */
+.demo-box {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 20px;
+  background: var(--bg-card);
+  box-shadow: var(--shadow-lg);
+}
+.demo-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--bg-code-header);
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.demo-header .demo-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.demo-header .demo-label::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+}
+.demo-result {
+  padding: 20px;
+  min-height: 60px;
+}
+.source-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.source-toggle:hover {
+  border-color: var(--border-color-hover);
+  color: var(--text-primary);
+}
+.source-toggle.open {
+  background: rgba(99,102,241,0.1);
+  color: var(--accent-3);
+  border-color: var(--accent-1);
+}
+.source-panel {
+  display: none;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-code);
+}
+.source-panel.open {
+  display: block;
+}
+.source-panel pre {
+  padding: 16px;
+  overflow-x: auto;
+  font-size: 0.8rem;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  margin: 0;
+}
+.source-panel pre code {
+  color: inherit;
+}
+
+/* ========== Syntax Highlighting (dark theme) ========== */
+.hl-tag { color: #f472b6; }
+.hl-attr { color: #a78bfa; }
+.hl-val { color: #22d3ee; }
+.hl-text { color: #94a3b8; }
+.hl-comment { color: #475569; font-style: italic; }
+
+/* ========== Demo inner styles (xhtmlx rendered content) ========== */
+.demo-result .task-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.demo-result .task-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+  background: var(--bg-secondary);
+  transition: all var(--transition);
+}
+.demo-result .task-item:hover {
+  border-color: var(--border-color-hover);
+}
+.demo-result .task-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.demo-result .task-desc {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+.demo-result .task-due {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  margin-left: auto;
+  white-space: nowrap;
+}
+.demo-result .badge {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  border-radius: 9999px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.demo-result .badge-done {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+}
+.demo-result .badge-pending {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+}
+.demo-result .task-actions {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* Form styles inside demos */
+.demo-result form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.demo-result input[type="text"],
+.demo-result input[type="date"] {
+  background: var(--bg-code);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-family: var(--font-sans);
+  outline: none;
+  transition: border-color var(--transition);
+}
+.demo-result input[type="text"]:focus,
+.demo-result input[type="date"]:focus {
+  border-color: var(--accent-1);
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+}
+.demo-result .btn-small {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 14px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.demo-result .btn-small:hover {
+  border-color: var(--border-color-hover);
+  background: var(--bg-card-hover);
+}
+.demo-result .btn-primary-small {
+  background: var(--accent-1);
+  border-color: var(--accent-1);
+  color: #fff;
+}
+.demo-result .btn-primary-small:hover {
+  background: #5558e6;
+}
+.demo-result .btn-danger-small {
+  color: #f87171;
+  border-color: rgba(248, 113, 113, 0.3);
+}
+.demo-result .btn-danger-small:hover {
+  background: rgba(248, 113, 113, 0.1);
+  border-color: rgba(248, 113, 113, 0.5);
+}
+.demo-result .btn-success-small {
+  color: #22c55e;
+  border-color: rgba(34, 197, 94, 0.3);
+}
+.demo-result .btn-success-small:hover {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.5);
+}
+.demo-result .search-box {
+  width: 100%;
+  max-width: 340px;
+}
+
+/* Loading spinner */
+.demo-result .xh-indicator {
+  opacity: 0;
+  transition: opacity 200ms ease-in;
+}
+.demo-result .xh-request .xh-indicator,
+.demo-result .xh-request.xh-indicator {
+  opacity: 1;
+}
+.demo-result .spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border-color);
+  border-top-color: var(--accent-3);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Error display */
+.demo-result .error-box {
+  padding: 14px 18px;
+  background: rgba(248, 113, 113, 0.08);
+  border: 1px solid rgba(248, 113, 113, 0.25);
+  border-radius: var(--radius-sm);
+  color: #f87171;
+  font-size: 0.85rem;
+}
+.demo-result .error-box strong {
+  color: #fca5a5;
+}
+
+/* Checkbox custom */
+.demo-result input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent-1);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* Task text strikethrough when done */
+.demo-result .task-done .task-title {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+/* ========== Tip boxes ========== */
+.tip-box {
+  background: var(--gradient-subtle);
+  border: 1px solid var(--border-color);
+  border-left: 3px solid var(--accent-1);
+  border-radius: var(--radius-sm);
+  padding: 14px 18px;
+  margin: 16px 0;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+.tip-box strong {
+  color: var(--accent-3);
+}
+
+/* ========== Footer ========== */
+.tutorial-footer {
+  text-align: center;
+  padding: 40px 0;
+  border-top: 1px solid var(--border-color);
+  margin-top: 40px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+.tutorial-footer a {
+  font-weight: 600;
+}
+
+/* ========== Responsive ========== */
+@media (max-width: 640px) {
+  .container {
+    padding: 110px 16px 60px;
+  }
+  .step-title {
+    font-size: 1.25rem;
+  }
+  .demo-result {
+    padding: 14px;
+  }
+  .demo-result form {
+    flex-direction: column;
+  }
+  .demo-result .task-item {
+    flex-wrap: wrap;
+  }
+  .demo-result .task-due {
+    margin-left: 0;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- ========== Navigation ========== -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="../" class="nav-logo">xhtmlx Tutorial</a>
+    <ul class="nav-links">
+      <li><a href="../">Home</a></li>
+      <li><a href="../playground/">Playground</a></li>
+      <li><a href="https://github.com/teryxjs/xhtmlx" target="_blank" rel="noopener">GitHub</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- ========== Progress Bar ========== -->
+<div class="progress-bar">
+  <div class="progress-inner" id="progressBar">
+    <!-- Filled by JS -->
+  </div>
+</div>
+
+<!-- ========== Main Content ========== -->
+<div class="container">
+
+  <!-- Tutorial Header -->
+  <header class="tutorial-header">
+    <h1>Build a <span>Task Manager</span> with xhtmlx</h1>
+    <p>Learn every core feature of xhtmlx by building a fully functional Task Manager app, one step at a time. Each step below contains live, working code.</p>
+  </header>
+
+  <!-- ================================================================== -->
+  <!-- STEP 1: Your First Request (GET) -->
+  <!-- ================================================================== -->
+  <section class="step-section" id="step-1" data-step="1">
+    <div class="step-label">Step 1</div>
+    <h2 class="step-title">Your First Request (GET)</h2>
+    <div class="step-description">
+      <p>The most fundamental thing xhtmlx does is fetch JSON from an API and render it into the page. Add <code>xh-get</code> to any element to tell it which URL to request, and <code>xh-trigger="load"</code> to fire it automatically when the page loads.</p>
+      <p>Inside the element, place a <code>&lt;template&gt;</code> with <code>xh-each</code> to loop over the array in the response. Each item gets rendered as a repeated element.</p>
+    </div>
+    <div class="demo-box">
+      <div class="demo-header">
+        <span class="demo-label">Live Demo</span>
+        <button class="source-toggle" onclick="toggleSource(this)">View Source</button>
+      </div>
+      <div class="demo-result" id="demo-1">
+        <!-- xhtmlx code injected by JS -->
+      </div>
+      <div class="source-panel">
+        <pre><code><span class="hl-comment">&lt;!-- Fetch tasks on page load and render each one --&gt;</span>
+<span class="hl-tag">&lt;div</span> <span class="hl-attr">xh-get</span>=<span class="hl-val">"/api/tasks"</span> <span class="hl-attr">xh-trigger</span>=<span class="hl-val">"load"</span><span class="hl-tag">&gt;</span>
+  <span class="hl-tag">&lt;template&gt;</span>
+    <span class="hl-tag">&lt;ul</span> <span class="hl-attr">class</span>=<span class="hl-val">"task-list"</span><span class="hl-tag">&gt;</span>
+      <span class="hl-tag">&lt;li</span> <span class="hl-attr">xh-each</span>=<span class="hl-val">"tasks"</span> <span class="hl-attr">class</span>=<span class="hl-val">"task-item"</span><span class="hl-tag">&gt;</span>
+        <span class="hl-tag">&lt;span</span> <span class="hl-attr">xh-text</span>=<span class="hl-val">"title"</span> <span class="hl-attr">class</span>=<span class="hl-val">"task-title"</span><span class="hl-tag">&gt;&lt;/span&gt;</span>
+      <span class="hl-tag">&lt;/li&gt;</span>
+    <span class="hl-tag">&lt;/ul&gt;</span>
+  <span class="hl-tag">&lt;/template&gt;</span>
+<span class="hl-tag">&lt;/div&gt;</span></code></pre>
+      </div>
+    </div>
+    <div class="tip-box">
+      <strong>Tip:</strong> The <code>xh-trigger="load"</code> attribute tells xhtmlx to fire the request as soon as the element is processed. Without it, the default trigger for a <code>&lt;div&gt;</code> is <code>click</code>.
+    </div>
+  </section>
+
+  <!-- ================================================================== -->
+  <!-- STEP 2: Data Binding -->
+  <!-- ================================================================== -->
+  <section class="step-section" id="step-2" data-step="2">
+    <div class="step-label">Step 2</div>
+    <h2 class="step-title">Data Binding</h2>
+    <div class="step-description">
+      <p>Use <code>xh-text</code> to set an element's text content from a data field. Use <code>xh-attr-*</code> to set any HTML attribute dynamically -- for example, <code>xh-attr-href</code> sets the <code>href</code> on a link.</p>
+      <p>Here we display each task's title, description, and due date, plus a link to the task detail page.</p>
+    </div>
+    <div class="demo-box">
+      <div class="demo-header">
+        <span class="demo-label">Live Demo</span>
+        <button class="source-toggle" onclick="toggleSource(this)">View Source</button>
+      </div>
+      <div class="demo-result" id="demo-2"></div>
+      <div class="source-panel">
+        <pre><code><span class="hl-tag">&lt;div</span> <span class="hl-attr">xh-get</span>=<span class="hl-val">"/api/tasks"</span> <span class="hl-attr">xh-trigger</span>=<span class="hl-val">"load"</span><span class="hl-tag">&gt;</span>
+  <span class="hl-tag">&lt;template&gt;</span>
+    <span class="hl-tag">&lt;ul</span> <span class="hl-attr">class</span>=<span class="hl-val">"task-list"</span><span class="hl-tag">&gt;</span>
+      <span class="hl-tag">&lt;li</span> <span class="hl-attr">xh-each</span>=<span class="hl-val">"tasks"</span> <span class="hl-attr">class</span>=<span class="hl-val">"task-item"</span><span class="hl-tag">&gt;</span>
+        <span class="hl-tag">&lt;div&gt;</span>
+          <span class="hl-tag">&lt;a</span> <span class="hl-attr">xh-attr-href</span>=<span class="hl-val">"link"</span> <span class="hl-attr">xh-text</span>=<span class="hl-val">"title"</span> <span class="hl-attr">class</span>=<span class="hl-val">"task-title"</span><span class="hl-tag">&gt;&lt;/a&gt;</span>
+          <span class="hl-tag">&lt;div</span> <span class="hl-attr">xh-text</span>=<span class="hl-val">"description"</span> <span class="hl-attr">class</span>=<span class="hl-val">"task-desc"</span><span class="hl-tag">&gt;&lt;/div&gt;</span>
+        <span class="hl-tag">&lt;/div&gt;</span>
+        <span class="hl-tag">&lt;span</span> <span class="hl-attr">xh-text</span>=<span class="hl-val">"due"</span> <span class="hl-attr">class</span>=<span class="hl-val">"task-due"</span><span class="hl-tag">&gt;&lt;/span&gt;</span>
+      <span class="hl-tag">&lt;/li&gt;</span>
+    <span class="hl-tag">&lt;/ul&gt;</span>
+  <span class="hl-tag">&lt;/template&gt;</span>
+<span class="hl-tag">&lt;/div&gt;</span></code></pre>
+      </div>
+    </div>
+    <div class="tip-box">
+      <strong>Tip:</strong> <code>xh-attr-*</code> works with any attribute: <code>xh-attr-src</code>, <code>xh-attr-alt</code>, <code>xh-attr-title</code>, <code>xh-attr-data-id</code>, etc.
+    </div>
+  </section>
+
+  <!-- ================================================================== -->
+  <!-- STEP 3: Conditionals -->
+  <!-- ================================================================== -->
+  <section class="step-section" id="step-3" data-step="3">
+    <div class="step-label">Step 3</div>
+    <h2 class="step-title">Conditionals</h2>
+    <div class="step-description">
+      <p>Use <code>xh-if</code> to show an element only when a data field is truthy, and <code>xh-unless</code> to show it only when a field is falsy. Here we display a "Done" badge for completed tasks and a "Pending" badge for tasks that are not yet completed.</p>
+    </div>
+    <div class="demo-box">
+      <div class="demo-header">
+        <span class="demo-label">Live Demo</span>
+        <button class="source-toggle" onclick="toggleSource(this)">View Source</button>
+      </div>
+      <div class="demo-result" id="demo-3"></div>
+      <div class="source-panel">
+        <pre><code><span class="hl-tag">&lt;div</span> <span class="hl-attr">xh-get</span>=<span class="hl-val">"/api/tasks"</span> <span class="hl-attr">xh-trigger</span>=<span class="hl-val">"load"</span><span class="hl-tag">&gt;</span>
+  <span class="hl-tag">&lt;template&gt;</span>
+    <span class="hl-tag">&lt;ul</span> <span class="hl-attr">class</span>=<span class="hl-val">"task-list"</span><span class="hl-tag">&gt;</span>
+      <span class="hl-tag">&lt;li</span> <span class="hl-attr">xh-each</span>=<span class="hl-val">"tasks"</span> <span class="hl-attr">class</span>=<span class="hl-val">"task-item"</span><span class="hl-tag">&gt;</span>
+        <span class="hl-tag">&lt;span</span> <span class="hl-attr">xh-if</span>=<span class="hl-val">"completed"</span> <span class="hl-attr">class</span>=<span class="hl-val">"badge badge-done"</span><span class="hl-tag">&gt;</span><span class="hl-text">Done</span><span class="hl-tag">&lt;/span&gt;</span>
+        <span class="hl-tag">&lt;span</span> <span class="hl-attr">xh-unless</span>=<span class="hl-val">"completed"</span> <span class="hl-attr">class</span>=<span class="hl-val">"badge badge-pending"</span><span class="hl-tag">&gt;</span><span class="hl-text">Pending</span><span class="hl-tag">&lt;/span&gt;</span>
+        <span class="hl-tag">&lt;span</span> <span class="hl-attr">xh-text</span>=<span class="hl-val">"title"</span> <span class="hl-attr">class</span>=<span class="hl-val">"task-title"</span><span class="hl-tag">&gt;&lt;/span&gt;</span>
+        <span class="hl-tag">&lt;span</span> <span class="hl-attr">xh-text</span>=<span class="hl-val">"due"</span> <span class="hl-attr">class</span>=<span class="hl-val">"task-due"</span><span class="hl-tag">&gt;&lt;/span&gt;</span>
+      <span class="hl-tag">&lt;/li&gt;</span>
+    <span class="hl-tag">&lt;/ul&gt;</span>
+  <span class="hl-tag">&lt;/template&gt;</span>
+<span class="hl-tag">&lt;/div&gt;</span></code></pre>
+      </div>
+    </div>
+    <div class="tip-box">
+      <strong>Tip:</strong> When <code>xh-if</code> evaluates to false, the element is completely removed from the DOM -- not just hidden. This is different from <code>xh-show</code>/<code>xh-hide</code>, which toggle CSS visibility.
+    </div>
+  </section>
+
+  <!-- ================================================================== -->
+  <!-- STEP 4: Creating Tasks (POST) -->
+  <!-- ================================================================== -->
+  <section class="step-section" id="step-4" data-step="4">
+    <div class="step-label">Step 4</div>
+    <h2 class="step-title">Creating Tasks (POST)</h2>
+    <div class="step-description">
+      <p>To send data to the server, use <code>xh-post</code> on a <code>&lt;form&gt;</code>. Form fields are automatically serialized and sent as the request body. The <code>xh-target</code> attribute tells xhtmlx where to put the response, and <code>xh-swap="beforeend"</code> appends the new task to the existing list instead of replacing it.</p>
+    </div>
+    <div class="demo-box">
+      <div class="demo-header">
+        <span class="demo-label">Live Demo</span>
+        <button class="source-toggle" onclick="toggleSource(this)">View Source</button>
+      </div>
+      <div class="demo-result" id="demo-4"></div>
+      <div class="source-panel">
+        <pre><code><span class="hl-comment">&lt;!-- Form to add a new task --&gt;</span>
+<span class="hl-tag">&lt;form</span> <span class="hl-attr">xh-post</span>=<span class="hl-val">"/api/tasks"</span>
+      <span class="hl-attr">xh-target</span>=<span class="hl-val">"#task-list-4"</span>
+      <span class="hl-attr">xh-swap</span>=<span class="hl-val">"beforeend"</span><span class="hl-tag">&gt;</span>
+  <span class="hl-tag">&lt;template&gt;</span>
+    <span class="hl-tag">&lt;li</span> <span class="hl-attr">class</span>=<span class="hl-val">"task-item"</span><span class="hl-tag">&gt;</span>
+      <span class="hl-tag">&lt;span</span> <span class="hl-attr">class</span>=<span class="hl-val">"badge badge-pending"</span><span class="hl-tag">&gt;</span><span class="hl-text">Pending</span><span class="hl-tag">&lt;/span&gt;</span>
+      <span class="hl-tag">&lt;span</span> <span class="hl-attr">xh-text</span>=<span class="hl-val">"title"</span> <span class="hl-attr">class</span>=<span class="hl-val">"task-title"</span><span class="hl-tag">&gt;&lt;/span&gt;</span>
+      <span class="hl-tag">&lt;span</span> <span class="hl-attr">xh-text</span>=<span class="hl-val">"due"</span> <span class="hl-attr">class</span>=<span class="hl-val">"task-due"</span><span class="hl-tag">&gt;&lt;/span&gt;</span>
+    <span class="hl-tag">&lt;/li&gt;</span>
+  <span class="hl-tag">&lt;/template&gt;</span>
+  <span class="hl-tag">&lt;input</span> <span class="hl-attr">type</span>=<span class="hl-val">"text"</span> <span class="hl-attr">name</span>=<span class="hl-val">"title"</span> <span class="hl-attr">placeholder</span>=<span class="hl-val">"Task title..."</span> <span class="hl-attr">required</span><span class="hl-tag">&gt;</span>
+  <span class="hl-tag">&lt;input</span> <span class="hl-attr">type</span>=<span class="hl-val">"date"</span> <span class="hl-attr">name</span>=<span class="hl-val">"due"</span><span class="hl-tag">&gt;</span>
+  <span class="hl-tag">&lt;button</span> <span class="hl-attr">type</span>=<span class="hl-val">"submit"</span> <span class="hl-attr">class</span>=<span class="hl-val">"btn-small btn-primary-small"</span><span class="hl-tag">&gt;</span><span class="hl-text">Add Task</span><span class="hl-tag">&lt;/button&gt;</span>
+<span class="hl-tag">&lt;/form&gt;</span>
+
+<span class="hl-comment">&lt;!-- Existing task list loaded on page load --&gt;</span>
+<span class="hl-tag">&lt;div</span> <span class="hl-attr">xh-get</span>=<span class="hl-val">"/api/tasks"</span> <span class="hl-attr">xh-trigger</span>=<span class="hl-val">"load"</span> <span class="hl-attr">xh-target</span>=<span class="hl-val">"#task-list-4"</span><span class="hl-tag">&gt;</span>
+  <span class="hl-tag">&lt;template&gt;</span>
+    <span class="hl-tag">&lt;li</span> <span class="hl-attr">xh-each</span>=<span class="hl-val">"tasks"</span> <span class="hl-attr">class</span>=<span class="hl-val">"task-item"</span><span class="hl-tag">&gt;</span>
+      <span class="hl-tag">&lt;span</span> <span class="hl-attr">xh-if</span>=<span class="hl-val">"completed"</span> <span class="hl-attr">class</span>=<span class="hl-val">"badge badge-done"</span><span class="hl-tag">&gt;</span><span class="hl-text">Done</span><span class="hl-tag">&lt;/span&gt;</span>
+      <span class="hl-tag">&lt;span</span> <span class="hl-attr">xh-unless</span>=<span class="hl-val">"completed"</span> <span class="hl-attr">class</span>=<span class="hl-val">"badge badge-pending"</span><span class="hl-tag">&gt;</span><span class="hl-text">Pending</span><span class="hl-tag">&lt;/span&gt;</span>
+      <span class="hl-tag">&lt;span</span> <span class="hl-attr">xh-text</span>=<span class="hl-val">"title"</span> <span class="hl-attr">class</span>=<span class="hl-val">"task-title"</span><span class="hl-tag">&gt;&lt;/span&gt;</span>
+      <span class="hl-tag">&lt;span</span> <span class="hl-attr">xh-text</span>=<span class="hl-val">"due"</span> <span class="hl-attr">class</span>=<span class="hl-val">"task-due"</span><span class="hl-tag">&gt;&lt;/span&gt;</span>
+    <span class="hl-tag">&lt;/li&gt;</span>
+  <span class="hl-tag">&lt;/template&gt;</span>
+<span class="hl-tag">&lt;/div&gt;</span>
+<span class="hl-tag">&lt;ul</span> <span class="hl-attr">id</span>=<span class="hl-val">"task-list-4"</span> <span class="hl-attr">class</span>=<span class="hl-val">"task-list"</span><span class="hl-tag">&gt;&lt;/ul&gt;</span></code></pre>
+      </div>
+    </div>
+    <div class="tip-box">
+      <strong>Tip:</strong> xhtmlx automatically serializes all form fields (<code>&lt;input&gt;</code>, <code>&lt;select&gt;</code>, <code>&lt;textarea&gt;</code>) into the request body. You can also use <code>xh-vals</code> to send additional JSON data alongside form fields.
+    </div>
+  </section>
+
+  <!-- ================================================================== -->
+  <!-- STEP 5: Completing Tasks (PATCH) -->
+  <!-- ================================================================== -->
+  <section class="step-section" id="step-5" data-step="5">
+    <div class="step-label">Step 5</div>
+    <h2 class="step-title">Completing Tasks (PATCH)</h2>
+    <div class="step-description">
+      <p>Use <code>xh-patch</code> to send a PATCH request. URL interpolation with <code>{{id}}</code> inserts the task's ID from the current data context. The <code>xh-vals</code> attribute sends JSON data with the request. Here, clicking a button marks a task as complete.</p>
+    </div>
+    <div class="demo-box">
+      <div class="demo-header">
+        <span class="demo-label">Live Demo</span>
+        <button class="source-toggle" onclick="toggleSource(this)">View Source</button>
+      </div>
+      <div class="demo-result" id="demo-5"></div>
+      <div class="source-panel">
+        <pre><code><span class="hl-tag">&lt;div</span> <span class="hl-attr">xh-get</span>=<span class="hl-val">"/api/tasks"</span> <span class="hl-attr">xh-trigger</span>=<span class="hl-val">"load"</span><span class="hl-tag">&gt;</span>
+  <span class="hl-tag">&lt;template&gt;</span>
+    <span class="hl-tag">&lt;ul</span> <span class="hl-attr">class</span>=<span class="hl-val">"task-list"</span><span class="hl-tag">&gt;</span>
+      <span class="hl-tag">&lt;li</span> <span class="hl-attr">xh-each</span>=<span class="hl-val">"tasks"</span> <span class="hl-attr">class</span>=<span class="hl-val">"task-item"</span><span class="hl-tag">&gt;</span>
+        <span class="hl-tag">&lt;span</span> <span class="hl-attr">xh-if</span>=<span class="hl-val">"completed"</span> <span class="hl-attr">class</span>=<span class="hl-val">"badge badge-done"</span><span class="hl-tag">&gt;</span><span class="hl-text">Done</span><span class="hl-tag">&lt;/span&gt;</span>
+        <span class="hl-tag">&lt;span</span> <span class="hl-attr">xh-unless</span>=<span class="hl-val">"completed"</span> <span class="hl-attr">class</span>=<span class="hl-val">"badge badge-pending"</span><span class="hl-tag">&gt;</span><span class="hl-text">Pending</span><span class="hl-tag">&lt;/span&gt;</span>
+        <span class="hl-tag">&lt;span</span> <span class="hl-attr">xh-text</span>=<span class="hl-val">"title"</span> <span class="hl-attr">class</span>=<span class="hl-val">"task-title"</span><span class="hl-tag">&gt;&lt;/span&gt;</span>
+        <span class="hl-tag">&lt;div</span> <span class="hl-attr">class</span>=<span class="hl-val">"task-actions"</span><span class="hl-tag">&gt;</span>
+          <span class="hl-tag">&lt;button</span> <span class="hl-attr">xh-unless</span>=<span class="hl-val">"completed"</span>
+                  <span class="hl-attr">xh-patch</span>=<span class="hl-val">"/api/tasks/{{id}}"</span>
+                  <span class="hl-attr">xh-vals</span>=<span class="hl-val">'{"completed": true}'</span>
+                  <span class="hl-attr">xh-swap</span>=<span class="hl-val">"none"</span>
+                  <span class="hl-attr">class</span>=<span class="hl-val">"btn-small btn-success-small"</span><span class="hl-tag">&gt;</span>
+            <span class="hl-text">Complete</span>
+          <span class="hl-tag">&lt;/button&gt;</span>
+        <span class="hl-tag">&lt;/div&gt;</span>
+      <span class="hl-tag">&lt;/li&gt;</span>
+    <span class="hl-tag">&lt;/ul&gt;</span>
+  <span class="hl-tag">&lt;/template&gt;</span>
+<span class="hl-tag">&lt;/div&gt;</span></code></pre>
+      </div>
+    </div>
+    <div class="tip-box">
+      <strong>Tip:</strong> <code>xh-swap="none"</code> means "fire and forget" -- the request is sent but no DOM swap happens. This is useful for actions where you do not need to replace content (e.g., toggling a flag). Use <code>xh-vals</code> to send any JSON payload.
+    </div>
+  </section>
+
+  <!-- ================================================================== -->
+  <!-- STEP 6: Deleting Tasks (DELETE) -->
+  <!-- ================================================================== -->
+  <section class="step-section" id="step-6" data-step="6">
+    <div class="step-label">Step 6</div>
+    <h2 class="step-title">Deleting Tasks (DELETE)</h2>
+    <div class="step-description">
+      <p>Use <code>xh-delete</code> to send a DELETE request and <code>xh-swap="delete"</code> to remove the element from the DOM after a successful response. We use <code>xh-target="closest .task-item"</code> to target the parent list item for removal.</p>
+    </div>
+    <div class="demo-box">
+      <div class="demo-header">
+        <span class="demo-label">Live Demo</span>
+        <button class="source-toggle" onclick="toggleSource(this)">View Source</button>
+      </div>
+      <div class="demo-result" id="demo-6"></div>
+      <div class="source-panel">
+        <pre><code><span class="hl-tag">&lt;div</span> <span class="hl-attr">xh-get</span>=<span class="hl-val">"/api/tasks"</span> <span class="hl-attr">xh-trigger</span>=<span class="hl-val">"load"</span><span class="hl-tag">&gt;</span>
+  <span class="hl-tag">&lt;template&gt;</span>
+    <span class="hl-tag">&lt;ul</span> <span class="hl-attr">class</span>=<span class="hl-val">"task-list"</span><span class="hl-tag">&gt;</span>
+      <span class="hl-tag">&lt;li</span> <span class="hl-attr">xh-each</span>=<span class="hl-val">"tasks"</span> <span class="hl-attr">class</span>=<span class="hl-val">"task-item"</span><span class="hl-tag">&gt;</span>
+        <span class="hl-tag">&lt;span</span> <span class="hl-attr">xh-text</span>=<span class="hl-val">"title"</span> <span class="hl-attr">class</span>=<span class="hl-val">"task-title"</span><span class="hl-tag">&gt;&lt;/span&gt;</span>
+        <span class="hl-tag">&lt;span</span> <span class="hl-attr">xh-text</span>=<span class="hl-val">"due"</span> <span class="hl-attr">class</span>=<span class="hl-val">"task-due"</span><span class="hl-tag">&gt;&lt;/span&gt;</span>
+        <span class="hl-tag">&lt;button</span> <span class="hl-attr">xh-delete</span>=<span class="hl-val">"/api/tasks/{{id}}"</span>
+                <span class="hl-attr">xh-target</span>=<span class="hl-val">"closest .task-item"</span>
+                <span class="hl-attr">xh-swap</span>=<span class="hl-val">"delete"</span>
+                <span class="hl-attr">class</span>=<span class="hl-val">"btn-small btn-danger-small"</span><span class="hl-tag">&gt;</span>
+          <span class="hl-text">Delete</span>
+        <span class="hl-tag">&lt;/button&gt;</span>
+      <span class="hl-tag">&lt;/li&gt;</span>
+    <span class="hl-tag">&lt;/ul&gt;</span>
+  <span class="hl-tag">&lt;/template&gt;</span>
+<span class="hl-tag">&lt;/div&gt;</span></code></pre>
+      </div>
+    </div>
+    <div class="tip-box">
+      <strong>Tip:</strong> The <code>xh-swap="delete"</code> mode removes the target element entirely. Combined with <code>xh-target="closest .task-item"</code>, it walks up the DOM to find the nearest matching ancestor and removes it.
+    </div>
+  </section>
+
+  <!-- ================================================================== -->
+  <!-- STEP 7: Search with Debounce -->
+  <!-- ================================================================== -->
+  <section class="step-section" id="step-7" data-step="7">
+    <div class="step-label">Step 7</div>
+    <h2 class="step-title">Search with Debounce</h2>
+    <div class="step-description">
+      <p>Use <code>xh-trigger="keyup changed delay:300ms"</code> on an input to debounce the request. The <code>changed</code> modifier ensures we only fire when the value actually changes, and <code>delay:300ms</code> waits 300ms after the last keystroke. The input's value is automatically included as a query parameter.</p>
+    </div>
+    <div class="demo-box">
+      <div class="demo-header">
+        <span class="demo-label">Live Demo</span>
+        <button class="source-toggle" onclick="toggleSource(this)">View Source</button>
+      </div>
+      <div class="demo-result" id="demo-7"></div>
+      <div class="source-panel">
+        <pre><code><span class="hl-tag">&lt;input</span> <span class="hl-attr">type</span>=<span class="hl-val">"text"</span>
+       <span class="hl-attr">name</span>=<span class="hl-val">"q"</span>
+       <span class="hl-attr">placeholder</span>=<span class="hl-val">"Search tasks..."</span>
+       <span class="hl-attr">class</span>=<span class="hl-val">"search-box"</span>
+       <span class="hl-attr">xh-get</span>=<span class="hl-val">"/api/tasks"</span>
+       <span class="hl-attr">xh-trigger</span>=<span class="hl-val">"keyup changed delay:300ms"</span>
+       <span class="hl-attr">xh-target</span>=<span class="hl-val">"#search-results-7"</span><span class="hl-tag">&gt;</span>
+  <span class="hl-tag">&lt;template&gt;</span>
+    <span class="hl-tag">&lt;ul</span> <span class="hl-attr">class</span>=<span class="hl-val">"task-list"</span><span class="hl-tag">&gt;</span>
+      <span class="hl-tag">&lt;li</span> <span class="hl-attr">xh-each</span>=<span class="hl-val">"tasks"</span> <span class="hl-attr">class</span>=<span class="hl-val">"task-item"</span><span class="hl-tag">&gt;</span>
+        <span class="hl-tag">&lt;span</span> <span class="hl-attr">xh-text</span>=<span class="hl-val">"title"</span> <span class="hl-attr">class</span>=<span class="hl-val">"task-title"</span><span class="hl-tag">&gt;&lt;/span&gt;</span>
+        <span class="hl-tag">&lt;span</span> <span class="hl-attr">xh-text</span>=<span class="hl-val">"description"</span> <span class="hl-attr">class</span>=<span class="hl-val">"task-desc"</span><span class="hl-tag">&gt;&lt;/span&gt;</span>
+      <span class="hl-tag">&lt;/li&gt;</span>
+    <span class="hl-tag">&lt;/ul&gt;</span>
+  <span class="hl-tag">&lt;/template&gt;</span>
+<span class="hl-tag">&lt;/input&gt;</span>
+<span class="hl-tag">&lt;div</span> <span class="hl-attr">id</span>=<span class="hl-val">"search-results-7"</span><span class="hl-tag">&gt;&lt;/div&gt;</span></code></pre>
+      </div>
+    </div>
+    <div class="tip-box">
+      <strong>Tip:</strong> Trigger modifiers can be combined. <code>keyup changed delay:300ms</code> fires on keyup, but only if the value changed, and only after a 300ms pause. You can also use <code>throttle:500ms</code> to limit the rate of requests.
+    </div>
+  </section>
+
+  <!-- ================================================================== -->
+  <!-- STEP 8: Loading Indicators -->
+  <!-- ================================================================== -->
+  <section class="step-section" id="step-8" data-step="8">
+    <div class="step-label">Step 8</div>
+    <h2 class="step-title">Loading Indicators</h2>
+    <div class="step-description">
+      <p>Use the <code>xh-indicator</code> attribute to point to an element that should be shown while a request is in flight. xhtmlx will add the <code>xh-request</code> class to the indicator element during loading, and the built-in CSS hides/shows elements with the <code>xh-indicator</code> class based on that.</p>
+    </div>
+    <div class="demo-box">
+      <div class="demo-header">
+        <span class="demo-label">Live Demo</span>
+        <button class="source-toggle" onclick="toggleSource(this)">View Source</button>
+      </div>
+      <div class="demo-result" id="demo-8"></div>
+      <div class="source-panel">
+        <pre><code><span class="hl-tag">&lt;button</span> <span class="hl-attr">xh-get</span>=<span class="hl-val">"/api/tasks"</span>
+        <span class="hl-attr">xh-target</span>=<span class="hl-val">"#indicator-results-8"</span>
+        <span class="hl-attr">xh-indicator</span>=<span class="hl-val">"#loading-8"</span>
+        <span class="hl-attr">class</span>=<span class="hl-val">"btn-small btn-primary-small"</span><span class="hl-tag">&gt;</span>
+  <span class="hl-text">Load Tasks</span>
+<span class="hl-tag">&lt;/button&gt;</span>
+<span class="hl-tag">&lt;span</span> <span class="hl-attr">id</span>=<span class="hl-val">"loading-8"</span> <span class="hl-attr">class</span>=<span class="hl-val">"xh-indicator"</span><span class="hl-tag">&gt;</span>
+  <span class="hl-tag">&lt;span</span> <span class="hl-attr">class</span>=<span class="hl-val">"spinner"</span><span class="hl-tag">&gt;&lt;/span&gt;</span> <span class="hl-text">Loading...</span>
+<span class="hl-tag">&lt;/span&gt;</span>
+
+<span class="hl-tag">&lt;template&gt;</span>
+  <span class="hl-tag">&lt;ul</span> <span class="hl-attr">class</span>=<span class="hl-val">"task-list"</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;li</span> <span class="hl-attr">xh-each</span>=<span class="hl-val">"tasks"</span> <span class="hl-attr">class</span>=<span class="hl-val">"task-item"</span><span class="hl-tag">&gt;</span>
+      <span class="hl-tag">&lt;span</span> <span class="hl-attr">xh-text</span>=<span class="hl-val">"title"</span> <span class="hl-attr">class</span>=<span class="hl-val">"task-title"</span><span class="hl-tag">&gt;&lt;/span&gt;</span>
+    <span class="hl-tag">&lt;/li&gt;</span>
+  <span class="hl-tag">&lt;/ul&gt;</span>
+<span class="hl-tag">&lt;/template&gt;</span>
+<span class="hl-tag">&lt;div</span> <span class="hl-attr">id</span>=<span class="hl-val">"indicator-results-8"</span><span class="hl-tag">&gt;&lt;/div&gt;</span></code></pre>
+      </div>
+    </div>
+    <div class="tip-box">
+      <strong>Tip:</strong> Any element with the <code>xh-indicator</code> class is hidden by default and shown when its parent (or the element pointed to by <code>xh-indicator</code>) receives the <code>xh-request</code> class. You can customize the loading animation with CSS.
+    </div>
+  </section>
+
+  <!-- ================================================================== -->
+  <!-- STEP 9: Error Handling -->
+  <!-- ================================================================== -->
+  <section class="step-section" id="step-9" data-step="9">
+    <div class="step-label">Step 9</div>
+    <h2 class="step-title">Error Handling</h2>
+    <div class="step-description">
+      <p>When an API returns an error status, xhtmlx can render a dedicated error template. Use <code>xh-error-template</code> with an inline <code>&lt;template&gt;</code> to define what to show on failure. The error data context includes <code>status</code>, <code>statusText</code>, and <code>body</code>.</p>
+      <p>You can also wrap multiple widgets in an <code>xh-error-boundary</code> to catch errors from any child that does not have its own error template.</p>
+    </div>
+    <div class="demo-box">
+      <div class="demo-header">
+        <span class="demo-label">Live Demo</span>
+        <button class="source-toggle" onclick="toggleSource(this)">View Source</button>
+      </div>
+      <div class="demo-result" id="demo-9"></div>
+      <div class="source-panel">
+        <pre><code><span class="hl-comment">&lt;!-- This request hits an endpoint that returns 500 --&gt;</span>
+<span class="hl-tag">&lt;button</span> <span class="hl-attr">xh-get</span>=<span class="hl-val">"/api/error/500"</span>
+        <span class="hl-attr">xh-target</span>=<span class="hl-val">"#error-output-9"</span>
+        <span class="hl-attr">xh-error-target</span>=<span class="hl-val">"#error-output-9"</span>
+        <span class="hl-attr">class</span>=<span class="hl-val">"btn-small btn-danger-small"</span><span class="hl-tag">&gt;</span>
+  <span class="hl-text">Trigger Server Error</span>
+  <span class="hl-tag">&lt;template&gt;</span>
+    <span class="hl-tag">&lt;div&gt;</span><span class="hl-text">This won't show because the request fails.</span><span class="hl-tag">&lt;/div&gt;</span>
+  <span class="hl-tag">&lt;/template&gt;</span>
+  <span class="hl-tag">&lt;template</span> <span class="hl-attr">xh-error-template</span><span class="hl-tag">&gt;</span>
+    <span class="hl-tag">&lt;div</span> <span class="hl-attr">class</span>=<span class="hl-val">"error-box"</span><span class="hl-tag">&gt;</span>
+      <span class="hl-tag">&lt;strong&gt;</span><span class="hl-text">Error </span><span class="hl-tag">&lt;span</span> <span class="hl-attr">xh-text</span>=<span class="hl-val">"status"</span><span class="hl-tag">&gt;&lt;/span&gt;&lt;/strong&gt;</span>
+      <span class="hl-text"> &mdash; </span><span class="hl-tag">&lt;span</span> <span class="hl-attr">xh-text</span>=<span class="hl-val">"body.message"</span><span class="hl-tag">&gt;&lt;/span&gt;</span>
+    <span class="hl-tag">&lt;/div&gt;</span>
+  <span class="hl-tag">&lt;/template&gt;</span>
+<span class="hl-tag">&lt;/button&gt;</span>
+<span class="hl-tag">&lt;div</span> <span class="hl-attr">id</span>=<span class="hl-val">"error-output-9"</span><span class="hl-tag">&gt;&lt;/div&gt;</span></code></pre>
+      </div>
+    </div>
+    <div class="tip-box">
+      <strong>Tip:</strong> You can use status-specific error templates like <code>xh-error-template-404</code> or <code>xh-error-template-4xx</code> for fine-grained control. Error boundaries (<code>xh-error-boundary</code>) catch errors from child widgets that do not have their own error template.
+    </div>
+  </section>
+
+  <!-- ========== Footer ========== -->
+  <footer class="tutorial-footer">
+    <p>You have completed the xhtmlx tutorial!</p>
+    <p style="margin-top: 8px;">
+      <a href="../playground/">Try the Playground</a> &middot;
+      <a href="../">Back to Docs</a> &middot;
+      <a href="https://github.com/teryxjs/xhtmlx" target="_blank" rel="noopener">GitHub</a>
+    </p>
+  </footer>
+
+</div><!-- .container -->
+
+<!-- ================================================================== -->
+<!-- JavaScript: Mock API, xhtmlx loader, demo injection -->
+<!-- ================================================================== -->
+<script>
+(function() {
+  "use strict";
+
+  // =====================================================================
+  // Step names for the progress bar
+  // =====================================================================
+  var STEPS = [
+    { num: 1, label: "GET" },
+    { num: 2, label: "Binding" },
+    { num: 3, label: "Conditionals" },
+    { num: 4, label: "POST" },
+    { num: 5, label: "PATCH" },
+    { num: 6, label: "DELETE" },
+    { num: 7, label: "Search" },
+    { num: 8, label: "Indicators" },
+    { num: 9, label: "Errors" }
+  ];
+
+  // =====================================================================
+  // Progress bar
+  // =====================================================================
+  var progressBar = document.getElementById("progressBar");
+  function buildProgressBar() {
+    var html = "";
+    for (var i = 0; i < STEPS.length; i++) {
+      if (i > 0) html += '<span class="progress-connector"></span>';
+      html += '<button class="progress-step" data-target="step-' + STEPS[i].num + '">' +
+        '<span class="step-num">' + STEPS[i].num + '</span>' +
+        STEPS[i].label +
+        '</button>';
+    }
+    progressBar.innerHTML = html;
+
+    var buttons = progressBar.querySelectorAll(".progress-step");
+    for (var j = 0; j < buttons.length; j++) {
+      buttons[j].addEventListener("click", function() {
+        var target = document.getElementById(this.getAttribute("data-target"));
+        if (target) target.scrollIntoView({ behavior: "smooth" });
+      });
+    }
+  }
+  buildProgressBar();
+
+  // Update active step on scroll
+  function updateActiveStep() {
+    var sections = document.querySelectorAll(".step-section");
+    var buttons = progressBar.querySelectorAll(".progress-step");
+    var activeIdx = 0;
+    var scrollTop = window.scrollY || document.documentElement.scrollTop;
+
+    for (var i = 0; i < sections.length; i++) {
+      if (sections[i].getBoundingClientRect().top <= 160) {
+        activeIdx = i;
+      }
+    }
+
+    for (var j = 0; j < buttons.length; j++) {
+      buttons[j].classList.remove("active", "completed");
+      if (j < activeIdx) buttons[j].classList.add("completed");
+      if (j === activeIdx) buttons[j].classList.add("active");
+    }
+  }
+
+  var scrollTimer;
+  window.addEventListener("scroll", function() {
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(updateActiveStep, 50);
+  });
+  updateActiveStep();
+
+  // =====================================================================
+  // View Source toggle
+  // =====================================================================
+  window.toggleSource = function(btn) {
+    var panel = btn.closest(".demo-box").querySelector(".source-panel");
+    btn.classList.toggle("open");
+    panel.classList.toggle("open");
+    btn.textContent = btn.classList.contains("open") ? "Hide Source" : "View Source";
+  };
+
+  // =====================================================================
+  // Mock API data
+  // =====================================================================
+  var tasks = [
+    { id: 1, title: "Learn xhtmlx", description: "Read the docs", completed: true, due: "2026-03-15", link: "#task-1" },
+    { id: 2, title: "Build a task manager", description: "Follow this tutorial", completed: false, due: "2026-03-16", link: "#task-2" },
+    { id: 3, title: "Deploy to production", description: "Ship it!", completed: false, due: "2026-03-20", link: "#task-3" }
+  ];
+  var nextId = 4;
+
+  // =====================================================================
+  // Mock fetch interceptor
+  //
+  // Overrides window.fetch to intercept /api/* requests and return
+  // mock JSON responses. Non-API requests pass through to the real fetch.
+  // =====================================================================
+  var _origFetch = window.fetch;
+
+  function mockDelay() {
+    return 150 + Math.floor(Math.random() * 250);
+  }
+
+  function jsonResponse(body, status) {
+    return new Response(JSON.stringify(body), {
+      status: status || 200,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+
+  function matchRoute(url, method, init) {
+    // Parse URL
+    var parsedUrl;
+    try {
+      parsedUrl = new URL(url, location.href);
+    } catch (e) {
+      return null;
+    }
+    var pathname = parsedUrl.pathname;
+    var search = parsedUrl.searchParams;
+
+    // GET /api/tasks or GET /api/tasks?q=...
+    if (method === "GET" && pathname === "/api/tasks") {
+      var q = search.get("q");
+      var filtered = tasks;
+      if (q) {
+        q = q.toLowerCase();
+        filtered = tasks.filter(function(t) {
+          return t.title.toLowerCase().indexOf(q) !== -1 ||
+                 t.description.toLowerCase().indexOf(q) !== -1;
+        });
+      }
+      return jsonResponse({ tasks: filtered });
+    }
+
+    // POST /api/tasks
+    if (method === "POST" && pathname === "/api/tasks") {
+      var body = {};
+      try {
+        if (init && init.body) {
+          if (typeof init.body === "string") {
+            // Could be JSON or form-encoded
+            try {
+              body = JSON.parse(init.body);
+            } catch (e) {
+              // Parse as URL-encoded
+              var pairs = init.body.split("&");
+              for (var i = 0; i < pairs.length; i++) {
+                var kv = pairs[i].split("=");
+                body[decodeURIComponent(kv[0])] = decodeURIComponent(kv[1] || "");
+              }
+            }
+          }
+        }
+      } catch (e) {}
+      var newTask = {
+        id: nextId++,
+        title: body.title || "New Task",
+        description: body.description || "",
+        completed: false,
+        due: body.due || "2026-03-20",
+        link: "#task-" + (nextId - 1)
+      };
+      tasks.push(newTask);
+      return jsonResponse(newTask, 201);
+    }
+
+    // PATCH /api/tasks/:id
+    var patchMatch = pathname.match(/^\/api\/tasks\/(\d+)$/);
+    if (method === "PATCH" && patchMatch) {
+      var patchId = parseInt(patchMatch[1], 10);
+      var patchBody = {};
+      try {
+        if (init && init.body) {
+          patchBody = JSON.parse(init.body);
+        }
+      } catch (e) {}
+      for (var pi = 0; pi < tasks.length; pi++) {
+        if (tasks[pi].id === patchId) {
+          for (var key in patchBody) {
+            if (patchBody.hasOwnProperty(key)) {
+              tasks[pi][key] = patchBody[key];
+            }
+          }
+          return jsonResponse(tasks[pi]);
+        }
+      }
+      return jsonResponse({ error: "Task not found" }, 404);
+    }
+
+    // DELETE /api/tasks/:id
+    var deleteMatch = pathname.match(/^\/api\/tasks\/(\d+)$/);
+    if (method === "DELETE" && deleteMatch) {
+      var deleteId = parseInt(deleteMatch[1], 10);
+      tasks = tasks.filter(function(t) { return t.id !== deleteId; });
+      return jsonResponse({ success: true });
+    }
+
+    // GET /api/error/500
+    if (method === "GET" && pathname === "/api/error/500") {
+      return jsonResponse({ message: "Internal Server Error. The server encountered an unexpected condition." }, 500);
+    }
+
+    return null;
+  }
+
+  window.fetch = function(input, init) {
+    var url, method;
+    if (typeof input === "string") {
+      url = input;
+      method = (init && init.method) ? init.method.toUpperCase() : "GET";
+    } else if (input instanceof Request) {
+      url = input.url;
+      method = input.method.toUpperCase();
+    } else {
+      return _origFetch.apply(this, arguments);
+    }
+
+    var mockResp = matchRoute(url, method, init);
+    if (mockResp) {
+      return new Promise(function(resolve) {
+        setTimeout(function() {
+          resolve(mockResp);
+        }, mockDelay());
+      });
+    }
+
+    return _origFetch.apply(this, arguments);
+  };
+
+  // =====================================================================
+  // Load xhtmlx.js and inject demos
+  // =====================================================================
+  var xhtmlxUrl = location.origin + location.pathname.replace(/tutorial\/.*$/, "") + "xhtmlx.js";
+
+  function injectDemos() {
+    // Step 1: Your First Request (GET)
+    document.getElementById("demo-1").innerHTML =
+      '<div xh-get="/api/tasks" xh-trigger="load">' +
+        '<template>' +
+          '<ul class="task-list">' +
+            '<li xh-each="tasks" class="task-item">' +
+              '<span xh-text="title" class="task-title"></span>' +
+            '</li>' +
+          '</ul>' +
+        '</template>' +
+      '</div>';
+
+    // Step 2: Data Binding
+    document.getElementById("demo-2").innerHTML =
+      '<div xh-get="/api/tasks" xh-trigger="load">' +
+        '<template>' +
+          '<ul class="task-list">' +
+            '<li xh-each="tasks" class="task-item">' +
+              '<div>' +
+                '<a xh-attr-href="link" xh-text="title" class="task-title"></a>' +
+                '<div xh-text="description" class="task-desc"></div>' +
+              '</div>' +
+              '<span xh-text="due" class="task-due"></span>' +
+            '</li>' +
+          '</ul>' +
+        '</template>' +
+      '</div>';
+
+    // Step 3: Conditionals
+    document.getElementById("demo-3").innerHTML =
+      '<div xh-get="/api/tasks" xh-trigger="load">' +
+        '<template>' +
+          '<ul class="task-list">' +
+            '<li xh-each="tasks" class="task-item">' +
+              '<span xh-if="completed" class="badge badge-done">Done</span>' +
+              '<span xh-unless="completed" class="badge badge-pending">Pending</span>' +
+              '<span xh-text="title" class="task-title"></span>' +
+              '<span xh-text="due" class="task-due"></span>' +
+            '</li>' +
+          '</ul>' +
+        '</template>' +
+      '</div>';
+
+    // Step 4: Creating Tasks (POST)
+    document.getElementById("demo-4").innerHTML =
+      '<form xh-post="/api/tasks" xh-target="#task-list-4" xh-swap="beforeend">' +
+        '<template>' +
+          '<li class="task-item">' +
+            '<span class="badge badge-pending">Pending</span>' +
+            '<span xh-text="title" class="task-title"></span>' +
+            '<span xh-text="due" class="task-due"></span>' +
+          '</li>' +
+        '</template>' +
+        '<input type="text" name="title" placeholder="Task title..." required>' +
+        '<input type="date" name="due">' +
+        '<button type="submit" class="btn-small btn-primary-small">Add Task</button>' +
+      '</form>' +
+      '<div xh-get="/api/tasks" xh-trigger="load" xh-target="#task-list-4">' +
+        '<template>' +
+          '<li xh-each="tasks" class="task-item">' +
+            '<span xh-if="completed" class="badge badge-done">Done</span>' +
+            '<span xh-unless="completed" class="badge badge-pending">Pending</span>' +
+            '<span xh-text="title" class="task-title"></span>' +
+            '<span xh-text="due" class="task-due"></span>' +
+          '</li>' +
+        '</template>' +
+      '</div>' +
+      '<ul id="task-list-4" class="task-list"></ul>';
+
+    // Step 5: Completing Tasks (PATCH)
+    document.getElementById("demo-5").innerHTML =
+      '<div xh-get="/api/tasks" xh-trigger="load">' +
+        '<template>' +
+          '<ul class="task-list">' +
+            '<li xh-each="tasks" class="task-item">' +
+              '<span xh-if="completed" class="badge badge-done">Done</span>' +
+              '<span xh-unless="completed" class="badge badge-pending">Pending</span>' +
+              '<span xh-text="title" class="task-title"></span>' +
+              '<div class="task-actions">' +
+                '<button xh-unless="completed" xh-patch="/api/tasks/{{id}}" xh-vals=\'{"completed": true}\' xh-swap="none" class="btn-small btn-success-small">Complete</button>' +
+              '</div>' +
+            '</li>' +
+          '</ul>' +
+        '</template>' +
+      '</div>';
+
+    // Step 6: Deleting Tasks (DELETE)
+    document.getElementById("demo-6").innerHTML =
+      '<div xh-get="/api/tasks" xh-trigger="load">' +
+        '<template>' +
+          '<ul class="task-list">' +
+            '<li xh-each="tasks" class="task-item">' +
+              '<span xh-text="title" class="task-title"></span>' +
+              '<span xh-text="due" class="task-due"></span>' +
+              '<button xh-delete="/api/tasks/{{id}}" xh-target="closest .task-item" xh-swap="delete" class="btn-small btn-danger-small">Delete</button>' +
+            '</li>' +
+          '</ul>' +
+        '</template>' +
+      '</div>';
+
+    // Step 7: Search with Debounce
+    document.getElementById("demo-7").innerHTML =
+      '<input type="text" name="q" placeholder="Search tasks..." class="search-box"' +
+        ' xh-get="/api/tasks"' +
+        ' xh-trigger="keyup changed delay:300ms"' +
+        ' xh-target="#search-results-7">' +
+        '<template>' +
+          '<ul class="task-list">' +
+            '<li xh-each="tasks" class="task-item">' +
+              '<span xh-text="title" class="task-title"></span>' +
+              '<span xh-text="description" class="task-desc"></span>' +
+            '</li>' +
+          '</ul>' +
+        '</template>' +
+      '</input>' +
+      '<div id="search-results-7" style="margin-top:12px"></div>';
+
+    // Step 8: Loading Indicators
+    document.getElementById("demo-8").innerHTML =
+      '<button xh-get="/api/tasks" xh-target="#indicator-results-8" xh-indicator="#loading-8" class="btn-small btn-primary-small">Load Tasks</button>' +
+      ' <span id="loading-8" class="xh-indicator"><span class="spinner"></span> Loading...</span>' +
+      '<template>' +
+        '<ul class="task-list">' +
+          '<li xh-each="tasks" class="task-item">' +
+            '<span xh-text="title" class="task-title"></span>' +
+          '</li>' +
+        '</ul>' +
+      '</template>' +
+      '<div id="indicator-results-8" style="margin-top:12px"></div>';
+
+    // Step 9: Error Handling
+    document.getElementById("demo-9").innerHTML =
+      '<button xh-get="/api/error/500" xh-target="#error-output-9" xh-error-target="#error-output-9" class="btn-small btn-danger-small">Trigger Server Error' +
+        '<template><div>This will not show because the request fails.</div></template>' +
+        '<template xh-error-template>' +
+          '<div class="error-box">' +
+            '<strong>Error <span xh-text="status"></span></strong>' +
+            ' &mdash; <span xh-text="body.message"></span>' +
+          '</div>' +
+        '</template>' +
+      '</button>' +
+      '<div id="error-output-9" style="margin-top:12px"></div>';
+  }
+
+  // =====================================================================
+  // Load xhtmlx.js from the parent directory by fetching its source
+  // and injecting it as an inline script. This avoids cross-origin
+  // issues and matches the playground approach.
+  // =====================================================================
+  function loadXhtmlx() {
+    fetch(xhtmlxUrl)
+      .then(function(r) { return r.text(); })
+      .then(function(src) {
+        // Inject all demo HTML first
+        injectDemos();
+
+        // Then load xhtmlx by creating a script element with the source
+        var script = document.createElement("script");
+        script.textContent = src;
+        document.body.appendChild(script);
+      })
+      .catch(function(err) {
+        console.error("[tutorial] Failed to load xhtmlx.js from " + xhtmlxUrl + ":", err);
+        // Fallback: try as an external script
+        injectDemos();
+        var script = document.createElement("script");
+        script.src = xhtmlxUrl;
+        document.body.appendChild(script);
+      });
+  }
+
+  // Start
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", loadXhtmlx);
+  } else {
+    loadXhtmlx();
+  }
+
+})();
+</script>
+</body>
+</html>
