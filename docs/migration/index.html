@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>xhtmlx Migration Guide</title>
+<style>
+:root {
+  --bg-primary: #0b0e17;
+  --bg-secondary: #111627;
+  --bg-card: #161b2e;
+  --bg-code: #0d1117;
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent-1: #6366f1;
+  --accent-3: #06b6d4;
+  --border-color: rgba(99,102,241,0.15);
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "SF Mono", "Cascadia Code", Consolas, monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-sans); background: var(--bg-primary); color: var(--text-primary); line-height: 1.7; }
+a { color: var(--accent-3); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.container { max-width: 800px; margin: 0 auto; padding: 40px 24px; }
+.back { display: inline-block; margin-bottom: 32px; font-size: 14px; color: var(--text-secondary); }
+h1 { font-size: 2.2rem; margin-bottom: 8px; }
+.subtitle { color: var(--text-secondary); margin-bottom: 40px; font-size: 1.1rem; }
+h2 { font-size: 1.5rem; margin-top: 48px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color); }
+h3 { font-size: 1.1rem; margin-top: 32px; margin-bottom: 12px; color: var(--accent-3); }
+p { margin-bottom: 16px; color: var(--text-secondary); }
+ul, ol { margin-bottom: 16px; padding-left: 24px; color: var(--text-secondary); }
+li { margin-bottom: 8px; }
+
+code {
+  font-family: var(--font-mono);
+  background: var(--bg-code);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.9em;
+  color: var(--accent-3);
+}
+pre {
+  background: var(--bg-code);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 16px 20px;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  margin-bottom: 20px;
+  color: var(--text-primary);
+}
+
+.change-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+.change-table th, .change-table td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border-color); font-size: 0.9rem; }
+.change-table th { color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; }
+.change-table td { color: var(--text-secondary); font-family: var(--font-mono); font-size: 0.85rem; }
+
+.badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.03em; }
+.badge-breaking { background: rgba(239,68,68,0.15); color: #ef4444; }
+.badge-rename { background: rgba(245,158,11,0.15); color: #f59e0b; }
+.badge-new { background: rgba(74,222,128,0.15); color: #4ade80; }
+.badge-deprecated { background: rgba(167,139,250,0.15); color: #a78bfa; }
+
+.cli-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 24px;
+  margin: 24px 0;
+}
+.cli-box h4 { margin-bottom: 12px; font-size: 0.95rem; }
+</style>
+</head>
+<body>
+<div class="container">
+  <a href="../" class="back">&larr; Back to xhtmlx</a>
+
+  <h1>Migration Guide</h1>
+  <p class="subtitle">How to upgrade between xhtmlx versions. Use the CLI tool for automated migration.</p>
+
+  <div class="cli-box">
+    <h4>Automated Migration</h4>
+    <p>The fastest way to migrate is the built-in CLI tool:</p>
+    <pre>npx xhtmlx-migrate --from=1 --to=2 src/</pre>
+    <p>Preview changes first with <code>--dry-run</code>, or rollback with <code>--reverse</code>.</p>
+    <pre># Preview changes without modifying files
+npx xhtmlx-migrate --dry-run --from=1 --to=2 src/
+
+# Rollback if something breaks
+npx xhtmlx-migrate --from=1 --to=2 --reverse src/
+
+# Show all migration rules
+npx xhtmlx-migrate --list-rules --from=1 --to=2</pre>
+  </div>
+
+  <h2>v1 &rarr; v2</h2>
+
+  <h3>Attribute Renames <span class="badge badge-rename">RENAME</span></h3>
+
+  <table class="change-table">
+    <thead>
+      <tr><th>v1 (old)</th><th>v2 (new)</th><th>Notes</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>xh-bind</td><td>xh-model</td><td>Two-way binding renamed for clarity</td></tr>
+      <tr><td>xh-loading</td><td>xh-indicator</td><td>Loading indicator renamed to match htmx convention</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Value Changes <span class="badge badge-rename">RENAME</span></h3>
+
+  <table class="change-table">
+    <thead>
+      <tr><th>Attribute</th><th>v1 value</th><th>v2 value</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>xh-swap</td><td>"replace"</td><td>"outerHTML"</td></tr>
+    </tbody>
+  </table>
+
+  <h3>New Requirements <span class="badge badge-breaking">BREAKING</span></h3>
+
+  <table class="change-table">
+    <thead>
+      <tr><th>Change</th><th>Details</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>xh-ws requires xh-trigger</td><td>WebSocket elements now need explicit <code>xh-trigger="message"</code>. Previously auto-triggered.</td></tr>
+      <tr><td>Strict equality for xh-model</td><td>Radio buttons and selects use <code>===</code> instead of <code>==</code>. Ensure data types match option values (e.g. <code>"1"</code> not <code>1</code>).</td></tr>
+    </tbody>
+  </table>
+
+  <h3>New Features in v2 <span class="badge badge-new">NEW</span></h3>
+  <ul>
+    <li><code>xh-model</code> — two-way data binding (pre-fill, auto-collect, live reactivity)</li>
+    <li><code>xh-class-*</code> — toggle CSS classes based on data</li>
+    <li><code>xh-show</code> / <code>xh-hide</code> — toggle visibility</li>
+    <li><code>xh-on-*</code> — declarative event handlers</li>
+    <li><code>xh-push-url</code> / <code>xh-replace-url</code> — browser history</li>
+    <li><code>xh-ws</code> / <code>xh-ws-send</code> — WebSocket support</li>
+    <li><code>xh-boost</code> — enhance links and forms</li>
+    <li><code>xh-cache</code> — response caching with TTL</li>
+    <li><code>xh-retry</code> — automatic retry with backoff</li>
+    <li><code>xh-validate</code> — declarative form validation</li>
+    <li><code>xh-i18n</code> — internationalization</li>
+    <li><code>xh-router</code> / <code>xh-route</code> — SPA routing</li>
+    <li><code>xh-focus</code> — focus management after swap</li>
+    <li><code>xh-template-mobile</code> / <code>xh-template-tablet</code> — responsive templates</li>
+    <li><code>xh-name</code> — named inline templates</li>
+    <li>Plugin API: <code>xhtmlx.directive()</code>, <code>xhtmlx.hook()</code>, <code>xhtmlx.transform()</code></li>
+    <li>UI versioning: <code>xhtmlx.switchVersion()</code></li>
+    <li>CSP-safe mode: <code>xhtmlx.config.cspSafe = true</code></li>
+  </ul>
+
+  <h2>How to Migrate Safely</h2>
+
+  <ol>
+    <li><strong>Run dry-run first</strong> — <code>npx xhtmlx-migrate --dry-run --from=1 --to=2 src/</code></li>
+    <li><strong>Review the changes</strong> — check each file in the output</li>
+    <li><strong>Commit your current state</strong> — so you can revert via git</li>
+    <li><strong>Apply the migration</strong> — <code>npx xhtmlx-migrate --from=1 --to=2 src/</code></li>
+    <li><strong>Test your app</strong> — run your tests, check the UI</li>
+    <li><strong>If something breaks</strong> — either <code>git revert</code> or <code>npx xhtmlx-migrate --reverse --from=1 --to=2 src/</code></li>
+  </ol>
+
+  <h2>UI Version Switching</h2>
+
+  <p>For zero-downtime deployment, use <code>xhtmlx.switchVersion()</code> instead of migrating HTML files:</p>
+
+  <pre>// Deploy new templates alongside old ones
+// /ui/v1/templates/...  (current)
+// /ui/v2/templates/...  (new)
+
+// Switch all widgets to v2 templates
+xhtmlx.switchVersion("v2");
+
+// Rollback if needed
+xhtmlx.switchVersion("v1");</pre>
+
+  <p>This changes the template prefix at runtime without modifying any HTML files. See <a href="../api/#switchVersion">switchVersion API docs</a>.</p>
+
+</div>
+</body>
+</html>

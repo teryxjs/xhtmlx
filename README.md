@@ -761,6 +761,28 @@ xhtmlx.config.defaultErrorTemplate = null;     // Global error template
 xhtmlx.config.defaultErrorTarget = null;       // Global error target
 ```
 
+## Migration
+
+Use the built-in CLI tool to migrate HTML files between xhtmlx versions:
+
+```bash
+# Migrate v1 → v2
+npx xhtmlx-migrate --from=1 --to=2 src/
+
+# Preview changes without modifying files
+npx xhtmlx-migrate --dry-run --from=1 --to=2 src/
+
+# Rollback v2 → v1
+npx xhtmlx-migrate --from=1 --to=2 --reverse src/
+
+# Show available migration rules
+npx xhtmlx-migrate --list-rules --from=1 --to=2
+```
+
+The tool scans HTML files for deprecated `xh-*` attributes and updates them automatically. Supports recursive directory scanning, dry-run preview, and reverse migrations for rollback.
+
+See the [Migration Guide](https://teryxjs.github.io/xhtmlx/migration/) for detailed version-by-version changes.
+
 ## Browser Support
 
 xhtmlx uses `fetch()`, `Promise`, `WeakMap`, and `IntersectionObserver`. Works in all modern browsers (Chrome, Firefox, Safari, Edge). No IE support.
