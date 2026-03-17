@@ -1,5 +1,12 @@
 # xhtmlx
 
+[![npm version](https://img.shields.io/npm/v/xhtmlx.svg)](https://www.npmjs.com/package/xhtmlx)
+[![npm downloads](https://img.shields.io/npm/dm/xhtmlx.svg)](https://www.npmjs.com/package/xhtmlx)
+[![bundle size](https://img.shields.io/bundlephobia/minzip/xhtmlx)](https://bundlephobia.com/package/xhtmlx)
+[![tests](https://img.shields.io/badge/tests-910-brightgreen)]()
+[![license](https://img.shields.io/npm/l/xhtmlx.svg)](https://github.com/teryxjs/xhtmlx/blob/main/LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/teryxjs/xhtmlx)](https://github.com/teryxjs/xhtmlx)
+
 A lightweight, zero-dependency JavaScript library for building dynamic UIs with REST APIs using declarative HTML attributes.
 
 Like [htmx](https://htmx.org), but instead of receiving HTML from the server, xhtmlx receives **JSON** and renders UI **client-side** using templates.

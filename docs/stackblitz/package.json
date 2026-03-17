@@ -1,0 +1,11 @@
+{
+  "name": "xhtmlx-starter",
+  "version": "1.0.0",
+  "description": "xhtmlx starter template — REST APIs meet declarative HTML",
+  "scripts": {
+    "start": "npx serve -l 3000 ."
+  },
+  "dependencies": {
+    "serve": "^14.2.0"
+  }
+}

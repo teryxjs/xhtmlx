@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>xhtmlx Starter</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 32px;
+      line-height: 1.6;
+    }
+    h1 { margin-bottom: 8px; }
+    p.subtitle { color: #94a3b8; margin-bottom: 24px; }
+    a { color: #06b6d4; }
+
+    .user-card {
+      background: #1e293b;
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin: 8px 0;
+      border-left: 3px solid #6366f1;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .user-card .name { font-weight: 600; }
+    .user-card .email { color: #94a3b8; font-size: 14px; }
+    .user-card .badge {
+      background: rgba(74, 222, 128, 0.15);
+      color: #4ade80;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    .search-input {
+      width: 100%;
+      max-width: 400px;
+      padding: 10px 14px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      color: #e2e8f0;
+      font-size: 15px;
+      outline: none;
+      margin-bottom: 16px;
+    }
+    .search-input:focus { border-color: #6366f1; }
+
+    .xh-indicator { opacity: 0; transition: opacity 200ms ease-in; }
+    .xh-request .xh-indicator, .xh-request.xh-indicator { opacity: 1; }
+    .loading { color: #94a3b8; font-size: 14px; }
+
+    section { margin-bottom: 40px; }
+    h2 { font-size: 18px; margin-bottom: 12px; color: #94a3b8; }
+  </style>
+</head>
+<body>
+
+  <h1>xhtmlx Starter</h1>
+  <p class="subtitle">Edit this file to experiment. Uses <a href="https://jsonplaceholder.typicode.com" target="_blank">JSONPlaceholder</a> API.</p>
+
+  <!-- ============================================================ -->
+  <!-- Example 1: Load users on page load -->
+  <!-- ============================================================ -->
+  <section>
+    <h2>Users (loads automatically)</h2>
+    <div xh-get="https://jsonplaceholder.typicode.com/users?_limit=5"
+         xh-trigger="load"
+         xh-target="#user-list">
+      <span class="xh-indicator loading">Loading users...</span>
+    </div>
+    <div id="user-list">
+      <template>
+        <!-- jsonplaceholder returns an array, so we wrap with $self -->
+        <div xh-each="$self">
+          <div class="user-card">
+            <div>
+              <div class="name" xh-text="name"></div>
+              <div class="email" xh-text="email"></div>
+            </div>
+            <div class="badge" xh-text="company.name"></div>
+          </div>
+        </div>
+      </template>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- Example 2: Load posts for user 1 on button click -->
+  <!-- ============================================================ -->
+  <section>
+    <h2>Posts (click to load)</h2>
+    <button xh-get="https://jsonplaceholder.typicode.com/posts?userId=1&_limit=3"
+            xh-trigger="click"
+            xh-target="#posts"
+            xh-indicator="#posts-loading"
+            style="padding:8px 18px;background:#6366f1;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px">
+      Load Posts for User 1
+    </button>
+    <span id="posts-loading" class="xh-indicator loading"> Loading...</span>
+    <div id="posts">
+      <template>
+        <div xh-each="$self">
+          <div class="user-card" style="border-left-color:#8b5cf6">
+            <div>
+              <div class="name" xh-text="title"></div>
+              <div class="email" xh-text="body"></div>
+            </div>
+          </div>
+        </div>
+      </template>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- Example 3: Todos with conditionals -->
+  <!-- ============================================================ -->
+  <section>
+    <h2>Todos (conditionals)</h2>
+    <div xh-get="https://jsonplaceholder.typicode.com/todos?_limit=6"
+         xh-trigger="load"
+         xh-target="#todos">
+      <span class="xh-indicator loading">Loading todos...</span>
+    </div>
+    <div id="todos">
+      <template>
+        <div xh-each="$self">
+          <div class="user-card" style="border-left-color:#06b6d4">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span xh-if="completed" style="color:#4ade80">&#10003;</span>
+              <span xh-unless="completed" style="color:#64748b">&#9675;</span>
+              <span xh-text="title"></span>
+            </div>
+          </div>
+        </div>
+      </template>
+    </div>
+  </section>
+
+  <!-- xhtmlx library -->
+  <script src="https://unpkg.com/xhtmlx@0.2.0/xhtmlx.js"></script>
+
+  <!-- Wrap array responses for jsonplaceholder (returns arrays, xhtmlx expects objects) -->
+  <script>
+    (function() {
+      var origFetch = window.fetch;
+      window.fetch = function() {
+        return origFetch.apply(this, arguments).then(function(response) {
+          var clone = response.clone();
+          var origText = response.text.bind(response);
+          response.text = function() {
+            return origText().then(function(text) {
+              try {
+                var parsed = JSON.parse(text);
+                if (Array.isArray(parsed)) return JSON.stringify({ "$self": parsed });
+              } catch(e) {}
+              return text;
+            });
+          };
+          return response;
+        });
+      };
+    })();
+  </script>
+
+</body>
+</html>
