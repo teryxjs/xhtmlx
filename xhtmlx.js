@@ -181,20 +181,20 @@
     if (parts[0] === "$parent") {
       if (!this.parent) return undefined;
       if (parts.length === 1) return this.parent.data;
-      return this.parent.resolve(parts.slice(1).join("."));
+      return this.parent._resolveFromParts(parts, 1);
     }
 
     if (parts[0] === "$root") {
       var root = this;
       while (root.parent) root = root.parent;
       if (parts.length === 1) return root.data;
-      return root.resolve(parts.slice(1).join("."));
+      return root._resolveFromParts(parts, 1);
     }
 
     if (parts[0] === "$viewport") {
       var vp = getViewportContext();
       if (parts.length === 1) return vp;
-      return resolveDot(vp, parts.slice(1));
+      return resolveDot(vp, parts, 1);
     }
 
     // --- local lookup --------------------------------------------------------
@@ -208,14 +208,55 @@
   };
 
   /**
-   * Resolve a dotted path against a plain object.
-   * @param {Object} obj
-   * @param {string[]} parts
+   * Resolve using pre-split parts starting from a given index.
+   * Avoids intermediate array/string allocation from slice()+join().
+   *
+   * @param {string[]} parts    – The full parts array.
+   * @param {number}   startIdx – Index to start resolving from.
    * @returns {*}
    */
-  function resolveDot(obj, parts) {
+  DataContext.prototype._resolveFromParts = function (parts, startIdx) {
+    if (startIdx < parts.length && parts[startIdx] === "$parent") {
+      if (!this.parent) return undefined;
+      if (startIdx === parts.length - 1) return this.parent.data;
+      return this.parent._resolveFromParts(parts, startIdx + 1);
+    }
+
+    if (startIdx < parts.length && parts[startIdx] === "$root") {
+      var root = this;
+      while (root.parent) root = root.parent;
+      if (startIdx === parts.length - 1) return root.data;
+      return root._resolveFromParts(parts, startIdx + 1);
+    }
+
+    if (startIdx < parts.length && parts[startIdx] === "$index") {
+      return this.index;
+    }
+
+    if (startIdx < parts.length && parts[startIdx] === "$viewport") {
+      var vp = getViewportContext();
+      if (startIdx === parts.length - 1) return vp;
+      return resolveDot(vp, parts, startIdx + 1);
+    }
+
+    var value = resolveDot(this.data, parts, startIdx);
+    if (value !== undefined) return value;
+
+    if (this.parent) return this.parent._resolveFromParts(parts, startIdx);
+
+    return undefined;
+  };
+
+  /**
+   * Resolve a dotted path against a plain object.
+   * @param {Object}   obj
+   * @param {string[]} parts
+   * @param {number}   [startIdx=0] – Index to start resolving from.
+   * @returns {*}
+   */
+  function resolveDot(obj, parts, startIdx) {
     var cur = obj;
-    for (var i = 0; i < parts.length; i++) {
+    for (var i = startIdx || 0; i < parts.length; i++) {
       if (cur == null || typeof cur !== "object") return undefined;
       if (!(parts[i] in cur)) return undefined;
       cur = cur[parts[i]];
