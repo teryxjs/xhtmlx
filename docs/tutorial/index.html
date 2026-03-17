@@ -1384,10 +1384,16 @@ code, pre {
         // Inject all demo HTML first
         injectDemos();
 
-        // Then load xhtmlx by creating a script element with the source
+        // Load xhtmlx by creating a script element with the source
         var script = document.createElement("script");
         script.textContent = src;
         document.body.appendChild(script);
+
+        // DOMContentLoaded already fired, so xhtmlx won't auto-init.
+        // Manually process the page.
+        if (window.xhtmlx) {
+          window.xhtmlx.process(document.body);
+        }
         window.__xhtmlxLoaded = true;
       })
       .catch(function(err) {
@@ -1396,7 +1402,10 @@ code, pre {
         injectDemos();
         var script = document.createElement("script");
         script.src = xhtmlxUrl;
-        script.onload = function() { window.__xhtmlxLoaded = true; };
+        script.onload = function() {
+          if (window.xhtmlx) window.xhtmlx.process(document.body);
+          window.__xhtmlxLoaded = true;
+        };
         document.body.appendChild(script);
       });
   }
