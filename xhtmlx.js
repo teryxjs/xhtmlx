@@ -1812,6 +1812,38 @@
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Global resize handler — single listener delegates to all registered elements
+  // ---------------------------------------------------------------------------
+  var resizeElements = [];
+  var resizeGlobalTimer = null;
+  var resizeGlobalDelay = 300;
+  var resizeListenerAttached = false;
+
+  function globalResizeHandler() {
+    clearTimeout(resizeGlobalTimer);
+    resizeGlobalTimer = setTimeout(function() {
+      for (var i = resizeElements.length - 1; i >= 0; i--) {
+        var entry = resizeElements[i];
+        // Skip elements no longer in DOM
+        if (!entry.el.parentNode) {
+          resizeElements.splice(i, 1);
+          continue;
+        }
+        executeRequest(entry.el, entry.ctx, entry.templateStack);
+      }
+    }, resizeGlobalDelay);
+  }
+
+  function registerResizeElement(el, ctx, templateStack, delay) {
+    resizeElements.push({ el: el, ctx: ctx, templateStack: templateStack });
+    if (delay < resizeGlobalDelay) resizeGlobalDelay = delay;
+    if (!resizeListenerAttached && typeof window !== "undefined") {
+      window.addEventListener("resize", globalResizeHandler);
+      resizeListenerAttached = true;
+    }
+  }
+
   /**
    * Attach a single trigger spec to an element.
    */
@@ -1846,19 +1878,9 @@
       return;
     }
 
-    // --- "resize" trigger: debounced window resize ----------------------------
+    // --- "resize" trigger: single global handler, delegates to registered elements
     if (spec.event === "resize") {
-      var resizeHandler = function() {
-        executeRequest(el, ctx, templateStack);
-      };
-      // Debounce resize by default (use spec.delay or 300ms)
-      var resizeDelay = spec.delay || 300;
-      var resizeTimer = null;
-      window.addEventListener("resize", function() {
-        clearTimeout(resizeTimer);
-        resizeTimer = setTimeout(resizeHandler, resizeDelay);
-      });
-      state.intervalIds.push(resizeTimer); // for cleanup
+      registerResizeElement(el, ctx, templateStack, spec.delay || 300);
       return;
     }
 
