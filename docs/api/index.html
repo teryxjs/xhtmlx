@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>xhtmlx API Reference</title>
+<meta name="description" content="Comprehensive API reference for the xhtmlx library — all attributes, methods, events, and configuration options.">
+<style>
+:root {
+  --bg-primary: #0b0e17;
+  --bg-secondary: #111627;
+  --bg-card: #161b2e;
+  --bg-card-hover: #1c2240;
+  --bg-code: #0d1117;
+  --bg-code-header: #161b2e;
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent-1: #6366f1;
+  --accent-2: #8b5cf6;
+  --accent-3: #06b6d4;
+  --accent-4: #22d3ee;
+  --gradient-accent: linear-gradient(135deg, #6366f1, #8b5cf6, #06b6d4);
+  --gradient-subtle: linear-gradient(135deg, rgba(99,102,241,0.08), rgba(6,182,212,0.08));
+  --border-color: rgba(99,102,241,0.15);
+  --border-color-hover: rgba(99,102,241,0.35);
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: "SF Mono", "Cascadia Code", "Fira Code", Consolas, "DejaVu Sans Mono", monospace;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow-lg: 0 25px 50px -12px rgba(0,0,0,0.5);
+  --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --sidebar-w: 280px;
+  --nav-h: 56px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-padding-top:calc(var(--nav-h) + 16px);-webkit-text-size-adjust:100%}
+body{font-family:var(--font-sans);background:var(--bg-primary);color:var(--text-primary);line-height:1.7;-webkit-font-smoothing:antialiased}
+a{color:var(--accent-3);text-decoration:none;transition:color var(--transition)}
+a:hover{color:var(--accent-4)}
+code,pre{font-family:var(--font-mono)}
+
+/* ===== NAV ===== */
+.topnav{position:fixed;top:0;left:0;right:0;z-index:200;height:var(--nav-h);background:rgba(11,14,23,0.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--border-color);display:flex;align-items:center;padding:0 20px;gap:16px}
+.topnav-title{font-size:1.05rem;font-weight:700;background:var(--gradient-accent);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;white-space:nowrap}
+.topnav-back{font-size:.85rem;color:var(--text-secondary);white-space:nowrap}
+.topnav-back:hover{color:var(--accent-4)}
+.topnav-search{flex:1;max-width:360px;margin-left:auto}
+.topnav-search input{width:100%;padding:7px 14px;border-radius:var(--radius-sm);border:1px solid var(--border-color);background:var(--bg-secondary);color:var(--text-primary);font-size:.88rem;outline:none;transition:border var(--transition)}
+.topnav-search input:focus{border-color:var(--accent-1)}
+.topnav-search input::placeholder{color:var(--text-muted)}
+.hamburger{display:none;background:none;border:none;color:var(--text-primary);font-size:1.5rem;cursor:pointer;padding:4px}
+
+/* ===== SIDEBAR ===== */
+.sidebar{position:fixed;top:var(--nav-h);left:0;bottom:0;width:var(--sidebar-w);overflow-y:auto;padding:16px 0 32px;background:var(--bg-secondary);border-right:1px solid var(--border-color);z-index:100;transition:transform .3s ease}
+.sidebar::-webkit-scrollbar{width:5px}
+.sidebar::-webkit-scrollbar-thumb{background:var(--border-color);border-radius:4px}
+.sidebar-group{margin-bottom:6px}
+.sidebar-group-title{display:block;padding:8px 20px 4px;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--text-muted)}
+.sidebar a{display:block;padding:3px 20px 3px 28px;font-size:.82rem;color:var(--text-secondary);line-height:1.6;transition:color .15s,background .15s;border-left:2px solid transparent}
+.sidebar a:hover{color:var(--text-primary);background:rgba(99,102,241,0.06)}
+.sidebar a.active{color:var(--accent-3);border-left-color:var(--accent-3);background:rgba(6,182,212,0.06)}
+
+/* ===== MAIN ===== */
+.main{margin-left:var(--sidebar-w);padding:calc(var(--nav-h) + 24px) 36px 80px;max-width:920px}
+
+/* ===== ENTRY ===== */
+.api-entry{padding:28px 0 36px;border-bottom:1px solid var(--border-color)}
+.api-entry:last-child{border-bottom:none}
+.api-entry h2{font-size:1.35rem;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.api-entry h2 .anchor{color:var(--text-muted);font-weight:400;font-size:1rem;opacity:0;transition:opacity .2s}
+.api-entry h2:hover .anchor{opacity:1}
+.badge{display:inline-block;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:2px 8px;border-radius:4px;vertical-align:middle}
+.badge-attr{background:rgba(99,102,241,0.18);color:#818cf8}
+.badge-method{background:rgba(6,182,212,0.18);color:#22d3ee}
+.badge-event{background:rgba(139,92,246,0.18);color:#a78bfa}
+.badge-config{background:rgba(251,191,36,0.18);color:#fbbf24}
+.desc{color:var(--text-secondary);margin:6px 0 14px;font-size:.95rem}
+.code-block{background:var(--bg-code);border:1px solid var(--border-color);border-radius:var(--radius-sm);margin:10px 0;overflow-x:auto}
+.code-block pre{padding:14px 18px;font-size:.82rem;line-height:1.6;color:#c9d1d9;margin:0;white-space:pre}
+.code-label{display:block;padding:6px 18px;font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--text-muted);background:var(--bg-code-header);border-bottom:1px solid var(--border-color)}
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:.88rem}
+th{text-align:left;padding:8px 12px;background:var(--bg-card);color:var(--text-secondary);font-weight:600;font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border-color)}
+td{padding:8px 12px;border-bottom:1px solid var(--border-color);color:var(--text-secondary);vertical-align:top}
+td code{background:var(--bg-code);padding:1px 6px;border-radius:4px;font-size:.82rem;color:#818cf8}
+.related{margin-top:12px;font-size:.85rem;color:var(--text-muted)}
+.related a{margin-right:10px}
+
+.section-heading{font-size:1.6rem;font-weight:800;margin:40px 0 10px;padding-bottom:8px;border-bottom:2px solid var(--border-color);background:var(--gradient-accent);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.section-heading:first-child{margin-top:0}
+
+.no-results{display:none;text-align:center;padding:60px 20px;color:var(--text-muted);font-size:1.1rem}
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:860px){
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .main{margin-left:0;padding-left:20px;padding-right:20px}
+  .hamburger{display:block}
+  .topnav-title{font-size:.92rem}
+}
+@media(max-width:500px){
+  .topnav{padding:0 12px;gap:10px}
+  .topnav-back{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="topnav">
+  <button class="hamburger" onclick="document.querySelector('.sidebar').classList.toggle('open')" aria-label="Toggle menu">&#9776;</button>
+  <span class="topnav-title">xhtmlx API Reference</span>
+  <a href="../index.html" class="topnav-back">&larr; Back to main site</a>
+  <div class="topnav-search"><input type="text" id="search" placeholder="Search API..." autocomplete="off"></div>
+</nav>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-group">
+    <span class="sidebar-group-title">HTML Attributes</span>
+    <span class="sidebar-group-title" style="padding-top:2px;font-size:.62rem;opacity:.7">REST Verbs</span>
+    <a href="#xh-get">xh-get</a><a href="#xh-post">xh-post</a><a href="#xh-put">xh-put</a><a href="#xh-delete">xh-delete</a><a href="#xh-patch">xh-patch</a>
+    <span class="sidebar-group-title">Templates</span>
+    <a href="#xh-template">xh-template</a><a href="#xh-name">xh-name</a>
+    <span class="sidebar-group-title">Data Binding</span>
+    <a href="#xh-text">xh-text</a><a href="#xh-html">xh-html</a><a href="#xh-attr">xh-attr-*</a>
+    <span class="sidebar-group-title">Iteration &amp; Conditionals</span>
+    <a href="#xh-each">xh-each</a><a href="#xh-if">xh-if</a><a href="#xh-unless">xh-unless</a><a href="#xh-show">xh-show</a><a href="#xh-hide">xh-hide</a>
+    <span class="sidebar-group-title">Class</span>
+    <a href="#xh-class">xh-class-*</a>
+    <span class="sidebar-group-title">Model &amp; Reactivity</span>
+    <a href="#xh-model">xh-model</a>
+    <span class="sidebar-group-title">Triggers</span>
+    <a href="#xh-trigger">xh-trigger</a>
+    <span class="sidebar-group-title">Targeting &amp; Swap</span>
+    <a href="#xh-target">xh-target</a><a href="#xh-swap">xh-swap</a>
+    <span class="sidebar-group-title">Request Data</span>
+    <a href="#xh-vals">xh-vals</a><a href="#xh-headers">xh-headers</a>
+    <span class="sidebar-group-title">Events (xh-on-*)</span>
+    <a href="#xh-on">xh-on-*</a>
+    <span class="sidebar-group-title">Indicators</span>
+    <a href="#xh-indicator">xh-indicator</a><a href="#xh-disabled-class">xh-disabled-class</a>
+    <span class="sidebar-group-title">Error Handling</span>
+    <a href="#xh-error-template">xh-error-template</a><a href="#xh-error-target">xh-error-target</a><a href="#xh-error-boundary">xh-error-boundary</a>
+    <span class="sidebar-group-title">History</span>
+    <a href="#xh-push-url">xh-push-url</a><a href="#xh-replace-url">xh-replace-url</a>
+    <span class="sidebar-group-title">WebSocket</span>
+    <a href="#xh-ws">xh-ws</a><a href="#xh-ws-send">xh-ws-send</a>
+    <span class="sidebar-group-title">Boost</span>
+    <a href="#xh-boost">xh-boost</a><a href="#xh-boost-target">xh-boost-target</a><a href="#xh-boost-template">xh-boost-template</a>
+    <span class="sidebar-group-title">Caching &amp; Retry</span>
+    <a href="#xh-cache">xh-cache</a><a href="#xh-retry">xh-retry</a><a href="#xh-retry-delay">xh-retry-delay</a>
+    <span class="sidebar-group-title">Validation</span>
+    <a href="#xh-validate">xh-validate</a><a href="#xh-validate-pattern">xh-validate-pattern</a><a href="#xh-validate-min">xh-validate-min</a><a href="#xh-validate-max">xh-validate-max</a><a href="#xh-validate-minlength">xh-validate-minlength</a><a href="#xh-validate-maxlength">xh-validate-maxlength</a><a href="#xh-validate-message">xh-validate-message</a><a href="#xh-validate-class">xh-validate-class</a><a href="#xh-validate-target">xh-validate-target</a>
+    <span class="sidebar-group-title">i18n</span>
+    <a href="#xh-i18n">xh-i18n</a><a href="#xh-i18n-attr">xh-i18n-*</a><a href="#xh-i18n-vars">xh-i18n-vars</a>
+    <span class="sidebar-group-title">Routing</span>
+    <a href="#xh-router">xh-router</a><a href="#xh-route">xh-route</a><a href="#xh-router-outlet">xh-router-outlet</a><a href="#xh-router-404">xh-router-404</a>
+    <span class="sidebar-group-title">Accessibility</span>
+    <a href="#xh-focus">xh-focus</a><a href="#xh-aria-live">xh-aria-live</a>
+  </div>
+  <div class="sidebar-group">
+    <span class="sidebar-group-title">JavaScript API</span>
+    <a href="#js-process">xhtmlx.process()</a><a href="#js-createContext">xhtmlx.createContext()</a><a href="#js-switchVersion">xhtmlx.switchVersion()</a><a href="#js-reload">xhtmlx.reload()</a><a href="#js-directive">xhtmlx.directive()</a><a href="#js-hook">xhtmlx.hook()</a><a href="#js-transform">xhtmlx.transform()</a><a href="#js-i18n">xhtmlx.i18n</a><a href="#js-router">xhtmlx.router</a><a href="#js-config">xhtmlx.config</a><a href="#js-scanNamedTemplates">xhtmlx.scanNamedTemplates()</a><a href="#js-clearTemplateCache">xhtmlx.clearTemplateCache()</a><a href="#js-clearResponseCache">xhtmlx.clearResponseCache()</a>
+  </div>
+  <div class="sidebar-group">
+    <span class="sidebar-group-title">Events</span>
+    <a href="#evt-beforeRequest">xh:beforeRequest</a><a href="#evt-afterRequest">xh:afterRequest</a><a href="#evt-beforeSwap">xh:beforeSwap</a><a href="#evt-afterSwap">xh:afterSwap</a><a href="#evt-responseError">xh:responseError</a><a href="#evt-retry">xh:retry</a><a href="#evt-validationError">xh:validationError</a><a href="#evt-wsOpen">xh:wsOpen</a><a href="#evt-wsClose">xh:wsClose</a><a href="#evt-wsError">xh:wsError</a><a href="#evt-versionChanged">xh:versionChanged</a><a href="#evt-localeChanged">xh:localeChanged</a><a href="#evt-routeChanged">xh:routeChanged</a><a href="#evt-routeNotFound">xh:routeNotFound</a>
+  </div>
+  <div class="sidebar-group">
+    <span class="sidebar-group-title">Configuration</span>
+    <a href="#cfg-debug">debug</a><a href="#cfg-defaultSwapMode">defaultSwapMode</a><a href="#cfg-batchThreshold">batchThreshold</a><a href="#cfg-templatePrefix">templatePrefix</a><a href="#cfg-apiPrefix">apiPrefix</a><a href="#cfg-defaultErrorTemplate">defaultErrorTemplate</a><a href="#cfg-defaultErrorTarget">defaultErrorTarget</a><a href="#cfg-cspSafe">cspSafe</a><a href="#cfg-uiVersion">uiVersion</a>
+  </div>
+</aside>
+
+<!-- MAIN CONTENT -->
+<div class="main" id="main">
+<div id="no-results" class="no-results">No results found.</div>
+
+<!-- ============================================================ -->
+<!--                    HTML ATTRIBUTES                           -->
+<!-- ============================================================ -->
+<h1 class="section-heading" id="sec-rest">REST Verbs</h1>
+
+<!-- xh-get -->
+<div class="api-entry" id="xh-get">
+<h2>xh-get <span class="badge badge-attr">attribute</span> <a href="#xh-get" class="anchor">#</a></h2>
+<p class="desc">Issue a GET request to the specified URL. The JSON response is rendered via a template and swapped into the DOM.</p>
+<div class="code-block"><span class="code-label">Syntax</span><pre>&lt;element xh-get="/api/endpoint"&gt;</pre></div>
+<div class="code-block"><span class="code-label">Example</span><pre>&lt;button xh-get="/api/users"
+        xh-template="/templates/user-list.html"
+        xh-target="#results"&gt;
+  Load Users
+&lt;/button&gt;
+&lt;div id="results"&gt;&lt;/div&gt;</pre></div>
+<p class="related">Related: <a href="#xh-post">xh-post</a> <a href="#xh-trigger">xh-trigger</a> <a href="#xh-template">xh-template</a> <a href="#xh-target">xh-target</a></p>
+</div>
+
+<!-- xh-post -->
+<div class="api-entry" id="xh-post">
+<h2>xh-post <span class="badge badge-attr">attribute</span> <a href="#xh-post" class="anchor">#</a></h2>
+<p class="desc">Issue a POST request. Form fields, <code>xh-vals</code>, and <code>xh-model</code> values are serialized as JSON in the request body. Content-Type defaults to <code>application/json</code>.</p>
+<div class="code-block"><span class="code-label">Example</span><pre>&lt;form xh-post="/api/users" xh-template="/templates/success.html"&gt;
+  &lt;input name="name" type="text"&gt;
+  &lt;button type="submit"&gt;Create&lt;/button&gt;
+&lt;/form&gt;</pre></div>
+<p class="related">Related: <a href="#xh-vals">xh-vals</a> <a href="#xh-headers">xh-headers</a> <a href="#xh-model">xh-model</a></p>
+</div>
+
+<!-- xh-put -->
+<div class="api-entry" id="xh-put">
+<h2>xh-put <span class="badge badge-attr">attribute</span> <a href="#xh-put" class="anchor">#</a></h2>
+<p class="desc">Issue a PUT request. Behaves identically to <code>xh-post</code> but uses the PUT HTTP method.</p>
+<div class="code-block"><span class="code-label">Example</span><pre>&lt;button xh-put="/api/users/{{id}}"
+        xh-vals='{"name":"Alice"}'&gt;
+  Update
+&lt;/button&gt;</pre></div>
+<p class="related">Related: <a href="#xh-post">xh-post</a> <a href="#xh-patch">xh-patch</a></p>
+</div>
+
+<!-- xh-delete -->
+<div class="api-entry" id="xh-delete">
+<h2>xh-delete <span class="badge badge-attr">attribute</span> <a href="#xh-delete" class="anchor">#</a></h2>
+<p class="desc">Issue a DELETE request to the specified URL.</p>
+<div class="code-block"><span class="code-label">Example</span><pre>&lt;button xh-delete="/api/users/{{id}}" xh-swap="delete"&gt;
+  Remove
+&lt;/button&gt;</pre></div>
+<p class="related">Related: <a href="#xh-swap">xh-swap</a></p>
+</div>
+
+<!-- xh-patch -->
+<div class="api-entry" id="xh-patch">
+<h2>xh-patch <span class="badge badge-attr">attribute</span> <a href="#xh-patch" class="anchor">#</a></h2>
+<p class="desc">Issue a PATCH request. Sends a JSON body like <code>xh-post</code> and <code>xh-put</code>.</p>
+<div class="code-block"><span class="code-label">Example</span><pre>&lt;button xh-patch="/api/users/{{id}}"
+        xh-vals='{"role":"admin"}'&gt;
+  Promote
+&lt;/button&gt;</pre></div>
+<p class="related">Related: <a href="#xh-put">xh-put</a> <a href="#xh-vals">xh-vals</a></p>
+</div>
+
+<!-- ============================================================ -->
+<h1 class="section-heading" id="sec-templates">Templates</h1>
+
+<div class="api-entry" id="xh-template">
+<h2>xh-template <span class="badge badge-attr">attribute</span> <a href="#xh-template" class="anchor">#</a></h2>
+<p class="desc">URL of an external HTML template file to render with the JSON response data. If omitted, the library looks for an inline <code>&lt;template&gt;</code> child, or falls back to self-binding (applying bindings directly to the element).</p>
+<div class="code-block"><span class="code-label">Syntax</span><pre>&lt;element xh-get="/api/data" xh-template="/templates/view.html"&gt;</pre></div>
+<div class="code-block"><span class="code-label">Inline template alternative</span><pre>&lt;div xh-get="/api/users"&gt;
+  &lt;template&gt;
+    &lt;span xh-text="name"&gt;&lt;/span&gt;
+  &lt;/template&gt;
+&lt;/div&gt;</pre></div>
+<p class="desc">Templates are cached after first fetch. Use <code>xhtmlx.clearTemplateCache()</code> to clear. Templates can contain nested <code>xh-*</code> attributes for composition.</p>
+<p class="related">Related: <a href="#xh-name">xh-name</a> <a href="#js-clearTemplateCache">clearTemplateCache()</a> <a href="#xh-swap">xh-swap</a></p>
+</div>
+
+<div class="api-entry" id="xh-name">
+<h2>xh-name <span class="badge badge-attr">attribute</span> <a href="#xh-name" class="anchor">#</a></h2>
+<p class="desc">Defines a named inline template. Place <code>&lt;template xh-name="/path"&gt;</code> anywhere in the document; its content is cached and can be referenced by other elements via <code>xh-template="/path"</code> without a network request.</p>
+<div class="code-block"><span class="code-label">Example</span><pre>&lt;template xh-name="/templates/user-card.html"&gt;
+  &lt;div class="card"&gt;&lt;h3 xh-text="name"&gt;&lt;/h3&gt;&lt;/div&gt;
+&lt;/template&gt;
+
+&lt;div xh-get="/api/user/1" xh-trigger="load"
+     xh-template="/templates/user-card.html"&gt;&lt;/div&gt;</pre></div>
+<p class="desc">Named templates are scanned on <code>DOMContentLoaded</code>. Call <code>xhtmlx.scanNamedTemplates()</code> after dynamically adding new ones.</p>
+<p class="related">Related: <a href="#xh-template">xh-template</a> <a href="#js-scanNamedTemplates">scanNamedTemplates()</a></p>
+</div>
+
+<!-- ============================================================ -->
+<h1 class="section-heading" id="sec-binding">Data Binding</h1>
+
+<div class="api-entry" id="xh-text">
+<h2>xh-text <span class="badge badge-attr">attribute</span> <a href="#xh-text" class="anchor">#</a></h2>
+<p class="desc">Set the element's <code>textContent</code> to the value of the given data field. Supports dot notation and the pipe transform syntax.</p>
+<div class="code-block"><span class="code-label">Syntax</span><pre>&lt;span xh-text="field.path"&gt;&lt;/span&gt;
+&lt;span xh-text="price | currency"&gt;&lt;/span&gt;</pre></div>
+<p class="desc">Reactive: when backed by a <code>MutableDataContext</code>, updates automatically when the field value changes.</p>
+<p class="related">Related: <a href="#xh-html">xh-html</a> <a href="#js-transform">xhtmlx.transform()</a></p>
+</div>
+
+<div class="api-entry" id="xh-html">
+<h2>xh-html <span class="badge badge-attr">attribute</span> <a href="#xh-html" class="anchor">#</a></h2>
+<p class="desc">Set the element's <code>innerHTML</code> to the value of the given data field. Use with caution as it can introduce XSS vulnerabilities. Disabled in CSP-safe mode (falls back to <code>textContent</code>).</p>
+<div class="code-block"><span class="code-label">Example</span><pre>&lt;div xh-html="user.bio_html"&gt;&lt;/div&gt;</pre></div>
+<p class="related">Related: <a href="#xh-text">xh-text</a> <a href="#cfg-cspSafe">cspSafe</a></p>
+</div>
+
+<div class="api-entry" id="xh-attr">
+<h2>xh-attr-* <span class="badge badge-attr">attribute</span> <a href="#xh-attr" class="anchor">#</a></h2>
+<p class="desc">Set any HTML attribute from a data field. The part after <code>xh-attr-</code> becomes the target attribute name.</p>
+<div class="code-block"><span class="code-label">Example</span><pre>&lt;img xh-attr-src="user.avatar" xh-attr-alt="user.name"&gt;
+&lt;a xh-attr-href="user.profile_url" xh-text="user.name"&gt;&lt;/a&gt;</pre></div>
+<p class="desc">Reactive when backed by a <code>MutableDataContext</code>.</p>
+<p class="related">Related: <a href="#xh-text">xh-text</a> <a href="#xh-class">xh-class-*</a></p>
+</div>
+
+<!-- ============================================================ -->
+<h1 class="section-heading" id="sec-iter">Iteration &amp; Conditionals</h1>
+
+<div class="api-entry" id="xh-each">
+<h2>xh-each <span class="badge badge-attr">attribute</span> <a href="#xh-each" class="anchor">#</a></h2>
+<p class="desc">Repeat the element for each item in an array field. Each clone receives its own data context scoped to the array item. Use <code>$index</code> for the zero-based iteration index, <code>$parent</code> to access the parent context, and <code>$root</code> for the root context.</p>
+<div class="code-block"><span class="code-label">Example</span><pre>&lt;ul&gt;
+  &lt;li xh-each="items"&gt;
+    &lt;span xh-text="$index"&gt;&lt;/span&gt;. &lt;span xh-text="name"&gt;&lt;/span&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;</pre></div>
+<table><thead><tr><th>Special variable</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>$index</code></td><td>Current iteration index (0-based)</td></tr>
+<tr><td><code>$parent</code></td><td>Parent data context</td></tr>
+<tr><td><code>$root</code></td><td>Root (topmost) data context</td></tr>
+</tbody></table>
+<p class="desc">For arrays larger than <code>config.batchThreshold</code> (default 100), rendering may use batching for performance.</p>
+<p class="related">Related: <a href="#xh-if">xh-if</a> <a href="#cfg-batchThreshold">batchThreshold</a></p>
+</div>
+
+<div class="api-entry" id="xh-if">
+<h2>xh-if <span class="badge badge-attr">attribute</span> <a href="#xh-if" class="anchor">#</a></h2>
+<p class="desc">Conditionally render the element. If the referenced data field is falsy, the element is removed from the DOM entirely.</p>
+<div class="code-block"><span class="code-label">Example</span><pre>&lt;span xh-if="is_admin" class="badge"&gt;Admin&lt;/span&gt;</pre></div>
+<p class="related">Related: <a href="#xh-unless">xh-unless</a> <a href="#xh-show">xh-show</a></p>
+</div>
+
+<div class="api-entry" id="xh-unless">
+<h2>xh-unless <span class="badge badge-attr">attribute</span> <a href="#xh-unless" class="anchor">#</a></h2>
+<p class="desc">Inverse of <code>xh-if</code>. Removes the element if the data field is truthy.</p>
+<div class="code-block"><span class="code-label">Example</span><pre>&lt;span xh-unless="verified" class="warning"&gt;Unverified&lt;/span&gt;</pre></div>
+<p class="related">Related: <a href="#xh-if">xh-if</a> <a href="#xh-hide">xh-hide</a></p>
+</div>
+
+<div class="api-entry" id="xh-show">
+<h2>xh-show <span class="badge badge-attr">attribute</span> <a href="#xh-show" class="anchor">#</a></h2>
+<p class="desc">Toggle element visibility via <code>display</code> style. Sets <code>display:none</code> when falsy, clears it when truthy. Unlike <code>xh-if</code>, the element remains in the DOM. Reactivity-aware with <code>MutableDataContext</code>.</p>
+<div class="code-block"><span class="code-label">Example</span><pre>&lt;div xh-show="has_details"&gt;Details here&lt;/div&gt;</pre></div>
+<p class="related">Related: <a href="#xh-hide">xh-hide</a> <a href="#xh-if">xh-if</a></p>
+</div>
+
+<div class="api-entry" id="xh-hide">
+<h2>xh-hide <span class="badge badge-attr">attribute</span> <a href="#xh-hide" class="anchor">#</a></h2>
+<p class="desc">Inverse of <code>xh-show</code>. Hides the element when the data field is truthy. Reactivity-aware.</p>
+<div class="code-block"><span class="code-label">Example</span><pre>&lt;div xh-hide="is_loading"&gt;Content ready&lt;/div&gt;</pre></div>
+<p class="related">Related: <a href="#xh-show">xh-show</a> <a href="#xh-unless">xh-unless</a></p>
+</div>
+
+<!-- ============================================================ -->
+<h1 class="section-heading" id="sec-class">Dynamic CSS Classes</h1>
+
+<div class="api-entry" id="xh-class">
+<h2>xh-class-* <span class="badge badge-attr">attribute</span> <a href="#xh-class" class="anchor">#</a></h2>
+<p class="desc">Toggle a CSS class based on a data field. The part after <code>xh-class-</code> is the class name; the attribute value is the data field to evaluate. Reactivity-aware.</p>
+<div class="code-block"><span class="code-label">Syntax</span><pre>&lt;element xh-class-{className}="dataField"&gt;</pre></div>
+<div class="code-block"><span class="code-label">Example</span><pre>&lt;div xh-class-active="is_active"
+     xh-class-highlight="is_featured"&gt;
+  Content
+&lt;/div&gt;</pre></div>
+<p class="related">Related: <a href="#xh-attr">xh-attr-*</a> <a href="#xh-show">xh-show</a></p>
+</div>
+
+<!-- ============================================================ -->
+<h1 class="section-heading" id="sec-model">Model &amp; Reactivity</h1>
+
+<div class="api-entry" id="xh-model">
+<h2>xh-model <span class="badge badge-attr">attribute</span> <a href="#xh-model" class="anchor">#</a></h2>
+<p class="desc">Two-way data binding for form inputs. Pre-fills input values from the data context. When the user edits the input, the data context is updated (if mutable). Values from <code>xh-model</code> inputs are automatically included in request bodies alongside form fields and <code>xh-vals</code>.</p>
+<table><thead><tr><th>Element type</th><th>Behavior</th></tr></thead><tbody>
+<tr><td>Text input / textarea</td><td>Binds to <code>.value</code>, listens on <code>input</code></td></tr>
+<tr><td>Checkbox</td><td>Binds to <code>.checked</code> (boolean), listens on <code>change</code></td></tr>
+<tr><td>Radio button</td><td>Checks if <code>.value === data</code>, listens on <code>change</code></td></tr>
+<tr><td>Select</td><td>Sets matching option, listens on <code>change</code></td></tr>
+</tbody></table>
+<div class="code-block"><span class="code-label">Example</span><pre>&lt;div xh-get="/api/user/1" xh-trigger="load"&gt;
+  &lt;template&gt;
+    &lt;input type="text" xh-model="name"&gt;
+    &lt;select xh-model="role"&gt;
+      &lt;option value="user"&gt;User&lt;/option&gt;
+      &lt;option value="admin"&gt;Admin&lt;/option&gt;
+    &lt;/select&gt;
+    &lt;input type="checkbox" xh-model="active"&gt;
+    &lt;button xh-put="/api/user/1"&gt;Save&lt;/button&gt;
+  &lt;/template&gt;
+&lt;/div&gt;</pre></div>
+<p class="related">Related: <a href="#xh-text">xh-text</a> <a href="#xh-vals">xh-vals</a></p>
+</div>
+
+<!-- ============================================================ -->
+<h1 class="section-heading" id="sec-triggers">Triggers</h1>
+
+<div class="api-entry" id="xh-trigger">
+<h2>xh-trigger <span class="badge badge-attr">attribute</span> <a href="#xh-trigger" class="anchor">#</a></h2>
+<p class="desc">Specifies which event fires the REST request. Multiple triggers can be comma-separated. If omitted, defaults are used: <code>click</code> for buttons/links, <code>submit</code> for forms, <code>change</code> for inputs/selects/textareas.</p>
+<div class="code-block"><span class="code-label">Syntax</span><pre>xh-trigger="event [modifiers]"
+xh-trigger="event1 [mods], event2 [mods]"</pre></div>
+<table><thead><tr><th>Trigger / Modifier</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>load</code></td><td>Fire immediately when the element is processed</td></tr>
+<tr><td><code>revealed</code></td><td>Fire when scrolled into the viewport (IntersectionObserver)</td></tr>
+<tr><td><code>every Ns</code> / <code>every Nms</code></td><td>Polling: repeat at the given interval</td></tr>
+<tr><td><code>once</code></td><td>Fire only once, then remove the listener</td></tr>
+<tr><td><code>changed</code></td><td>Only fire if the source value has changed</td></tr>
+<tr><td><code>delay:Nms</code></td><td>Debounce: wait N ms after the last event before firing</td></tr>
+<tr><td><code>throttle:Nms</code></td><td>Throttle: fire at most once every N ms</td></tr>
+<tr><td><code>from:selector</code></td><td>Listen on a different element (specified by CSS selector)</td></tr>
+</tbody></table>
+<div class="code-block"><span class="code-label">Examples</span><pre>&lt;div xh-get="/api/data" xh-trigger="load"&gt;Auto-load&lt;/div&gt;
+
+&lt;input xh-get="/api/search" xh-trigger="keyup changed delay:300ms"&gt;
+
+&lt;div xh-get="/api/feed" xh-trigger="every 5s"&gt;Polling&lt;/div&gt;
+
+&lt;div xh-get="/api/more" xh-trigger="revealed"&gt;Lazy load&lt;/div&gt;
+
+&lt;button xh-get="/api/data" xh-trigger="click once"&gt;Load once&lt;/button&gt;</pre></div>
+<p class="related">Related: <a href="#xh-get">xh-get</a> <a href="#xh-indicator">xh-indicator</a></p>
+</div>
+
+<!-- ============================================================ -->
+<h1 class="section-heading" id="sec-target">Targeting &amp; Swap</h1>
+
+<div class="api-entry" id="xh-target">
+<h2>xh-target <span class="badge badge-attr">attribute</span> <a href="#xh-target" class="anchor">#</a></h2>
+<p class="desc">CSS selector specifying where the rendered template result is placed. If omitted, the triggering element itself is used as the target. The target element automatically receives <code>aria-live</code> for accessibility.</p>
+<div class="code-block"><span class="code-label">Example</span><pre>&lt;button xh-get="/api/users" xh-target="#user-list"&gt;Load&lt;/button&gt;
+&lt;div id="user-list"&gt;&lt;/div&gt;</pre></div>
+<p class="related">Related: <a href="#xh-swap">xh-swap</a> <a href="#xh-aria-live">xh-aria-live</a></p>
+</div>
+
+<div class="api-entry" id="xh-swap">
+<h2>xh-swap <span class="badge badge-attr">attribute</span> <a href="#xh-swap" class="anchor">#</a></h2>
+<p class="desc">Controls how rendered content is inserted into the target element. Defaults to <code>innerHTML</code> (configurable via <code>config.defaultSwapMode</code>).</p>
+<table><thead><tr><th>Mode</th><th>Behavior</th></tr></thead><tbody>
+<tr><td><code>innerHTML</code></td><td>Replace the target's children (default)</td></tr>
+<tr><td><code>outerHTML</code></td><td>Replace the target element itself</td></tr>
+<tr><td><code>beforeend</code></td><td>Append inside the target</td></tr>
+<tr><td><code>afterbegin</code></td><td>Prepend inside the target</td></tr>
+<tr><td><code>beforebegin</code></td><td>Insert before the target</td></tr>
+<tr><td><code>afterend</code></td><td>Insert after the target</td></tr>
+<tr><td><code>delete</code></td><td>Remove the target from the DOM</td></tr>
+<tr><td><code>none</code></td><td>Fire-and-forget; no DOM swap</td></tr>
+</tbody></table>
+<div class="code-block"><span class="code-label">Example</span><pre>&lt;button xh-get="/api/messages"
+        xh-target="#chat"
+        xh-swap="beforeend"&gt;
+  Load More
+&lt;/button&gt;</pre></div>
+<p class="desc">After each swap, settle classes (<code>xh-added</code> then <code>xh-settled</code>) are applied for CSS transition support.</p>
+<p class="related">Related: <a href="#xh-target">xh-target</a> <a href="#cfg-defaultSwapMode">defaultSwapMode</a></p>
+</div>
+
+<!-- ============================================================ -->
+<h1 class="section-heading" id="sec-reqdata">Request Data</h1>
+
+<div class="api-entry" id="xh-vals">
+<h2>xh-vals <span class="badge badge-attr">attribute</span> <a href="#xh-vals" class="anchor">#</a></h2>
+<p class="desc">JSON string of additional values to include in the request body. Merged with form fields and <code>xh-model</code> values. Supports <code>{{field}}</code> interpolation.</p>
+<div class="code-block"><span class="code-label">Example</span><pre>&lt;button xh-post="/api/users"
+        xh-vals='{"name":"Alice","role":"admin"}'&gt;
+  Create
+&lt;/button&gt;</pre></div>
+<p class="related">Related: <a href="#xh-headers">xh-headers</a> <a href="#xh-model">xh-model</a></p>
+</div>
+
+<div class="api-entry" id="xh-headers">
+<h2>xh-headers <span class="badge badge-attr">attribute</span> <a href="#xh-headers" class="anchor">#</a></h2>
+<p class="desc">JSON string of custom HTTP headers to send with the request. Supports <code>{{field}}</code> interpolation.</p>
+<div class="code-block"><span class="code-label">Example</span><pre>&lt;button xh-get="/api/secure"
+        xh-headers='{"X-Custom":"value","Authorization":"Bearer {{token}}"}'&gt;
+  Fetch
+&lt;/button&gt;</pre></div>
+<p class="related">Related: <a href="#xh-vals">xh-vals</a> <a href="#js-hook">xhtmlx.hook()</a></p>
+</div>
+
+<!-- ============================================================ -->
+<h1 class="section-heading" id="sec-on">Declarative Event Handlers (xh-on-*)</h1>
+
+<div class="api-entry" id="xh-on">
+<h2>xh-on-* <span class="badge badge-attr">attribute</span> <a href="#xh-on" class="anchor">#</a></h2>
+<p class="desc">Attach client-side event handlers declaratively. The part after <code>xh-on-</code> is the DOM event name. The attribute value is an action string.</p>
+<div class="code-block"><span class="code-label">Syntax</span><pre>&lt;element xh-on-{event}="action:argument"&gt;</pre></div>
+<table><thead><tr><th>Action</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>toggleClass:name</code></td><td>Toggle a CSS class on the element</td></tr>
+<tr><td><code>addClass:name</code></td><td>Add a CSS class</td></tr>
+<tr><td><code>removeClass:name</code></td><td>Remove a CSS class</td></tr>
+<tr><td><code>remove</code></td><td>Remove the element from the DOM</td></tr>
+<tr><td><code>toggle:selector</code></td><td>Toggle visibility of another element</td></tr>
+<tr><td><code>dispatch:eventName</code></td><td>Dispatch a custom DOM event (bubbles)</td></tr>
+</tbody></table>
+<div class="code-block"><span class="code-label">Examples</span><pre>&lt;button xh-on-click="toggleClass:active"&gt;Toggle&lt;/button&gt;
+&lt;button xh-on-click="toggle:#details"&gt;Show/Hide Details&lt;/button&gt;
+&lt;button xh-on-click="dispatch:myEvent"&gt;Fire Event&lt;/button&gt;
+&lt;button xh-on-dblclick="remove"&gt;Double-click to remove&lt;/button&gt;</pre></div>
+<p class="related">Related: <a href="#xh-trigger">xh-trigger</a></p>
+</div>
+
+<!-- ============================================================ -->
+<h1 class="section-heading" id="sec-indicators">Indicators</h1>
+
+<div class="api-entry" id="xh-indicator">
+<h2>xh-indicator <span class="badge badge-attr">attribute</span> <a href="#xh-indicator" class="anchor">#</a></h2>
+<p class="desc">CSS selector of a loading indicator element. While the request is in-flight, the <code>xh-request</code> class is added to the indicator. Default CSS is injected to show/hide elements with the <code>xh-indicator</code> class.</p>
+<div class="code-block"><span class="code-label">Example</span><pre>&lt;button xh-get="/api/data" xh-indicator="#spinner"&gt;Load&lt;/button&gt;
+&lt;span id="spinner" class="xh-indicator"&gt;Loading...&lt;/span&gt;</pre></div>
+<p class="desc">Default CSS: <code>.xh-indicator { opacity: 0; }</code> and <code>.xh-request .xh-indicator { opacity: 1; }</code></p>
+<p class="related">Related: <a href="#xh-disabled-class">xh-disabled-class</a></p>
+</div>
+
+<div class="api-entry" id="xh-disabled-class">
+<h2>xh-disabled-class <span class="badge badge-attr">attribute</span> <a href="#xh-disabled-class" class="anchor">#</a></h2>
+<p class="desc">CSS class to add to the triggering element while a request is in-flight (request deduplication). Also sets <code>aria-disabled="true"</code>. Subsequent triggers are ignored until the request completes.</p>
+<div class="code-block"><span class="code-label">Example</span><pre>&lt;button xh-post="/api/submit"
+        xh-disabled-class="btn-loading"&gt;
+  Submit
+&lt;/button&gt;</pre></div>
+<p class="related">Related: <a href="#xh-indicator">xh-indicator</a></p>
+</div>
+
+<!-- ============================================================ -->
+<h1 class="section-heading" id="sec-errors">Error Handling</h1>
+
+<div class="api-entry" id="xh-error-template">
+<h2>xh-error-template <span class="badge badge-attr">attribute</span> <a href="#xh-error-template" class="anchor">#</a></h2>
+<p class="desc">URL of a template to render when the request returns an error HTTP status. Supports status-specific variants.</p>
+<div class="code-block"><span class="code-label">Syntax</span><pre>xh-error-template="/templates/error.html"
+xh-error-template-404="/templates/not-found.html"
+xh-error-template-4xx="/templates/client-error.html"
+xh-error-template-5xx="/templates/server-error.html"</pre></div>
+<p class="desc"><strong>Resolution order:</strong> (1) exact status code on element, (2) status class (4xx/5xx) on element, (3) generic on element, (4) nearest <code>xh-error-boundary</code> ancestor, (5) <code>config.defaultErrorTemplate</code>, (6) no template (adds <code>xh-error</code> CSS class).</p>
+<p class="desc">Error data context contains <code>status</code>, <code>statusText</code>, and <code>body</code> fields.</p>
+<div class="code-block"><span class="code-label">Error template example</span><pre>&lt;div class="error"&gt;
+  &lt;h3&gt;Error &lt;span xh-text="status"&gt;&lt;/span&gt;&lt;/h3&gt;
+  &lt;p xh-text="statusText"&gt;&lt;/p&gt;
+&lt;/div&gt;</pre></div>
+<p class="related">Related: <a href="#xh-error-target">xh-error-target</a> <a href="#xh-error-boundary">xh-error-boundary</a> <a href="#cfg-defaultErrorTemplate">defaultErrorTemplate</a></p>
+</div>
+
+<div class="api-entry" id="xh-error-target">
+<h2>xh-error-target <span class="badge badge-attr">attribute</span> <a href="#xh-error-target" class="anchor">#</a></h2>
+<p class="desc">CSS selector specifying where to render the error template. If omitted, falls back to boundary target, <code>config.defaultErrorTarget</code>, <code>xh-target</code>, or the element itself. The error container is marked with <code>role="alert"</code> for screen readers.</p>
+<div class="code-block"><span class="code-label">Example</span><pre>&lt;div xh-get="/api/data"
+     xh-error-template="/templates/error.html"
+     xh-error-target="#error-area"&gt;&lt;/div&gt;
+&lt;div id="error-area"&gt;&lt;/div&gt;</pre></div>
+<p class="related">Related: <a href="#xh-error-template">xh-error-template</a> <a href="#cfg-defaultErrorTarget">defaultErrorTarget</a></p>
+</div>
+
+<div class="api-entry" id="xh-error-boundary">
+<h2>xh-error-boundary <span class="badge badge-attr">attribute</span> <a href="#xh-error-boundary" class="anchor">#</a></h2>
+<p class="desc">Marks an ancestor element as an error boundary. Child widgets without their own error templates bubble errors up to the nearest boundary. Boundaries nest -- the closest ancestor wins. Supports status-specific templates like the element-level attributes.</p>
+<div class="code-block"><span class="code-label">Example</span><pre>&lt;div xh-error-boundary
+     xh-error-template="/templates/section-error.html"
+     xh-error-target="#section-errors"&gt;
+  &lt;div id="section-errors"&gt;&lt;/div&gt;
+  &lt;div xh-get="/api/widget" xh-trigger="load"&gt;
+    &lt;template&gt;&lt;span xh-text="data"&gt;&lt;/span&gt;&lt;/template&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</pre></div>
+<p class="related">Related: <a href="#xh-error-template">xh-error-template</a> <a href="#xh-error-target">xh-error-target</a></p>
+</div>
+
+<!-- ============================================================ -->
+<h1 class="section-heading" id="sec-history">History</h1>
+
+<div class="api-entry" id="xh-push-url">
+<h2>xh-push-url <span class="badge badge-attr">attribute</span> <a href="#xh-push-url" class="anchor">#</a></h2>
+<p class="desc">Push a new browser history entry after a successful request. Set to <code>"true"</code> to use the request URL, or provide a custom URL (supports <code>{{field}}</code> interpolation). Back/forward navigation re-fetches data and re-renders the template.</p>
+<div class="code-block"><span class="code-label">Example</span><pre>&lt;button xh-get="/api/users/{{id}}"
+        xh-push-url="/users/{{id}}"
+        xh-target="#content"&gt;
+  View User
+&lt;/button&gt;</pre></div>
+<p class="related">Related: <a href="#xh-replace-url">xh-replace-url</a></p>
+</div>
+
+<div class="api-entry" id="xh-replace-url">
+<h2>xh-replace-url <span class="badge badge-attr">attribute</span> <a href="#xh-replace-url" class="anchor">#</a></h2>
+<p class="desc">Replace the current browser history entry (instead of pushing a new one) after a successful request. Same value semantics as <code>xh-push-url</code>.</p>
+<div class="code-block"><span class="code-label">Example</span><pre>&lt;button xh-get="/api/search?q=test"
+        xh-replace-url="/search?q=test"
+        xh-target="#results"&gt;
+  Search
+&lt;/button&gt;</pre></div>
+<p class="related">Related: <a href="#xh-push-url">xh-push-url</a></p>
+</div>
+
+<!-- ============================================================ -->
+<h1 class="section-heading" id="sec-ws">WebSocket</h1>
+
+<div class="api-entry" id="xh-ws">
+<h2>xh-ws <span class="badge badge-attr">attribute</span> <a href="#xh-ws" class="anchor">#</a></h2>
+<p class="desc">Open a WebSocket connection to the given URL. Each incoming JSON message is rendered via the element's template and swapped into the target. Auto-reconnects after 3 seconds on unexpected disconnection.</p>
+<div class="code-block"><span class="code-label">Example</span><pre>&lt;div xh-ws="wss://example.com/feed"
+     xh-swap="beforeend"
+     xh-target="#messages"&gt;
+  &lt;template&gt;
+    &lt;div class="msg"&gt;
+      &lt;strong xh-text="user"&gt;&lt;/strong&gt;: &lt;span xh-text="text"&gt;&lt;/span&gt;
+    &lt;/div&gt;
+  &lt;/template&gt;
+&lt;/div&gt;
+&lt;div id="messages"&gt;&lt;/div&gt;</pre></div>
+<p class="related">Related: <a href="#xh-ws-send">xh-ws-send</a> <a href="#evt-wsOpen">xh:wsOpen</a> <a href="#evt-wsClose">xh:wsClose</a></p>
+</div>
+
+<div class="api-entry" id="xh-ws-send">
+<h2>xh-ws-send <span class="badge badge-attr">attribute</span> <a href="#xh-ws-send" class="anchor">#</a></h2>
+<p class="desc">Send data over an existing WebSocket connection. The value is a CSS selector pointing to the element with the <code>xh-ws</code> connection. Form fields and <code>xh-vals</code> are serialized as JSON.</p>
+<div class="code-block"><span class="code-label">Example</span><pre>&lt;div id="chat-ws" xh-ws="wss://example.com/chat"&gt;...&lt;/div&gt;
+&lt;form xh-ws-send="#chat-ws"&gt;
+  &lt;input name="text" type="text"&gt;
+  &lt;button type="submit"&gt;Send&lt;/button&gt;
+&lt;/form&gt;</pre></div>
+<p class="related">Related: <a href="#xh-ws">xh-ws</a></p>
+</div>
+
+<!-- ============================================================ -->
+<h1 class="section-heading" id="sec-boost">Boost</h1>
+
+<div class="api-entry" id="xh-boost">
+<h2>xh-boost <span class="badge badge-attr">attribute</span> <a href="#xh-boost" class="anchor">#</a></h2>
+<p class="desc">Enhance all <code>&lt;a&gt;</code> links and <code>&lt;form&gt;</code> elements within the container to use AJAX instead of full-page navigation. Boosted links automatically push browser history. Links with <code>target="_blank"</code>, <code>mailto:</code>, or hash-only hrefs are excluded.</p>
+<div class="code-block"><span class="code-label">Example</span><pre>&lt;nav xh-boost xh-boost-target="#main" xh-boost-template="/templates/page.html"&gt;
+  &lt;a href="/about"&gt;About&lt;/a&gt;
+  &lt;a href="/contact"&gt;Contact&lt;/a&gt;
+&lt;/nav&gt;
+&lt;div id="main"&gt;&lt;/div&gt;</pre></div>
+<p class="related">Related: <a href="#xh-boost-target">xh-boost-target</a> <a href="#xh-boost-template">xh-boost-template</a></p>
+</div>
+
+<div class="api-entry" id="xh-boost-target">
+<h2>xh-boost-target <span class="badge badge-attr">attribute</span> <a href="#xh-boost-target" class="anchor">#</a></h2>
+<p class="desc">CSS selector for where boosted content is swapped. Placed on the <code>xh-boost</code> container. Defaults to <code>#xh-boost-content</code>.</p>
+<p class="related">Related: <a href="#xh-boost">xh-boost</a></p>
+</div>
+
+<div class="api-entry" id="xh-boost-template">
+<h2>xh-boost-template <span class="badge badge-attr">attribute</span> <a href="#xh-boost-template" class="anchor">#</a></h2>
+<p class="desc">Template URL used to render JSON responses from boosted links/forms. Placed on the <code>xh-boost</code> container.</p>
+<p class="related">Related: <a href="#xh-boost">xh-boost</a></p>
+</div>
+
+<!-- ============================================================ -->
+<h1 class="section-heading" id="sec-cache">Caching &amp; Retry</h1>
+
+<div class="api-entry" id="xh-cache">
+<h2>xh-cache <span class="badge badge-attr">attribute</span> <a href="#xh-cache" class="anchor">#</a></h2>
+<p class="desc">Cache GET responses. Value is the TTL in seconds, or <code>"forever"</code> to cache until page reload or manual clear. Only applies to GET requests.</p>
+<div class="code-block"><span class="code-label">Examples</span><pre>&lt;div xh-get="/api/config" xh-trigger="load" xh-cache="60"&gt;...&lt;/div&gt;
+&lt;div xh-get="/api/static" xh-trigger="load" xh-cache="forever"&gt;...&lt;/div&gt;</pre></div>
+<p class="related">Related: <a href="#js-clearResponseCache">clearResponseCache()</a></p>
+</div>
+
+<div class="api-entry" id="xh-retry">
+<h2>xh-retry <span class="badge badge-attr">attribute</span> <a href="#xh-retry" class="anchor">#</a></h2>
+<p class="desc">Maximum number of retry attempts for failed requests (5xx errors and network failures). Uses exponential backoff.</p>
+<div class="code-block"><span class="code-label">Example</span><pre>&lt;div xh-get="/api/flaky"
+     xh-retry="3"
+     xh-retry-delay="1000"&gt;...&lt;/div&gt;</pre></div>
+<p class="desc">Delays double each attempt: 1s, 2s, 4s. Emits <code>xh:retry</code> on each attempt.</p>
+<p class="related">Related: <a href="#xh-retry-delay">xh-retry-delay</a> <a href="#evt-retry">xh:retry</a></p>
+</div>
+
+<div class="api-entry" id="xh-retry-delay">
+<h2>xh-retry-delay <span class="badge badge-attr">attribute</span> <a href="#xh-retry-delay" class="anchor">#</a></h2>
+<p class="desc">Base delay in milliseconds for retry backoff. Defaults to <code>1000</code>. Doubled on each subsequent attempt.</p>
+<p class="related">Related: <a href="#xh-retry">xh-retry</a></p>
+</div>
+
+<!-- ============================================================ -->
+<h1 class="section-heading" id="sec-validation">Validation</h1>
+
+<div class="api-entry" id="xh-validate">
+<h2>xh-validate <span class="badge badge-attr">attribute</span> <a href="#xh-validate" class="anchor">#</a></h2>
+<p class="desc">Enable validation on an input element. Currently supports the <code>required</code> rule. Validation runs automatically before sending a request; if it fails, the request is blocked and <code>xh:validationError</code> is emitted.</p>
+<div class="code-block"><span class="code-label">Example</span><pre>&lt;input name="username" xh-validate="required"
+       xh-validate-minlength="3"
+       xh-validate-maxlength="20"
+       xh-validate-message="Username must be 3-20 characters"
+       xh-validate-target="#username-error"&gt;
+&lt;span id="username-error"&gt;&lt;/span&gt;</pre></div>
+<p class="related">Related: <a href="#xh-validate-pattern">xh-validate-pattern</a> <a href="#evt-validationError">xh:validationError</a></p>
+</div>
+
+<div class="api-entry" id="xh-validate-pattern">
+<h2>xh-validate-pattern <span class="badge badge-attr">attribute</span> <a href="#xh-validate-pattern" class="anchor">#</a></h2>
+<p class="desc">Regex pattern the input value must match. Tested via <code>new RegExp(pattern).test(value)</code>.</p>
+<div class="code-block"><span class="code-label">Example</span><pre>&lt;input name="email" xh-validate="required"
+       xh-validate-pattern="^[^@]+@[^@]+$"&gt;</pre></div>
+<p class="related">Related: <a href="#xh-validate">xh-validate</a></p>
+</div>
+
+<div class="api-entry" id="xh-validate-min">
+<h2>xh-validate-min <span class="badge badge-attr">attribute</span> <a href="#xh-validate-min" class="anchor">#</a></h2>
+<p class="desc">Minimum numeric value. The input's value is compared as a number.</p>
+<p class="related">Related: <a href="#xh-validate-max">xh-validate-max</a></p>
+</div>
+
+<div class="api-entry" id="xh-validate-max">
+<h2>xh-validate-max <span class="badge badge-attr">attribute</span> <a href="#xh-validate-max" class="anchor">#</a></h2>
+<p class="desc">Maximum numeric value.</p>
+<div class="code-block"><span class="code-label">Example</span><pre>&lt;input name="age" type="number" xh-validate="required"
+       xh-validate-min="18" xh-validate-max="120"&gt;</pre></div>
+<p class="related">Related: <a href="#xh-validate-min">xh-validate-min</a></p>
+</div>
+
+<div class="api-entry" id="xh-validate-minlength">
+<h2>xh-validate-minlength <span class="badge badge-attr">attribute</span> <a href="#xh-validate-minlength" class="anchor">#</a></h2>
+<p class="desc">Minimum string length for the input value.</p>
+<p class="related">Related: <a href="#xh-validate-maxlength">xh-validate-maxlength</a></p>
+</div>
+
+<div class="api-entry" id="xh-validate-maxlength">
+<h2>xh-validate-maxlength <span class="badge badge-attr">attribute</span> <a href="#xh-validate-maxlength" class="anchor">#</a></h2>
+<p class="desc">Maximum string length for the input value.</p>
+<p class="related">Related: <a href="#xh-validate-minlength">xh-validate-minlength</a></p>
+</div>
+
+<div class="api-entry" id="xh-validate-message">
+<h2>xh-validate-message <span class="badge badge-attr">attribute</span> <a href="#xh-validate-message" class="anchor">#</a></h2>
+<p class="desc">Custom error message displayed when validation fails. If omitted, a default message is generated from the field name and rule.</p>
+<p class="related">Related: <a href="#xh-validate-target">xh-validate-target</a></p>
+</div>
+
+<div class="api-entry" id="xh-validate-class">
+<h2>xh-validate-class <span class="badge badge-attr">attribute</span> <a href="#xh-validate-class" class="anchor">#</a></h2>
+<p class="desc">CSS class applied to invalid fields. Defaults to <code>xh-invalid</code>.</p>
+<p class="related">Related: <a href="#xh-validate">xh-validate</a></p>
+</div>
+
+<div class="api-entry" id="xh-validate-target">
+<h2>xh-validate-target <span class="badge badge-attr">attribute</span> <a href="#xh-validate-target" class="anchor">#</a></h2>
+<p class="desc">CSS selector of an element where the validation error message is displayed (via <code>textContent</code>).</p>
+<p class="related">Related: <a href="#xh-validate-message">xh-validate-message</a></p>
+</div>
+
+<!-- ============================================================ -->
+<h1 class="section-heading" id="sec-i18n">i18n (Internationalization)</h1>
+
+<div class="api-entry" id="xh-i18n">
+<h2>xh-i18n <span class="badge badge-attr">attribute</span> <a href="#xh-i18n" class="anchor">#</a></h2>
+<p class="desc">Set the element's <code>textContent</code> from an i18n translation key. The key is looked up in the current locale dictionary (loaded via <code>xhtmlx.i18n.load()</code>). Re-renders automatically on locale change.</p>
+<div class="code-block"><span class="code-label">Example</span><pre>&lt;h1 xh-i18n="greeting" xh-i18n-vars='{"name":"Alice"}'&gt;&lt;/h1&gt;
+&lt;button xh-i18n="submit"&gt;&lt;/button&gt;</pre></div>
+<p class="related">Related: <a href="#xh-i18n-vars">xh-i18n-vars</a> <a href="#xh-i18n-attr">xh-i18n-*</a> <a href="#js-i18n">xhtmlx.i18n</a></p>
+</div>
+
+<div class="api-entry" id="xh-i18n-attr">
+<h2>xh-i18n-* <span class="badge badge-attr">attribute</span> <a href="#xh-i18n-attr" class="anchor">#</a></h2>
+<p class="desc">Translate an HTML attribute. The part after <code>xh-i18n-</code> is the target attribute name (except <code>vars</code>). The value is the translation key.</p>
+<div class="code-block"><span class="code-label">Example</span><pre>&lt;input xh-i18n-placeholder="search_placeholder"&gt;
+&lt;img xh-i18n-alt="logo_alt" src="logo.png"&gt;</pre></div>
+<p class="related">Related: <a href="#xh-i18n">xh-i18n</a></p>
+</div>
+
+<div class="api-entry" id="xh-i18n-vars">
+<h2>xh-i18n-vars <span class="badge badge-attr">attribute</span> <a href="#xh-i18n-vars" class="anchor">#</a></h2>
+<p class="desc">JSON string of variables for interpolation in translation strings. Variables are substituted using <code>{name}</code> placeholders in the translation value.</p>
+<div class="code-block"><span class="code-label">Example</span><pre>&lt;!-- Translation: "greeting": "Hello, {name}!" --&gt;
+&lt;span xh-i18n="greeting" xh-i18n-vars='{"name":"Bob"}'&gt;&lt;/span&gt;
+&lt;!-- Output: Hello, Bob! --&gt;</pre></div>
+<p class="related">Related: <a href="#xh-i18n">xh-i18n</a></p>
+</div>
+
+<!-- ============================================================ -->
+<h1 class="section-heading" id="sec-routing">Routing</h1>
+
+<div class="api-entry" id="xh-router">
+<h2>xh-router <span class="badge badge-attr">attribute</span> <a href="#xh-router" class="anchor">#</a></h2>
+<p class="desc">Marks a container as a client-side router. Contains <code>xh-route</code> links. Scanned on <code>DOMContentLoaded</code>. The router handles browser back/forward via <code>popstate</code> and resolves the current URL on init.</p>
+<p class="related">Related: <a href="#xh-route">xh-route</a> <a href="#xh-router-outlet">xh-router-outlet</a> <a href="#js-router">xhtmlx.router</a></p>
+</div>
+
+<div class="api-entry" id="xh-route">
+<h2>xh-route <span class="badge badge-attr">attribute</span> <a href="#xh-route" class="anchor">#</a></h2>
+<p class="desc">Defines a route path within an <code>xh-router</code> container. Supports path parameters with <code>:param</code> syntax. The active route link receives the <code>xh-route-active</code> CSS class. Combine with <code>xh-get</code> and <code>xh-template</code> for data-driven routes.</p>
+<div class="code-block"><span class="code-label">Example</span><pre>&lt;nav xh-router xh-router-outlet="#view" xh-router-404="/templates/404.html"&gt;
+  &lt;a xh-route="/" xh-template="/templates/home.html"&gt;Home&lt;/a&gt;
+  &lt;a xh-route="/users" xh-get="/api/users"
+     xh-template="/templates/users.html"&gt;Users&lt;/a&gt;
+  &lt;a xh-route="/users/:id" xh-get="/api/users/{{id}}"
+     xh-template="/templates/user.html"&gt;User&lt;/a&gt;
+&lt;/nav&gt;
+&lt;div id="view"&gt;&lt;/div&gt;</pre></div>
+<p class="related">Related: <a href="#xh-router">xh-router</a> <a href="#evt-routeChanged">xh:routeChanged</a></p>
+</div>
+
+<div class="api-entry" id="xh-router-outlet">
+<h2>xh-router-outlet <span class="badge badge-attr">attribute</span> <a href="#xh-router-outlet" class="anchor">#</a></h2>
+<p class="desc">CSS selector of the element where routed content is rendered. Placed on the <code>xh-router</code> container. Defaults to <code>#router-outlet</code>.</p>
+<p class="related">Related: <a href="#xh-router">xh-router</a></p>
+</div>
+
+<div class="api-entry" id="xh-router-404">
+<h2>xh-router-404 <span class="badge badge-attr">attribute</span> <a href="#xh-router-404" class="anchor">#</a></h2>
+<p class="desc">Template URL rendered when no route matches the current path. Placed on the <code>xh-router</code> container. The data context contains <code>{ path: "..." }</code>.</p>
+<p class="related">Related: <a href="#xh-router">xh-router</a> <a href="#evt-routeNotFound">xh:routeNotFound</a></p>
+</div>
+
+<!-- ============================================================ -->
+<h1 class="section-heading" id="sec-a11y">Accessibility</h1>
+
+<div class="api-entry" id="xh-focus">
+<h2>xh-focus <span class="badge badge-attr">attribute</span> <a href="#xh-focus" class="anchor">#</a></h2>
+<p class="desc">Manage focus after a content swap. Set to a CSS selector to focus a specific element, or <code>"auto"</code> to focus the first focusable element (<code>a, button, input, select, textarea, [tabindex]</code>) in the swapped content.</p>
+<div class="code-block"><span class="code-label">Examples</span><pre>&lt;button xh-get="/api/form" xh-target="#panel"
+        xh-focus="#panel input:first-child"&gt;Open Form&lt;/button&gt;
+
+&lt;button xh-get="/api/data" xh-target="#content"
+        xh-focus="auto"&gt;Load&lt;/button&gt;</pre></div>
+<p class="related">Related: <a href="#xh-aria-live">xh-aria-live</a></p>
+</div>
+
+<div class="api-entry" id="xh-aria-live">
+<h2>xh-aria-live <span class="badge badge-attr">attribute</span> <a href="#xh-aria-live" class="anchor">#</a></h2>
+<p class="desc">Override the default <code>aria-live</code> value set on target elements. By default, <code>xh-target</code> elements receive <code>aria-live="polite"</code>. Set this to <code>"assertive"</code> for urgent updates.</p>
+<div class="code-block"><span class="code-label">Example</span><pre>&lt;button xh-get="/api/alerts" xh-target="#alerts"
+        xh-aria-live="assertive"&gt;Check&lt;/button&gt;</pre></div>
+<p class="desc">Additional automatic accessibility features: <code>aria-busy="true"</code> on targets during requests, <code>role="alert"</code> on error containers, <code>aria-disabled="true"</code> during deduplication.</p>
+<p class="related">Related: <a href="#xh-focus">xh-focus</a> <a href="#xh-target">xh-target</a></p>
+</div>
+
+<!-- ============================================================ -->
+<!--                    JAVASCRIPT API                            -->
+<!-- ============================================================ -->
+<h1 class="section-heading" id="sec-jsapi">JavaScript API</h1>
+
+<div class="api-entry" id="js-process">
+<h2>xhtmlx.process() <span class="badge badge-method">method</span> <a href="#js-process" class="anchor">#</a></h2>
+<p class="desc">Manually process a DOM node and its descendants, scanning for <code>xh-*</code> attributes and attaching triggers. Called automatically on <code>DOMContentLoaded</code> and by the MutationObserver. Call manually after programmatically inserting HTML with <code>xh-*</code> attributes.</p>
+<div class="code-block"><span class="code-label">Syntax</span><pre>xhtmlx.process(root, ctx)</pre></div>
+<table><thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>root</code></td><td>Element</td><td>DOM element to process. Defaults to <code>document.body</code>.</td></tr>
+<tr><td><code>ctx</code></td><td>DataContext</td><td>Optional data context. Defaults to an empty context.</td></tr>
+</tbody></table>
+<div class="code-block"><span class="code-label">Example</span><pre>var el = document.getElementById("dynamic-section");
+xhtmlx.process(el);</pre></div>
+</div>
+
+<div class="api-entry" id="js-createContext">
+<h2>xhtmlx.createContext() <span class="badge badge-method">method</span> <a href="#js-createContext" class="anchor">#</a></h2>
+<p class="desc">Create a <code>DataContext</code> for programmatic use. Data contexts hold JSON data and can be chained via parent references.</p>
+<div class="code-block"><span class="code-label">Syntax</span><pre>xhtmlx.createContext(data, parent, index)</pre></div>
+<table><thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>data</code></td><td>Object</td><td>JSON data for this context level</td></tr>
+<tr><td><code>parent</code></td><td>DataContext</td><td>Optional parent context</td></tr>
+<tr><td><code>index</code></td><td>number</td><td>Optional iteration index (for <code>$index</code>)</td></tr>
+</tbody></table>
+<div class="code-block"><span class="code-label">Example</span><pre>var ctx = xhtmlx.createContext({ name: "Alice", role: "admin" });
+xhtmlx.process(document.getElementById("widget"), ctx);</pre></div>
+</div>
+
+<div class="api-entry" id="js-switchVersion">
+<h2>xhtmlx.switchVersion() <span class="badge badge-method">method</span> <a href="#js-switchVersion" class="anchor">#</a></h2>
+<p class="desc">Hot-swap UI templates and API endpoints without a full page reload. Clears template and response caches, then re-renders all active widgets. Emits <code>xh:versionChanged</code>.</p>
+<div class="code-block"><span class="code-label">Syntax</span><pre>xhtmlx.switchVersion(version, opts)</pre></div>
+<table><thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>version</code></td><td>string</td><td>Version identifier (e.g. "v2", git SHA)</td></tr>
+<tr><td><code>opts.templatePrefix</code></td><td>string</td><td>Template URL prefix. Defaults to <code>"/ui/{version}"</code></td></tr>
+<tr><td><code>opts.apiPrefix</code></td><td>string</td><td>API URL prefix. Defaults to unchanged</td></tr>
+<tr><td><code>opts.reload</code></td><td>boolean</td><td>Re-render widgets. Defaults to <code>true</code></td></tr>
+</tbody></table>
+<div class="code-block"><span class="code-label">Example</span><pre>xhtmlx.switchVersion("v2");
+xhtmlx.switchVersion("abc123", {
+  templatePrefix: "/static/abc123",
+  apiPrefix: "/api/v2"
+});</pre></div>
+<p class="related">Related: <a href="#js-reload">xhtmlx.reload()</a> <a href="#evt-versionChanged">xh:versionChanged</a></p>
+</div>
+
+<div class="api-entry" id="js-reload">
+<h2>xhtmlx.reload() <span class="badge badge-method">method</span> <a href="#js-reload" class="anchor">#</a></h2>
+<p class="desc">Re-fetch data and re-render all active widgets, or only those using a specific template. Useful after cache invalidation or version switches.</p>
+<div class="code-block"><span class="code-label">Syntax</span><pre>xhtmlx.reload(templateUrl)</pre></div>
+<table><thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>templateUrl</code></td><td>string</td><td>Optional. If provided, only reload widgets using this template.</td></tr>
+</tbody></table>
+<div class="code-block"><span class="code-label">Example</span><pre>xhtmlx.reload(); // all widgets
+xhtmlx.reload("/templates/user-list.html"); // specific template only</pre></div>
+</div>
+
+<div class="api-entry" id="js-directive">
+<h2>xhtmlx.directive() <span class="badge badge-method">method</span> <a href="#js-directive" class="anchor">#</a></h2>
+<p class="desc">Register a custom directive that is processed during <code>applyBindings</code>. The handler is called for each element that has the matching attribute.</p>
+<div class="code-block"><span class="code-label">Syntax</span><pre>xhtmlx.directive(name, handler)</pre></div>
+<table><thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>name</code></td><td>string</td><td>Attribute name (e.g. "xh-tooltip")</td></tr>
+<tr><td><code>handler</code></td><td>function</td><td>Called with <code>(element, attributeValue, dataContext)</code></td></tr>
+</tbody></table>
+<div class="code-block"><span class="code-label">Example</span><pre>xhtmlx.directive("xh-tooltip", function(el, value, ctx) {
+  el.title = ctx.resolve(value);
+});</pre></div>
+</div>
+
+<div class="api-entry" id="js-hook">
+<h2>xhtmlx.hook() <span class="badge badge-method">method</span> <a href="#js-hook" class="anchor">#</a></h2>
+<p class="desc">Register a global hook that runs before or after certain lifecycle events. Return <code>false</code> from a <code>beforeRequest</code> hook to cancel the request.</p>
+<div class="code-block"><span class="code-label">Syntax</span><pre>xhtmlx.hook(event, handler)</pre></div>
+<table><thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>event</code></td><td>string</td><td>Hook event name (e.g. "beforeRequest")</td></tr>
+<tr><td><code>handler</code></td><td>function</td><td>Called with the event detail object. Return <code>false</code> to cancel.</td></tr>
+</tbody></table>
+<div class="code-block"><span class="code-label">Example</span><pre>xhtmlx.hook("beforeRequest", function(detail) {
+  detail.headers["Authorization"] = "Bearer " + getToken();
+});</pre></div>
+</div>
+
+<div class="api-entry" id="js-transform">
+<h2>xhtmlx.transform() <span class="badge badge-method">method</span> <a href="#js-transform" class="anchor">#</a></h2>
+<p class="desc">Register a named value transform for the pipe syntax in <code>xh-text</code> and other binding expressions. Transforms can be chained: <code>"value | trim | uppercase"</code>.</p>
+<div class="code-block"><span class="code-label">Syntax</span><pre>xhtmlx.transform(name, fn)</pre></div>
+<div class="code-block"><span class="code-label">Example</span><pre>xhtmlx.transform("currency", function(value) {
+  return "$" + Number(value).toFixed(2);
+});
+// Usage: &lt;span xh-text="price | currency"&gt;&lt;/span&gt;</pre></div>
+</div>
+
+<div class="api-entry" id="js-i18n">
+<h2>xhtmlx.i18n <span class="badge badge-method">method</span> <a href="#js-i18n" class="anchor">#</a></h2>
+<p class="desc">The internationalization module. Load locale dictionaries, switch locales at runtime, and translate strings programmatically.</p>
+<table><thead><tr><th>Property / Method</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>i18n.load(locale, translations)</code></td><td>Load a translation dictionary for a locale</td></tr>
+<tr><td><code>i18n.locale</code></td><td>Get/set the current locale. Setting re-renders all <code>xh-i18n</code> elements and emits <code>xh:localeChanged</code></td></tr>
+<tr><td><code>i18n.t(key, vars)</code></td><td>Translate a key with optional variable interpolation. Falls back to <code>"en"</code> locale, then to the key itself</td></tr>
+</tbody></table>
+<div class="code-block"><span class="code-label">Example</span><pre>xhtmlx.i18n.load("en", { "greeting": "Hello, {name}!" });
+xhtmlx.i18n.load("es", { "greeting": "Hola, {name}!" });
+xhtmlx.i18n.locale = "es";
+console.log(xhtmlx.i18n.t("greeting", { name: "Bob" })); // "Hola, Bob!"</pre></div>
+<p class="related">Related: <a href="#xh-i18n">xh-i18n</a> <a href="#evt-localeChanged">xh:localeChanged</a></p>
+</div>
+
+<div class="api-entry" id="js-router">
+<h2>xhtmlx.router <span class="badge badge-method">method</span> <a href="#js-router" class="anchor">#</a></h2>
+<p class="desc">The client-side SPA router module. Navigate programmatically and access route state.</p>
+<table><thead><tr><th>Property / Method</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>router.navigate(path)</code></td><td>Navigate to a path, pushing browser history and resolving the route</td></tr>
+</tbody></table>
+<div class="code-block"><span class="code-label">Example</span><pre>xhtmlx.router.navigate("/users/42");</pre></div>
+<p class="related">Related: <a href="#xh-router">xh-router</a> <a href="#xh-route">xh-route</a></p>
+</div>
+
+<div class="api-entry" id="js-config">
+<h2>xhtmlx.config <span class="badge badge-config">config</span> <a href="#js-config" class="anchor">#</a></h2>
+<p class="desc">Global configuration object. See the <a href="#sec-config">Configuration</a> section below for all options.</p>
+<div class="code-block"><span class="code-label">Example</span><pre>xhtmlx.config.debug = true;
+xhtmlx.config.defaultSwapMode = "innerHTML";</pre></div>
+</div>
+
+<div class="api-entry" id="js-scanNamedTemplates">
+<h2>xhtmlx.scanNamedTemplates() <span class="badge badge-method">method</span> <a href="#js-scanNamedTemplates" class="anchor">#</a></h2>
+<p class="desc">Scan the document for <code>&lt;template xh-name="..."&gt;</code> elements and populate the template cache. Called automatically on <code>DOMContentLoaded</code>. Call manually after dynamically adding named templates.</p>
+<div class="code-block"><span class="code-label">Syntax</span><pre>xhtmlx.scanNamedTemplates()</pre></div>
+<p class="related">Related: <a href="#xh-name">xh-name</a></p>
+</div>
+
+<div class="api-entry" id="js-clearTemplateCache">
+<h2>xhtmlx.clearTemplateCache() <span class="badge badge-method">method</span> <a href="#js-clearTemplateCache" class="anchor">#</a></h2>
+<p class="desc">Clear the in-memory template cache. Subsequent template references will re-fetch from the server.</p>
+<div class="code-block"><span class="code-label">Syntax</span><pre>xhtmlx.clearTemplateCache()</pre></div>
+</div>
+
+<div class="api-entry" id="js-clearResponseCache">
+<h2>xhtmlx.clearResponseCache() <span class="badge badge-method">method</span> <a href="#js-clearResponseCache" class="anchor">#</a></h2>
+<p class="desc">Clear the in-memory response cache (used by <code>xh-cache</code>).</p>
+<div class="code-block"><span class="code-label">Syntax</span><pre>xhtmlx.clearResponseCache()</pre></div>
+<p class="related">Related: <a href="#xh-cache">xh-cache</a></p>
+</div>
+
+<!-- ============================================================ -->
+<!--                         EVENTS                               -->
+<!-- ============================================================ -->
+<h1 class="section-heading" id="sec-events">Events</h1>
+
+<div class="api-entry" id="evt-beforeRequest">
+<h2>xh:beforeRequest <span class="badge badge-event">event</span> <a href="#evt-beforeRequest" class="anchor">#</a></h2>
+<p class="desc">Fired on the triggering element before a fetch request is sent. <strong>Cancelable</strong> -- call <code>event.preventDefault()</code> to abort the request.</p>
+<table><thead><tr><th>detail property</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>url</code></td><td>The request URL</td></tr>
+<tr><td><code>method</code></td><td>HTTP method (GET, POST, etc.)</td></tr>
+<tr><td><code>headers</code></td><td>Request headers object</td></tr>
+</tbody></table>
+<div class="code-block"><span class="code-label">Example</span><pre>document.body.addEventListener("xh:beforeRequest", function(e) {
+  if (!isAuthenticated()) e.preventDefault();
+});</pre></div>
+</div>
+
+<div class="api-entry" id="evt-afterRequest">
+<h2>xh:afterRequest <span class="badge badge-event">event</span> <a href="#evt-afterRequest" class="anchor">#</a></h2>
+<p class="desc">Fired after a fetch completes (before template rendering). Not cancelable.</p>
+<table><thead><tr><th>detail property</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>url</code></td><td>The request URL</td></tr>
+<tr><td><code>status</code></td><td>HTTP status code</td></tr>
+</tbody></table>
+</div>
+
+<div class="api-entry" id="evt-beforeSwap">
+<h2>xh:beforeSwap <span class="badge badge-event">event</span> <a href="#evt-beforeSwap" class="anchor">#</a></h2>
+<p class="desc">Fired before the rendered content is swapped into the DOM. <strong>Cancelable</strong>.</p>
+<table><thead><tr><th>detail property</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>target</code></td><td>The swap target element</td></tr>
+<tr><td><code>fragment</code></td><td>The DocumentFragment to be inserted</td></tr>
+<tr><td><code>swapMode</code></td><td>The swap mode string</td></tr>
+<tr><td><code>isError</code></td><td><code>true</code> if this is an error template swap</td></tr>
+</tbody></table>
+</div>
+
+<div class="api-entry" id="evt-afterSwap">
+<h2>xh:afterSwap <span class="badge badge-event">event</span> <a href="#evt-afterSwap" class="anchor">#</a></h2>
+<p class="desc">Fired after content has been swapped into the DOM. Not cancelable.</p>
+<table><thead><tr><th>detail property</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>target</code></td><td>The swap target element</td></tr>
+<tr><td><code>isError</code></td><td><code>true</code> if this was an error template swap</td></tr>
+</tbody></table>
+</div>
+
+<div class="api-entry" id="evt-responseError">
+<h2>xh:responseError <span class="badge badge-event">event</span> <a href="#evt-responseError" class="anchor">#</a></h2>
+<p class="desc">Fired when the server returns an error HTTP status. Not cancelable.</p>
+<table><thead><tr><th>detail property</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>status</code></td><td>HTTP status code</td></tr>
+<tr><td><code>statusText</code></td><td>HTTP status text</td></tr>
+<tr><td><code>body</code></td><td>Parsed response body (JSON object or string)</td></tr>
+</tbody></table>
+<div class="code-block"><span class="code-label">Example</span><pre>document.body.addEventListener("xh:responseError", function(e) {
+  console.log("Error", e.detail.status, e.detail.body);
+});</pre></div>
+</div>
+
+<div class="api-entry" id="evt-retry">
+<h2>xh:retry <span class="badge badge-event">event</span> <a href="#evt-retry" class="anchor">#</a></h2>
+<p class="desc">Fired before each retry attempt. Not cancelable.</p>
+<table><thead><tr><th>detail property</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>attempt</code></td><td>Current attempt number (1-based)</td></tr>
+<tr><td><code>maxRetries</code></td><td>Maximum retry count</td></tr>
+<tr><td><code>status</code></td><td>HTTP status (if available)</td></tr>
+<tr><td><code>error</code></td><td>Error message (if network error)</td></tr>
+</tbody></table>
+<p class="related">Related: <a href="#xh-retry">xh-retry</a></p>
+</div>
+
+<div class="api-entry" id="evt-validationError">
+<h2>xh:validationError <span class="badge badge-event">event</span> <a href="#evt-validationError" class="anchor">#</a></h2>
+<p class="desc">Fired when validation fails. Not cancelable.</p>
+<table><thead><tr><th>detail property</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>errors</code></td><td>Array of <code>{ field, message, element }</code> objects</td></tr>
+</tbody></table>
+<p class="related">Related: <a href="#xh-validate">xh-validate</a></p>
+</div>
+
+<div class="api-entry" id="evt-wsOpen">
+<h2>xh:wsOpen <span class="badge badge-event">event</span> <a href="#evt-wsOpen" class="anchor">#</a></h2>
+<p class="desc">Fired when a WebSocket connection is established.</p>
+<table><thead><tr><th>detail property</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>url</code></td><td>The WebSocket URL</td></tr>
+</tbody></table>
+<p class="related">Related: <a href="#xh-ws">xh-ws</a></p>
+</div>
+
+<div class="api-entry" id="evt-wsClose">
+<h2>xh:wsClose <span class="badge badge-event">event</span> <a href="#evt-wsClose" class="anchor">#</a></h2>
+<p class="desc">Fired when a WebSocket connection closes. Auto-reconnects after 3 seconds if the close code is not 1000 (normal closure).</p>
+<table><thead><tr><th>detail property</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>code</code></td><td>WebSocket close code</td></tr>
+<tr><td><code>reason</code></td><td>Close reason string</td></tr>
+</tbody></table>
+</div>
+
+<div class="api-entry" id="evt-wsError">
+<h2>xh:wsError <span class="badge badge-event">event</span> <a href="#evt-wsError" class="anchor">#</a></h2>
+<p class="desc">Fired on WebSocket error.</p>
+<table><thead><tr><th>detail property</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>url</code></td><td>The WebSocket URL</td></tr>
+</tbody></table>
+</div>
+
+<div class="api-entry" id="evt-versionChanged">
+<h2>xh:versionChanged <span class="badge badge-event">event</span> <a href="#evt-versionChanged" class="anchor">#</a></h2>
+<p class="desc">Fired on <code>document.body</code> after <code>switchVersion()</code> completes.</p>
+<table><thead><tr><th>detail property</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>version</code></td><td>New version string</td></tr>
+<tr><td><code>templatePrefix</code></td><td>New template prefix</td></tr>
+<tr><td><code>apiPrefix</code></td><td>New API prefix</td></tr>
+</tbody></table>
+<p class="related">Related: <a href="#js-switchVersion">switchVersion()</a></p>
+</div>
+
+<div class="api-entry" id="evt-localeChanged">
+<h2>xh:localeChanged <span class="badge badge-event">event</span> <a href="#evt-localeChanged" class="anchor">#</a></h2>
+<p class="desc">Fired on <code>document.body</code> when the i18n locale is changed.</p>
+<table><thead><tr><th>detail property</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>locale</code></td><td>New locale string</td></tr>
+</tbody></table>
+<p class="related">Related: <a href="#js-i18n">xhtmlx.i18n</a></p>
+</div>
+
+<div class="api-entry" id="evt-routeChanged">
+<h2>xh:routeChanged <span class="badge badge-event">event</span> <a href="#evt-routeChanged" class="anchor">#</a></h2>
+<p class="desc">Fired on the router outlet element after a route is resolved.</p>
+<table><thead><tr><th>detail property</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>path</code></td><td>The matched path</td></tr>
+<tr><td><code>params</code></td><td>Object of extracted path parameters</td></tr>
+</tbody></table>
+<p class="related">Related: <a href="#xh-route">xh-route</a></p>
+</div>
+
+<div class="api-entry" id="evt-routeNotFound">
+<h2>xh:routeNotFound <span class="badge badge-event">event</span> <a href="#evt-routeNotFound" class="anchor">#</a></h2>
+<p class="desc">Fired on <code>document.body</code> when no route matches the current path.</p>
+<table><thead><tr><th>detail property</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>path</code></td><td>The unmatched path</td></tr>
+</tbody></table>
+<p class="related">Related: <a href="#xh-router-404">xh-router-404</a></p>
+</div>
+
+<!-- ============================================================ -->
+<!--                      CONFIGURATION                           -->
+<!-- ============================================================ -->
+<h1 class="section-heading" id="sec-config">Configuration</h1>
+
+<div class="api-entry" id="cfg-debug">
+<h2>debug <span class="badge badge-config">config</span> <a href="#cfg-debug" class="anchor">#</a></h2>
+<p class="desc">Enable debug logging to the console. Logs unresolved interpolations, missing targets, request deduplication skips, and more.</p>
+<div class="code-block"><span class="code-label">Default</span><pre>xhtmlx.config.debug = false;</pre></div>
+</div>
+
+<div class="api-entry" id="cfg-defaultSwapMode">
+<h2>defaultSwapMode <span class="badge badge-config">config</span> <a href="#cfg-defaultSwapMode" class="anchor">#</a></h2>
+<p class="desc">Default swap mode when <code>xh-swap</code> is not specified on an element.</p>
+<div class="code-block"><span class="code-label">Default</span><pre>xhtmlx.config.defaultSwapMode = "innerHTML";</pre></div>
+<p class="related">Related: <a href="#xh-swap">xh-swap</a></p>
+</div>
+
+<div class="api-entry" id="cfg-batchThreshold">
+<h2>batchThreshold <span class="badge badge-config">config</span> <a href="#cfg-batchThreshold" class="anchor">#</a></h2>
+<p class="desc">Arrays above this size in <code>xh-each</code> may use batched rendering for performance.</p>
+<div class="code-block"><span class="code-label">Default</span><pre>xhtmlx.config.batchThreshold = 100;</pre></div>
+<p class="related">Related: <a href="#xh-each">xh-each</a></p>
+</div>
+
+<div class="api-entry" id="cfg-templatePrefix">
+<h2>templatePrefix <span class="badge badge-config">config</span> <a href="#cfg-templatePrefix" class="anchor">#</a></h2>
+<p class="desc">String prepended to all <code>xh-template</code> URLs. Used by <code>switchVersion()</code> to version template paths.</p>
+<div class="code-block"><span class="code-label">Default</span><pre>xhtmlx.config.templatePrefix = "";</pre></div>
+<p class="related">Related: <a href="#js-switchVersion">switchVersion()</a></p>
+</div>
+
+<div class="api-entry" id="cfg-apiPrefix">
+<h2>apiPrefix <span class="badge badge-config">config</span> <a href="#cfg-apiPrefix" class="anchor">#</a></h2>
+<p class="desc">String prepended to all REST verb URLs (unless the URL contains <code>://</code>). Used for API versioning.</p>
+<div class="code-block"><span class="code-label">Default</span><pre>xhtmlx.config.apiPrefix = "";</pre></div>
+</div>
+
+<div class="api-entry" id="cfg-defaultErrorTemplate">
+<h2>defaultErrorTemplate <span class="badge badge-config">config</span> <a href="#cfg-defaultErrorTemplate" class="anchor">#</a></h2>
+<p class="desc">Global fallback error template URL. Used when an element has no <code>xh-error-template</code> and no ancestor <code>xh-error-boundary</code>.</p>
+<div class="code-block"><span class="code-label">Default</span><pre>xhtmlx.config.defaultErrorTemplate = null;</pre></div>
+<p class="related">Related: <a href="#xh-error-template">xh-error-template</a> <a href="#xh-error-boundary">xh-error-boundary</a></p>
+</div>
+
+<div class="api-entry" id="cfg-defaultErrorTarget">
+<h2>defaultErrorTarget <span class="badge badge-config">config</span> <a href="#cfg-defaultErrorTarget" class="anchor">#</a></h2>
+<p class="desc">Global fallback CSS selector for where to render error templates.</p>
+<div class="code-block"><span class="code-label">Default</span><pre>xhtmlx.config.defaultErrorTarget = null;</pre></div>
+<p class="related">Related: <a href="#xh-error-target">xh-error-target</a></p>
+</div>
+
+<div class="api-entry" id="cfg-cspSafe">
+<h2>cspSafe <span class="badge badge-config">config</span> <a href="#cfg-cspSafe" class="anchor">#</a></h2>
+<p class="desc">When <code>true</code>, avoids <code>innerHTML</code> for CSP compliance. Uses DOMParser and adopted stylesheets instead. <code>xh-html</code> falls back to <code>textContent</code>.</p>
+<div class="code-block"><span class="code-label">Default</span><pre>xhtmlx.config.cspSafe = false;</pre></div>
+<p class="related">Related: <a href="#xh-html">xh-html</a></p>
+</div>
+
+<div class="api-entry" id="cfg-uiVersion">
+<h2>uiVersion <span class="badge badge-config">config</span> <a href="#cfg-uiVersion" class="anchor">#</a></h2>
+<p class="desc">Current UI version identifier. Set automatically by <code>switchVersion()</code>. Can be any string.</p>
+<div class="code-block"><span class="code-label">Default</span><pre>xhtmlx.config.uiVersion = null;</pre></div>
+<p class="related">Related: <a href="#js-switchVersion">switchVersion()</a></p>
+</div>
+
+</div><!-- .main -->
+
+<!-- ===== JAVASCRIPT: Search + Scrollspy ===== -->
+<script>
+(function(){
+  // Search
+  var input = document.getElementById("search");
+  var entries = document.querySelectorAll(".api-entry");
+  var headings = document.querySelectorAll(".section-heading");
+  var noResults = document.getElementById("no-results");
+  input.addEventListener("input", function(){
+    var q = this.value.toLowerCase().trim();
+    var visible = 0;
+    entries.forEach(function(e){
+      var show = !q || e.textContent.toLowerCase().indexOf(q) !== -1;
+      e.style.display = show ? "" : "none";
+      if(show) visible++;
+    });
+    headings.forEach(function(h){
+      var next = h.nextElementSibling;
+      var any = false;
+      while(next && !next.classList.contains("section-heading")){
+        if(next.classList.contains("api-entry") && next.style.display !== "none") any = true;
+        next = next.nextElementSibling;
+      }
+      h.style.display = any || !q ? "" : "none";
+    });
+    noResults.style.display = visible === 0 && q ? "block" : "none";
+  });
+
+  // Scrollspy
+  var sidebarLinks = document.querySelectorAll(".sidebar a[href^='#']");
+  var idMap = {};
+  sidebarLinks.forEach(function(a){ idMap[a.getAttribute("href").slice(1)] = a; });
+  var targets = [];
+  for(var id in idMap){
+    var el = document.getElementById(id);
+    if(el) targets.push({id:id, el:el});
+  }
+  function onScroll(){
+    var scrollY = window.scrollY + 80;
+    var current = null;
+    for(var i = 0; i < targets.length; i++){
+      if(targets[i].el.offsetTop <= scrollY) current = targets[i].id;
+    }
+    sidebarLinks.forEach(function(a){ a.classList.remove("active"); });
+    if(current && idMap[current]) idMap[current].classList.add("active");
+  }
+  window.addEventListener("scroll", onScroll, {passive:true});
+  onScroll();
+
+  // Close sidebar on link click (mobile)
+  sidebarLinks.forEach(function(a){
+    a.addEventListener("click", function(){
+      document.querySelector(".sidebar").classList.remove("open");
+    });
+  });
+})();
+</script>
+</body>
+</html>
