@@ -2327,26 +2327,53 @@
     }
   }
 
+  // Compound CSS selector covering all known xh-* attributes.
+  // Lets the browser's native selector engine find elements directly
+  // instead of scanning every element and checking attributes manually.
+  var XH_KNOWN_SELECTOR = [
+    "[xh-get]", "[xh-post]", "[xh-put]", "[xh-delete]", "[xh-patch]",
+    "[xh-text]", "[xh-html]", "[xh-each]", "[xh-if]", "[xh-unless]",
+    "[xh-model]", "[xh-trigger]", "[xh-template]", "[xh-swap]", "[xh-target]",
+    "[xh-indicator]", "[xh-show]", "[xh-hide]", "[xh-boost]", "[xh-ws]",
+    "[xh-ws-send]", "[xh-push-url]", "[xh-replace-url]", "[xh-vals]",
+    "[xh-headers]", "[xh-cache]", "[xh-retry]", "[xh-validate]",
+    "[xh-error-template]", "[xh-error-boundary]", "[xh-error-target]",
+    "[xh-focus]", "[xh-disabled-class]", "[xh-i18n]", "[xh-router]",
+    "[xh-route]", "[xh-aria-live]"
+  ].join(",");
+
   /**
    * Gather elements that have xh-* attributes within a root node.
+   * Uses a compound CSS selector for known attributes (fast path) and only
+   * falls back to manual scanning for dynamic attributes (xh-attr-*, xh-on-*,
+   * xh-class-*, xh-i18n-*).
    * @param {Element} root
    * @returns {Element[]}
    */
   function gatherXhElements(root) {
-    var results = [];
     var seen = new Set();
-    var all = root.querySelectorAll("*");
+    var results = [];
 
-    for (var i = 0; i < all.length; i++) {
-      var el = all[i];
-      var attrs = el.attributes;
-      for (var j = 0; j < attrs.length; j++) {
-        if (attrs[j].name.indexOf("xh-") === 0) {
-          if (!seen.has(el)) {
-            seen.add(el);
-            results.push(el);
-          }
-          break; // Found one xh- attr, no need to check more on this element
+    // Fast path: use native CSS selector for known xh-* attributes
+    var known = root.querySelectorAll(XH_KNOWN_SELECTOR);
+    for (var i = 0; i < known.length; i++) {
+      seen.add(known[i]);
+      results.push(known[i]);
+    }
+
+    // Slow path: scan for dynamic xh-attr-*, xh-on-*, xh-class-*, xh-i18n-*
+    // Only needed if elements use these wildcard attribute patterns
+    var all = root.querySelectorAll("*");
+    for (var j = 0; j < all.length; j++) {
+      if (seen.has(all[j])) continue;
+      var attrs = all[j].attributes;
+      for (var k = 0; k < attrs.length; k++) {
+        var name = attrs[k].name;
+        if (name.indexOf("xh-attr-") === 0 || name.indexOf("xh-on-") === 0 ||
+            name.indexOf("xh-class-") === 0 || name.indexOf("xh-i18n-") === 0 ||
+            name.indexOf("xh-error-template-") === 0 || name.indexOf("xh-template-") === 0) {
+          results.push(all[j]);
+          break;
         }
       }
     }
