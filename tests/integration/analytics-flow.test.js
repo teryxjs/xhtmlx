@@ -5,9 +5,7 @@
 const xhtmlx = require("../../xhtmlx.js");
 const {
   analyticsHandlers,
-  DataContext,
   config,
-  elementStates,
 } = xhtmlx._internals;
 
 function flushPromises() {

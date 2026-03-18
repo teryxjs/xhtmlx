@@ -96,8 +96,8 @@ ci-browser: install playwright-install ## CI: browser test job (install, playwri
 ci-build: install minify size ## CI: build job (install, minify, check sizes)
 	@echo "ci-build passed"
 
-ci-publish: install check lint ## CI: publish job (check, lint, test, build, pack)
-	npx jest --verbose
+ci-publish: install check lint playwright-install ## CI: publish job (check, lint, test, build, pack)
+	npx jest --verbose --forceExit
 	npx playwright test
 	$(MAKE) minify
 	npm pack --dry-run

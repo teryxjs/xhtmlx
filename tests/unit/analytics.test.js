@@ -11,7 +11,6 @@ const {
   registerAnalytics,
   DataContext,
   config,
-  elementStates,
 } = xhtmlx._internals;
 
 function flushPromises() {
