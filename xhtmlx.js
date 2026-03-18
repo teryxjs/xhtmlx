@@ -2558,18 +2558,34 @@
    * @param {Element} el
    * @returns {boolean}
    */
+  // Comprehensive selector for checking if a subtree contains xh-* elements.
+  // Covers all known fixed-name xh-* attributes.
+  var XH_DETECT_SELECTOR = [
+    "[xh-get]", "[xh-post]", "[xh-put]", "[xh-delete]", "[xh-patch]",
+    "[xh-text]", "[xh-html]", "[xh-each]", "[xh-if]", "[xh-unless]",
+    "[xh-model]", "[xh-trigger]", "[xh-template]", "[xh-swap]", "[xh-target]",
+    "[xh-indicator]", "[xh-show]", "[xh-hide]", "[xh-boost]", "[xh-ws]",
+    "[xh-ws-send]", "[xh-push-url]", "[xh-replace-url]", "[xh-vals]",
+    "[xh-headers]", "[xh-cache]", "[xh-retry]", "[xh-validate]",
+    "[xh-error-template]", "[xh-error-boundary]", "[xh-error-target]",
+    "[xh-focus]", "[xh-disabled-class]", "[xh-i18n]", "[xh-router]",
+    "[xh-route]", "[xh-aria-live]"
+  ].join(",");
+
   function hasXhAttributes(el) {
     // Skip nodes owned by xhtmlx (inserted via swap/render)
     if (el.hasAttribute && el.hasAttribute("data-xh-owned")) return false;
     // Check the element itself (fast path — avoids full subtree scan)
     if (checkElementForXh(el)) return true;
-    // Check descendants — use a targeted selector instead of querySelectorAll("*")
-    var all = el.querySelectorAll ? el.querySelectorAll("[xh-get],[xh-post],[xh-put],[xh-delete],[xh-patch],[xh-text],[xh-each],[xh-trigger],[xh-template],[xh-model],[xh-ws],[xh-router],[xh-i18n],[xh-boost]") : [];
-    if (all.length > 0) return true;
-    // Fallback: check for wildcard xh-* attrs (xh-attr-*, xh-on-*, etc.)
-    all = el.querySelectorAll ? el.querySelectorAll("*") : [];
-    for (var i = 0; i < all.length; i++) {
-      if (checkElementForXh(all[i])) return true;
+    // Single check using querySelector (stops at first match)
+    if (el.querySelectorAll) {
+      // Fast path covers all known fixed-name attributes
+      if (el.querySelector(XH_DETECT_SELECTOR)) return true;
+      // Fallback for dynamic wildcard attrs (xh-attr-*, xh-on-*, xh-class-*, xh-i18n-*)
+      var all = el.querySelectorAll("*");
+      for (var i = 0; i < all.length; i++) {
+        if (checkElementForXh(all[i])) return true;
+      }
     }
     return false;
   }
