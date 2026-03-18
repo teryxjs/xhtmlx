@@ -327,9 +327,14 @@
    */
   MutableDataContext.prototype._notify = function(path) {
     var subs = this._subscribers[path];
-    if (subs) {
-      for (var i = 0; i < subs.length; i++) subs[i]();
+    if (!subs) return;
+    // Execute callbacks and prune any that throw (detached element references)
+    var live = [];
+    for (var i = 0; i < subs.length; i++) {
+      try { subs[i](); live.push(subs[i]); }
+      catch (e) { /* subscriber references a detached element — drop it */ }
     }
+    if (live.length !== subs.length) this._subscribers[path] = live;
   };
 
   // ---------------------------------------------------------------------------
@@ -674,7 +679,9 @@
       }
 
       // Live reactivity: when the user edits an xh-model input, call ctx.set()
-      if (ctx instanceof MutableDataContext) {
+      // Guard against duplicate listeners on reprocessing (reload/process)
+      if (ctx instanceof MutableDataContext && !el.hasAttribute("data-xh-model-bound")) {
+        el.setAttribute("data-xh-model-bound", "");
         (function(field, element, context) {
           var eventName = (type === "checkbox" || type === "radio" || tag === "select") ? "change" : "input";
           element.addEventListener(eventName, function() {
@@ -2066,6 +2073,10 @@
   }
 
   function registerResizeElement(el, ctx, templateStack, delay) {
+    // Prevent duplicates when elements are reprocessed
+    for (var i = 0; i < resizeElements.length; i++) {
+      if (resizeElements[i].el === el) return;
+    }
     resizeElements.push({ el: el, ctx: ctx, templateStack: templateStack });
     if (delay < resizeGlobalDelay) resizeGlobalDelay = delay;
     if (!resizeListenerAttached && typeof window !== "undefined") {
