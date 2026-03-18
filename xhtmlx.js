@@ -83,8 +83,7 @@
   var responseCache = new Map();
 
   /** Cache for path.split(".") results in DataContext.resolve (bounded) */
-  var pathSplitCache = {};
-  var pathSplitCacheSize = 0;
+  var pathSplitCache = new Map();
   var PATH_SPLIT_CACHE_MAX = 1000;
 
   // ---------------------------------------------------------------------------
@@ -164,12 +163,18 @@
       return rawValue;
     }
 
-    var parts = pathSplitCache[path];
+    var parts = pathSplitCache.get(path);
     if (!parts) {
-      if (pathSplitCacheSize >= PATH_SPLIT_CACHE_MAX) { pathSplitCache = {}; pathSplitCacheSize = 0; }
+      if (pathSplitCache.size >= PATH_SPLIT_CACHE_MAX) {
+        // Evict oldest half instead of flushing entire cache
+        var toDelete = PATH_SPLIT_CACHE_MAX >> 1;
+        var iter = pathSplitCache.keys();
+        for (var d = 0; d < toDelete; d++) {
+          pathSplitCache.delete(iter.next().value);
+        }
+      }
       parts = path.split(".");
-      pathSplitCache[path] = parts;
-      pathSplitCacheSize++;
+      pathSplitCache.set(path, parts);
     }
 
     // --- special variables ---------------------------------------------------
@@ -526,12 +531,14 @@
   }
 
   function applyBindings(el, ctx) {
+    var isMutable = ctx instanceof MutableDataContext;
+
     // -- xh-show ----------------------------------------------------------------
     var showAttr = el.getAttribute("xh-show");
     if (showAttr != null) {
       var sval = ctx.resolve(showAttr);
       el.style.display = sval ? "" : "none";
-      if (ctx instanceof MutableDataContext) {
+      if (isMutable) {
         (function(field, element, context) {
           trackSubscription(element, context, field, function() {
             var newVal = context.resolve(field);
@@ -546,7 +553,7 @@
     if (hideAttr != null) {
       var hdval = ctx.resolve(hideAttr);
       el.style.display = hdval ? "none" : "";
-      if (ctx instanceof MutableDataContext) {
+      if (isMutable) {
         (function(field, element, context) {
           trackSubscription(element, context, field, function() {
             var newVal = context.resolve(field);
@@ -581,7 +588,7 @@
     if (textAttr != null) {
       var tv = ctx.resolve(textAttr);
       el.textContent = tv != null ? String(tv) : "";
-      if (ctx instanceof MutableDataContext) {
+      if (isMutable) {
         (function(field, element, context) {
           trackSubscription(element, context, field, function() {
             var newVal = context.resolve(field);
@@ -600,7 +607,7 @@
         el.textContent = hv != null ? String(hv) : "";
       } else {
         el.innerHTML = hv != null ? String(hv) : "";
-        if (ctx instanceof MutableDataContext) {
+        if (isMutable) {
           (function(field, element, context) {
             trackSubscription(element, context, field, function() {
               var newVal = context.resolve(field);
@@ -621,7 +628,7 @@
         if (aval != null) {
           el.setAttribute(targetAttr, String(aval));
         }
-        if (ctx instanceof MutableDataContext) {
+        if (isMutable) {
           (function(field, tAttr, element, context) {
             trackSubscription(element, context, field, function() {
               var newVal = context.resolve(field);
@@ -639,7 +646,7 @@
         } else {
           el.classList.remove(className);
         }
-        if (ctx instanceof MutableDataContext) {
+        if (isMutable) {
           (function(field, clsName, element, context) {
             trackSubscription(element, context, field, function() {
               var newVal = context.resolve(field);
@@ -680,7 +687,7 @@
 
       // Live reactivity: when the user edits an xh-model input, call ctx.set()
       // Guard against duplicate listeners on reprocessing (reload/process)
-      if (ctx instanceof MutableDataContext && !el.hasAttribute("data-xh-model-bound")) {
+      if (isMutable && !el.hasAttribute("data-xh-model-bound")) {
         el.setAttribute("data-xh-model-bound", "");
         (function(field, element, context) {
           var eventName = (type === "checkbox" || type === "radio" || tag === "select") ? "change" : "input";
@@ -1452,14 +1459,16 @@
       }
     }
 
-    // Process xh-each first (top-level only, they handle their own children)
+    // Process xh-each first (top-level only, they handle their own children).
+    // Use a Set for O(1) nesting checks instead of O(n) parent walks.
+    var eachSet = new Set(eachEls);
     for (var i = 0; i < eachEls.length; i++) {
       if (!eachEls[i].parentNode) continue;
-      // Only process top-level xh-each (not nested inside another xh-each)
+      // Only process top-level xh-each — skip if any ancestor is also xh-each
       var isNested = false;
       var check = eachEls[i].parentNode;
       while (check && check !== container) {
-        if (check.hasAttribute && check.hasAttribute("xh-each")) {
+        if (eachSet.has(check)) {
           isNested = true;
           break;
         }
@@ -1585,6 +1594,9 @@
   // Validation
   // ---------------------------------------------------------------------------
 
+  // Cache compiled validation regexes by pattern string
+  var validationRegexCache = {};
+
   /**
    * Validate fields within the scope of an element.
    * Looks for [xh-validate] elements in the form or element scope and checks
@@ -1617,7 +1629,10 @@
 
       // xh-validate-pattern
       var pattern = field.getAttribute("xh-validate-pattern");
-      if (pattern && value && !new RegExp(pattern).test(value)) {
+      if (pattern && value) {
+        if (!validationRegexCache[pattern]) validationRegexCache[pattern] = new RegExp(pattern);
+      }
+      if (pattern && value && !validationRegexCache[pattern].test(value)) {
         error = customMsg || fieldName + " format is invalid";
       }
 
@@ -2929,33 +2944,41 @@
   var I18N_ATTR_SELECTOR = "[xh-i18n-placeholder],[xh-i18n-title],[xh-i18n-alt],[xh-i18n-label],[xh-i18n-aria-label]";
 
   function applyI18n(root) {
-    var els = root.querySelectorAll("[xh-i18n]");
-    for (var i = 0; i < els.length; i++) {
-      var key = els[i].getAttribute("xh-i18n");
-      var vars = els[i].getAttribute("xh-i18n-vars");
-      var parsedVars = null;
-      if (vars) {
-        try { parsedVars = JSON.parse(vars); } catch(e) { /* ignore */ }
-      }
-      els[i].textContent = i18n.t(key, parsedVars);
-    }
+    // Single combined selector for xh-i18n and common xh-i18n-{attr} elements
+    var selector = "[xh-i18n]," + I18N_ATTR_SELECTOR;
 
-    // xh-i18n-{attr} for attribute translations
-    // Fast path: use targeted selectors for common i18n attribute names
-    var targeted = root.querySelectorAll(I18N_ATTR_SELECTOR);
-    var seen = new Set();
-    for (var t = 0; t < targeted.length; t++) {
-      seen.add(targeted[t]);
-      applyI18nAttrs(targeted[t]);
-    }
-
-    // Slow path: scan for uncommon xh-i18n-* attributes
+    // Scan root for any uncommon xh-i18n-* attrs and add them to the selector
     var all = root.querySelectorAll("*");
-    for (var j = 0; j < all.length; j++) {
-      if (seen.has(all[j])) continue;
-      if (checkElementForI18nAttr(all[j])) {
-        applyI18nAttrs(all[j]);
+    var extraSels = {};
+    for (var s = 0; s < all.length; s++) {
+      if (checkElementForI18nAttr(all[s])) {
+        var attrs = all[s].attributes;
+        for (var a = 0; a < attrs.length; a++) {
+          if (attrs[a].name.indexOf("xh-i18n-") === 0 && attrs[a].name !== "xh-i18n-vars") {
+            extraSels["[" + attrs[a].name + "]"] = true;
+          }
+        }
       }
+    }
+    var extra = Object.keys(extraSels);
+    if (extra.length) selector += "," + extra.join(",");
+
+    // Single querySelectorAll pass
+    var els = root.querySelectorAll(selector);
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i];
+      // Handle xh-i18n (textContent translation)
+      var key = el.getAttribute("xh-i18n");
+      if (key) {
+        var vars = el.getAttribute("xh-i18n-vars");
+        var parsedVars = null;
+        if (vars) {
+          try { parsedVars = JSON.parse(vars); } catch(e) { /* ignore */ }
+        }
+        el.textContent = i18n.t(key, parsedVars);
+      }
+      // Handle xh-i18n-{attr} attribute translations
+      applyI18nAttrs(el);
     }
   }
 
