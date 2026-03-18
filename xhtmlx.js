@@ -1365,15 +1365,20 @@
    * @param {Element} processTarget – The container of new elements.
    */
   /**
-   * Mark all elements in a DocumentFragment as owned by xhtmlx so that
-   * MutationObserver skips them (they'll be processed via processNode
+   * Mark top-level element children in a DocumentFragment as owned by xhtmlx
+   * so that MutationObserver skips them (they'll be processed via processNode
    * with the correct data context instead of the root context).
+   *
+   * Only top-level children need marking because the MutationObserver receives
+   * them as addedNodes and checks data-xh-owned on each one directly.
    */
   function markFragmentOwned(fragment) {
-    if (!fragment || !fragment.querySelectorAll) return;
-    var els = fragment.querySelectorAll("*");
-    for (var i = 0; i < els.length; i++) {
-      els[i].setAttribute("data-xh-owned", "");
+    if (!fragment) return;
+    var children = fragment.childNodes;
+    for (var i = 0; i < children.length; i++) {
+      if (children[i].nodeType === 1 && children[i].setAttribute) {
+        children[i].setAttribute("data-xh-owned", "");
+      }
     }
   }
 
