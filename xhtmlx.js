@@ -2798,19 +2798,8 @@
    * @param {Element} el
    * @returns {boolean}
    */
-  // Comprehensive selector for checking if a subtree contains xh-* elements.
-  // Covers all known fixed-name xh-* attributes.
-  var XH_DETECT_SELECTOR = [
-    "[xh-get]", "[xh-post]", "[xh-put]", "[xh-delete]", "[xh-patch]",
-    "[xh-text]", "[xh-html]", "[xh-each]", "[xh-if]", "[xh-unless]",
-    "[xh-model]", "[xh-trigger]", "[xh-template]", "[xh-swap]", "[xh-target]",
-    "[xh-indicator]", "[xh-show]", "[xh-hide]", "[xh-boost]", "[xh-ws]",
-    "[xh-ws-send]", "[xh-push-url]", "[xh-replace-url]", "[xh-vals]",
-    "[xh-headers]", "[xh-cache]", "[xh-retry]", "[xh-validate]",
-    "[xh-error-template]", "[xh-error-boundary]", "[xh-error-target]",
-    "[xh-focus]", "[xh-disabled-class]", "[xh-i18n]", "[xh-router]",
-    "[xh-route]", "[xh-aria-live]", "[xh-track]", "[xh-track-view]"
-  ].join(",");
+  // Reuse the same compound selector for detection.
+  var XH_DETECT_SELECTOR = XH_KNOWN_SELECTOR;
 
   function hasXhAttributes(el) {
     // Skip nodes owned by xhtmlx (inserted via swap/render)
