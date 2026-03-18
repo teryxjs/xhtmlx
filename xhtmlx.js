@@ -705,6 +705,33 @@
   }
 
   /**
+   * Build a targeted CSS selector from a template element by inspecting its
+   * descendants once.  This covers all known xh-* attributes (via
+   * XH_KNOWN_SELECTOR) and any dynamic attributes (xh-on-*, xh-attr-*,
+   * xh-class-*, xh-i18n-*) that actually appear in the template.
+   * The result is reused for every clone, avoiding querySelectorAll("*").
+   *
+   * @param {Element} templateEl
+   * @returns {string}
+   */
+  function buildCloneSelector(templateEl) {
+    var dynamicAttrs = {};
+    var all = templateEl.querySelectorAll("*");
+    for (var i = 0; i < all.length; i++) {
+      var attrs = all[i].attributes;
+      for (var a = 0; a < attrs.length; a++) {
+        var name = attrs[a].name;
+        if (name.indexOf("xh-on-") === 0 || name.indexOf("xh-attr-") === 0 ||
+            name.indexOf("xh-class-") === 0 || name.indexOf("xh-i18n-") === 0) {
+          dynamicAttrs["[" + name + "]"] = true;
+        }
+      }
+    }
+    var extra = Object.keys(dynamicAttrs);
+    return extra.length ? XH_KNOWN_SELECTOR + "," + extra.join(",") : XH_KNOWN_SELECTOR;
+  }
+
+  /**
    * Process xh-each on an element. Clones the element for each item in the
    * array, applies bindings, and recursively processes each clone.
    *
@@ -731,6 +758,10 @@
     // re-trigger iteration.
     el.removeAttribute("xh-each");
 
+    // Pre-build a targeted selector from the template once, reused for all
+    // cloned items instead of querySelectorAll("*") per clone.
+    var cloneSelector = buildCloneSelector(el);
+
     var fragment = document.createDocumentFragment();
 
     var ItemCtxClass = (ctx instanceof MutableDataContext) ? MutableDataContext : DataContext;
@@ -752,7 +783,7 @@
       cloneState.processed = true;
       elementStates.set(clone, cloneState);
       // Single combined pass: bindings + REST triggers for all descendants
-      processEachCloneChildren(clone, itemCtx);
+      processEachCloneChildren(clone, itemCtx, cloneSelector);
       fragment.appendChild(clone);
     };
 
@@ -775,7 +806,7 @@
           clone.setAttribute("data-xh-each-item", "");
           var itemCtx = new ItemCtxClass(arr[b], ctx, b);
           applyBindings(clone, itemCtx);
-          processEachCloneChildren(clone, itemCtx);
+          processEachCloneChildren(clone, itemCtx, cloneSelector);
           batchFragment.appendChild(clone);
         }
         // Insert after the last inserted batch
@@ -811,9 +842,9 @@
    * @param {DataContext}  ctx
    */
   function processBindingsInTree(root, ctx) {
-    // Collect elements that need processing. We snapshot because DOM
-    // mutations (xh-each, xh-if) can modify the live list.
-    var elements = Array.prototype.slice.call(root.querySelectorAll("*"));
+    // Use a targeted selector instead of querySelectorAll("*") so we only
+    // visit elements that actually have xh-* attributes.
+    var elements = Array.prototype.slice.call(root.querySelectorAll(buildCloneSelector(root)));
     for (var i = 0; i < elements.length; i++) {
       var el = elements[i];
       // Skip if already detached from DOM
@@ -835,11 +866,13 @@
    * Merges processBindingsInTree + processNode into a single querySelectorAll
    * to avoid 2+ full DOM scans per cloned item.
    *
-   * @param {Element}     root – The cloned element.
-   * @param {DataContext}  ctx  – Per-item data context.
+   * @param {Element}     root     – The cloned element.
+   * @param {DataContext}  ctx      – Per-item data context.
+   * @param {string}      selector – Pre-built CSS selector targeting only
+   *                                 elements with xh-* attributes.
    */
-  function processEachCloneChildren(root, ctx) {
-    var elements = Array.prototype.slice.call(root.querySelectorAll("*"));
+  function processEachCloneChildren(root, ctx, selector) {
+    var elements = Array.prototype.slice.call(root.querySelectorAll(selector));
     for (var i = 0; i < elements.length; i++) {
       var el = elements[i];
       if (!el.parentNode) continue;
