@@ -107,6 +107,17 @@
   /** WeakMap<Element, PatchState> — binding state for DOM patching via render() */
   var patchStates = new WeakMap();
 
+  /** Shared frozen state for marking elements as processed (avoids per-element allocation) */
+  var PROCESSED_STATE = Object.freeze({ processed: true });
+
+  /** WeakSet tracking xh-each rendered items (replaces data-xh-each-item attribute) */
+  var eachItemSet = new WeakSet();
+
+  /** Binding type codes for compiled render plans */
+  var XH_IF = 0, XH_UNLESS = 1, XH_TEXT = 2, XH_HTML = 3,
+      XH_SHOW = 4, XH_HIDE = 5, XH_ATTR = 6, XH_CLASS = 7,
+      XH_ON = 8, XH_TRACK = 9, XH_TRACK_VIEW = 10, XH_UNKNOWN = 11;
+
   // ---------------------------------------------------------------------------
   // Default CSS injection
   // ---------------------------------------------------------------------------
@@ -883,6 +894,18 @@
   }
 
   /**
+   * Render a single plan-based xh-each item (top-level to avoid closure allocation).
+   */
+  function _renderPlanEachItem(item, idx, target, EachCtx, ctx, plan) {
+    var b = execElementPlan(plan, new EachCtx(item, ctx, idx));
+    if (b) {
+      eachItemSet.add(b);
+      elementStates.set(b, PROCESSED_STATE);
+      target.appendChild(b);
+    }
+  }
+
+  /**
    * Process xh-each on an element. Clones the element for each item in the
    * array, applies bindings, and recursively processes each clone.
    *
@@ -934,81 +957,78 @@
 
     var ItemCtxClass = (ctx instanceof MutableDataContext) ? MutableDataContext : DataContext;
 
-    var renderItem = function (item, idx, targetFragment) {
-      var itemCtx = new ItemCtxClass(item, ctx, idx);
-
-      // Plan-based path: build DOM directly (no cloneNode)
-      if (itemPlan) {
-        var built = execElementPlan(itemPlan, itemCtx);
-        if (built) {
-          built.setAttribute("data-xh-each-item", "");
-          var builtState = elementStates.get(built) || {};
-          builtState.processed = true;
-          elementStates.set(built, builtState);
-          targetFragment.appendChild(built);
+    if (itemPlan) {
+      // Plan-based fast path: no closure allocation for common (non-batch) case
+      if (arr.length > config.batchThreshold && typeof requestAnimationFrame === "function") {
+        var batchSize = config.batchThreshold;
+        for (var i = 0; i < Math.min(batchSize, arr.length); i++) {
+          _renderPlanEachItem(arr[i], i, fragment, ItemCtxClass, ctx, itemPlan);
         }
-        return;
+        parent.insertBefore(fragment, el);
+        var offset = batchSize;
+        function _planBatch() {
+          var bf = document.createDocumentFragment();
+          var end = Math.min(offset + batchSize, arr.length);
+          for (var b = offset; b < end; b++) {
+            _renderPlanEachItem(arr[b], b, bf, ItemCtxClass, ctx, itemPlan);
+          }
+          parent.appendChild(bf);
+          offset = end;
+          if (offset < arr.length) requestAnimationFrame(_planBatch);
+        }
+        if (offset < arr.length) requestAnimationFrame(_planBatch);
+        parent.removeChild(el);
+        return true;
       }
-
-      // Fallback: cloneNode path
-      var clone = el.cloneNode(true);
-      // Mark only the clone root — descendants are detected via closest()
-      clone.setAttribute("data-xh-each-item", "");
-      applyBindings(clone, itemCtx);
-      // Handle xh-on-* event handlers on the clone root itself
-      if (rootHasOn) {
-        for (var oa = 0; oa < clone.attributes.length; oa++) {
-          if (clone.attributes[oa].name.indexOf("xh-on-") === 0) {
-            attachOnHandler(clone, clone.attributes[oa].name.slice(6), clone.attributes[oa].value);
+      for (var j = 0; j < arr.length; j++) {
+        _renderPlanEachItem(arr[j], j, fragment, ItemCtxClass, ctx, itemPlan);
+      }
+    } else {
+      // Clone-based fallback path
+      var renderItem = function (item, idx, targetFragment) {
+        var itemCtx = new ItemCtxClass(item, ctx, idx);
+        var clone = el.cloneNode(true);
+        eachItemSet.add(clone);
+        applyBindings(clone, itemCtx);
+        if (rootHasOn) {
+          for (var oa = 0; oa < clone.attributes.length; oa++) {
+            if (clone.attributes[oa].name.indexOf("xh-on-") === 0) {
+              attachOnHandler(clone, clone.attributes[oa].name.slice(6), clone.attributes[oa].value);
+            }
           }
         }
-      }
-      // Mark clone root as processed to prevent re-processing by processNode
-      var cloneState = elementStates.get(clone) || {};
-      cloneState.processed = true;
-      elementStates.set(clone, cloneState);
-      // Process descendants: use compiled plan (fast) or full selector path
-      if (eachPlan) {
-        applyEachPlan(clone, itemCtx, eachPlan);
-      } else {
-        processEachCloneChildren(clone, itemCtx, cloneSelector);
-      }
-      targetFragment.appendChild(clone);
-    };
-
-    if (arr.length > config.batchThreshold && typeof requestAnimationFrame === "function") {
-      // Render first batch immediately (above-the-fold content)
-      var batchSize = config.batchThreshold;
-      for (var i = 0; i < Math.min(batchSize, arr.length); i++) {
-        renderItem(arr[i], i, fragment);
-      }
-      parent.insertBefore(fragment, el);
-
-      // Render remaining in chunks via rAF
-      var offset = batchSize;
-
-      function renderBatch() {
-        var batchFragment = document.createDocumentFragment();
-        var end = Math.min(offset + batchSize, arr.length);
-        for (var b = offset; b < end; b++) {
-          renderItem(arr[b], b, batchFragment);
+        elementStates.set(clone, PROCESSED_STATE);
+        if (eachPlan) {
+          applyEachPlan(clone, itemCtx, eachPlan);
+        } else {
+          processEachCloneChildren(clone, itemCtx, cloneSelector);
         }
-        // Insert after the last inserted batch
-        parent.appendChild(batchFragment);
-        offset = end;
-        if (offset < arr.length) {
-          requestAnimationFrame(renderBatch);
-        }
-      }
+        targetFragment.appendChild(clone);
+      };
 
-      if (offset < arr.length) {
-        requestAnimationFrame(renderBatch);
+      if (arr.length > config.batchThreshold && typeof requestAnimationFrame === "function") {
+        var batchSize2 = config.batchThreshold;
+        for (var i2 = 0; i2 < Math.min(batchSize2, arr.length); i2++) {
+          renderItem(arr[i2], i2, fragment);
+        }
+        parent.insertBefore(fragment, el);
+        var offset2 = batchSize2;
+        function renderBatch() {
+          var batchFragment = document.createDocumentFragment();
+          var end = Math.min(offset2 + batchSize2, arr.length);
+          for (var b2 = offset2; b2 < end; b2++) {
+            renderItem(arr[b2], b2, batchFragment);
+          }
+          parent.appendChild(batchFragment);
+          offset2 = end;
+          if (offset2 < arr.length) requestAnimationFrame(renderBatch);
+        }
+        if (offset2 < arr.length) requestAnimationFrame(renderBatch);
+        parent.removeChild(el);
+        return true;
       }
-      parent.removeChild(el);
-      return true;
-    } else {
-      for (var j = 0; j < arr.length; j++) {
-        renderItem(arr[j], j, fragment);
+      for (var j2 = 0; j2 < arr.length; j2++) {
+        renderItem(arr[j2], j2, fragment);
       }
     }
 
@@ -1667,7 +1687,7 @@
           if (config.cspSafe) {
             while (target.firstChild) target.removeChild(target.firstChild);
           } else {
-            target.innerHTML = "";
+            target.textContent = "";
           }
         }
         target.appendChild(fragment);
@@ -1725,7 +1745,7 @@
         if (config.cspSafe) {
           while (target.firstChild) target.removeChild(target.firstChild);
         } else {
-          target.innerHTML = "";
+          target.textContent = "";
         }
         target.appendChild(fragment);
         return target;
@@ -1764,6 +1784,28 @@
   }
 
   /**
+   * Encode an xh-* attribute name and value into the plan's numeric type code
+   * format (stride 3: [typeCode, arg1, arg2]).
+   */
+  function _pushXhCode(arr, name, value) {
+    switch (name) {
+      case "xh-if":         arr.push(XH_IF, value, 0); break;
+      case "xh-unless":     arr.push(XH_UNLESS, value, 0); break;
+      case "xh-text":       arr.push(XH_TEXT, value, 0); break;
+      case "xh-html":       arr.push(XH_HTML, value, 0); break;
+      case "xh-show":       arr.push(XH_SHOW, value, 0); break;
+      case "xh-hide":       arr.push(XH_HIDE, value, 0); break;
+      case "xh-track":      arr.push(XH_TRACK, value, 0); break;
+      case "xh-track-view": arr.push(XH_TRACK_VIEW, value, 0); break;
+      default:
+        if (name.indexOf("xh-attr-") === 0)  arr.push(XH_ATTR, name.slice(8), value);
+        else if (name.indexOf("xh-class-") === 0) arr.push(XH_CLASS, name.slice(9), value);
+        else if (name.indexOf("xh-on-") === 0)    arr.push(XH_ON, name.slice(6), value);
+        else arr.push(XH_UNKNOWN, name, value);
+    }
+  }
+
+  /**
    * Compile a single element (e.g. an xh-each template) into a plan node.
    * Returns a plan entry for that element including its children.
    */
@@ -1773,6 +1815,7 @@
       tag: el.tagName.toLowerCase(),
       attrs: null,
       xh: null,
+      skipCh: false,
       children: null
     };
     var attrs = el.attributes;
@@ -1782,7 +1825,7 @@
       var name = attrs[i].name;
       if (name.charCodeAt(0) === 120 && name.charCodeAt(1) === 104 && name.charCodeAt(2) === 45) {
         if (!xhAttrs) xhAttrs = [];
-        xhAttrs.push(name, attrs[i].value);
+        _pushXhCode(xhAttrs, name, attrs[i].value);
       } else {
         if (!staticAttrs) staticAttrs = [];
         staticAttrs.push(name, attrs[i].value);
@@ -1790,6 +1833,11 @@
     }
     entry.attrs = staticAttrs;
     entry.xh = xhAttrs;
+    if (xhAttrs) {
+      for (var sc = 0; sc < xhAttrs.length; sc += 3) {
+        if (xhAttrs[sc] === XH_TEXT || xhAttrs[sc] === XH_HTML) { entry.skipCh = true; break; }
+      }
+    }
     var children = [];
     _compilePlanChildren(el, children);
     entry.children = children.length ? children : null;
@@ -1827,6 +1875,7 @@
           tag: child.tagName.toLowerCase(),
           attrs: null,
           xh: null,
+          skipCh: false,
           children: null
         };
         var attrs = child.attributes;
@@ -1836,7 +1885,7 @@
           var name = attrs[i].name;
           if (name.charCodeAt(0) === 120 && name.charCodeAt(1) === 104 && name.charCodeAt(2) === 45) {
             if (!xhAttrs) xhAttrs = [];
-            xhAttrs.push(name, attrs[i].value);
+            _pushXhCode(xhAttrs, name, attrs[i].value);
           } else {
             if (!staticAttrs) staticAttrs = [];
             staticAttrs.push(name, attrs[i].value);
@@ -1844,6 +1893,11 @@
         }
         entry.attrs = staticAttrs;
         entry.xh = xhAttrs;
+        if (xhAttrs) {
+          for (var sc = 0; sc < xhAttrs.length; sc += 3) {
+            if (xhAttrs[sc] === XH_TEXT || xhAttrs[sc] === XH_HTML) { entry.skipCh = true; break; }
+          }
+        }
         var children = [];
         if (_compilePlanChildren(child, children) === false) return false;
         entry.children = children.length ? children : null;
@@ -1874,44 +1928,49 @@
    */
   function _applyPlanBindings(el, xh, ctx) {
     var hasUnknown = false;
-    for (var i = 0; i < xh.length; i += 2) {
-      var name = xh[i], field = xh[i + 1];
-      switch (name) {
-        case "xh-if":
-          if (!ctx.resolve(field)) return false;
+    var classes = null;
+    for (var i = 0; i < xh.length; i += 3) {
+      var type = xh[i], a1 = xh[i + 1], a2 = xh[i + 2];
+      switch (type) {
+        case 0: // XH_IF
+          if (!ctx.resolve(a1)) return false;
           break;
-        case "xh-unless":
-          if (ctx.resolve(field)) return false;
+        case 1: // XH_UNLESS
+          if (ctx.resolve(a1)) return false;
           break;
-        case "xh-text":
-          var tv = ctx.resolve(field);
+        case 2: // XH_TEXT
+          var tv = ctx.resolve(a1);
           el.textContent = tv != null ? (typeof tv === "string" ? tv : String(tv)) : "";
           break;
-        case "xh-html":
+        case 3: // XH_HTML
           if (!config.cspSafe) {
-            var hv = ctx.resolve(field);
+            var hv = ctx.resolve(a1);
             el.innerHTML = hv != null ? String(hv) : "";
           }
           break;
-        case "xh-show":
-          el.style.display = ctx.resolve(field) ? "" : "none";
+        case 4: // XH_SHOW
+          el.style.display = ctx.resolve(a1) ? "" : "none";
           break;
-        case "xh-hide":
-          el.style.display = ctx.resolve(field) ? "none" : "";
+        case 5: // XH_HIDE
+          el.style.display = ctx.resolve(a1) ? "none" : "";
+          break;
+        case 6: // XH_ATTR
+          var av = ctx.resolve(a2);
+          if (av != null) el.setAttribute(a1, String(av));
+          break;
+        case 7: // XH_CLASS
+          if (ctx.resolve(a2)) {
+            if (!classes) classes = [a1];
+            else classes.push(a1);
+          }
           break;
         default:
-          if (name.indexOf("xh-attr-") === 0) {
-            var av = ctx.resolve(field);
-            if (av != null) el.setAttribute(name.slice(8), String(av));
-          } else if (name.indexOf("xh-class-") === 0) {
-            if (ctx.resolve(field)) el.classList.add(name.slice(9));
-          } else {
-            // Unknown xh-* (xh-model, etc.) — set on DOM for compatibility
-            el.setAttribute(name, field);
-            hasUnknown = true;
-          }
+          // XH_UNKNOWN — set on DOM for compatibility
+          el.setAttribute(a1, a2);
+          hasUnknown = true;
       }
     }
+    if (classes) el.classList.add.apply(el.classList, classes);
     if (hasUnknown) applyBindings(el, ctx);
     return true;
   }
@@ -1922,13 +1981,14 @@
    */
   function executePlan(plan, ctx) {
     var frag = document.createDocumentFragment();
+    var isMutable = ctx instanceof MutableDataContext;
     for (var i = 0; i < plan.length; i++) {
-      _execPlanNode(frag, plan[i], ctx, false);
+      _execPlanNode(frag, plan[i], ctx, false, isMutable);
     }
     return frag;
   }
 
-  function _execPlanNode(parent, node, ctx, markProcessed) {
+  function _execPlanNode(parent, node, ctx, markProcessed, isMutable) {
     if (node.t === 2) { // static text
       parent.appendChild(document.createTextNode(node.v));
       return;
@@ -1942,49 +2002,39 @@
     if (node.t === 4) { // xh-each
       var arr = ctx.resolve(node.eachAttr);
       if (!Array.isArray(arr)) return;
-      var isMut = ctx instanceof MutableDataContext;
-      var EachCtx = isMut ? MutableDataContext : DataContext;
-      var renderPlanItem = function(item, idx, target) {
-        var ic = new EachCtx(item, ctx, idx);
-        var b = execElementPlan(node.itemPlan, ic);
-        if (b) {
-          b.setAttribute("data-xh-each-item", "");
-          elementStates.set(b, { processed: true });
-          target.appendChild(b);
-        }
-      };
+      var EachCtx = isMutable ? MutableDataContext : DataContext;
       if (arr.length > config.batchThreshold && typeof requestAnimationFrame === "function") {
         var batchSize = config.batchThreshold;
         for (var ei = 0; ei < Math.min(batchSize, arr.length); ei++) {
-          renderPlanItem(arr[ei], ei, parent);
+          _renderPlanEachItem(arr[ei], ei, parent, EachCtx, ctx, node.itemPlan);
         }
         var offset = batchSize;
         var parentRef = parent;
-        function _planBatch() {
+        var itemPlanRef = node.itemPlan;
+        function _planBatchInner() {
           var end = Math.min(offset + batchSize, arr.length);
           for (var rb = offset; rb < end; rb++) {
-            renderPlanItem(arr[rb], rb, parentRef);
+            _renderPlanEachItem(arr[rb], rb, parentRef, EachCtx, ctx, itemPlanRef);
           }
           offset = end;
-          if (offset < arr.length) requestAnimationFrame(_planBatch);
+          if (offset < arr.length) requestAnimationFrame(_planBatchInner);
         }
-        if (offset < arr.length) requestAnimationFrame(_planBatch);
+        if (offset < arr.length) requestAnimationFrame(_planBatchInner);
       } else {
         for (var ei2 = 0; ei2 < arr.length; ei2++) {
-          renderPlanItem(arr[ei2], ei2, parent);
+          _renderPlanEachItem(arr[ei2], ei2, parent, EachCtx, ctx, node.itemPlan);
         }
       }
       return;
     }
     // Element node (t === 1)
     var xh = node.xh;
-    var isMutable = ctx instanceof MutableDataContext;
 
     // Fast path: check xh-if/xh-unless BEFORE creating children or element attrs
     if (xh && !isMutable) {
-      for (var pre = 0; pre < xh.length; pre += 2) {
-        if (xh[pre] === "xh-if") { if (!ctx.resolve(xh[pre + 1])) return; }
-        else if (xh[pre] === "xh-unless") { if (ctx.resolve(xh[pre + 1])) return; }
+      for (var pre = 0; pre < xh.length; pre += 3) {
+        if (xh[pre] === XH_IF) { if (!ctx.resolve(xh[pre + 1])) return; }
+        else if (xh[pre] === XH_UNLESS) { if (ctx.resolve(xh[pre + 1])) return; }
       }
     }
 
@@ -2000,11 +2050,11 @@
         el.setAttribute(sa[i], attrVal);
       }
     }
-    // Create children (bindings like xh-text may overwrite them)
+    // Skip children if xh-text/xh-html will overwrite them
     var ch = node.children;
-    if (ch) {
+    if (ch && !node.skipCh) {
       for (var k = 0; k < ch.length; k++) {
-        _execPlanNode(el, ch[k], ctx, markProcessed);
+        _execPlanNode(el, ch[k], ctx, markProcessed, isMutable);
       }
     }
     // Apply bindings
@@ -2014,26 +2064,39 @@
         var kept = _applyPlanBindings(el, xh, ctx);
         if (kept === false) return;
       } else {
-        // Mutable path: set attrs on DOM for reactive subscriptions
-        for (var j = 0; j < xh.length; j += 2) {
-          el.setAttribute(xh[j], xh[j + 1]);
+        // Mutable path: reconstitute attrs on DOM for reactive subscriptions
+        for (var j = 0; j < xh.length; j += 3) {
+          switch (xh[j]) {
+            case XH_IF: el.setAttribute("xh-if", xh[j+1]); break;
+            case XH_UNLESS: el.setAttribute("xh-unless", xh[j+1]); break;
+            case XH_TEXT: el.setAttribute("xh-text", xh[j+1]); break;
+            case XH_HTML: el.setAttribute("xh-html", xh[j+1]); break;
+            case XH_SHOW: el.setAttribute("xh-show", xh[j+1]); break;
+            case XH_HIDE: el.setAttribute("xh-hide", xh[j+1]); break;
+            case XH_ATTR: el.setAttribute("xh-attr-" + xh[j+1], xh[j+2]); break;
+            case XH_CLASS: el.setAttribute("xh-class-" + xh[j+1], xh[j+2]); break;
+            case XH_ON: el.setAttribute("xh-on-" + xh[j+1], xh[j+2]); break;
+            case XH_TRACK: el.setAttribute("xh-track", xh[j+1]); break;
+            case XH_TRACK_VIEW: el.setAttribute("xh-track-view", xh[j+1]); break;
+            default: el.setAttribute(xh[j+1], xh[j+2]); break;
+          }
         }
         var kept2 = applyBindings(el, ctx);
         if (kept2 === false) return;
       }
       if (markProcessed) {
-        for (var m = 0; m < xh.length; m += 2) {
-          if (xh[m].indexOf("xh-on-") === 0) {
-            attachOnHandler(el, xh[m].slice(6), xh[m + 1]);
-          } else if (xh[m] === "xh-track") {
+        for (var m = 0; m < xh.length; m += 3) {
+          if (xh[m] === XH_ON) {
+            attachOnHandler(el, xh[m + 1], xh[m + 2]);
+          } else if (xh[m] === XH_TRACK) {
             el.setAttribute("xh-track", xh[m + 1]);
             setupTrack(el, ctx);
-          } else if (xh[m] === "xh-track-view") {
+          } else if (xh[m] === XH_TRACK_VIEW) {
             el.setAttribute("xh-track-view", xh[m + 1]);
             setupTrackView(el, ctx);
           }
         }
-        elementStates.set(el, { processed: true });
+        elementStates.set(el, PROCESSED_STATE);
       }
     }
     parent.appendChild(el);
@@ -2049,9 +2112,9 @@
 
     // Fast path: check xh-if/xh-unless BEFORE creating element or children
     if (xh && !isMutable) {
-      for (var pre = 0; pre < xh.length; pre += 2) {
-        if (xh[pre] === "xh-if") { if (!ctx.resolve(xh[pre + 1])) return null; }
-        else if (xh[pre] === "xh-unless") { if (ctx.resolve(xh[pre + 1])) return null; }
+      for (var pre = 0; pre < xh.length; pre += 3) {
+        if (xh[pre] === XH_IF) { if (!ctx.resolve(xh[pre + 1])) return null; }
+        else if (xh[pre] === XH_UNLESS) { if (ctx.resolve(xh[pre + 1])) return null; }
       }
     }
 
@@ -2067,12 +2130,12 @@
         el.setAttribute(sa[i], attrVal);
       }
     }
-    // Create children (bindings like xh-text may overwrite them)
+    // Skip children if xh-text/xh-html will overwrite them
     // markProcessed=true because xh-each items must not be re-processed by processNode
     var ch = plan.children;
-    if (ch) {
+    if (ch && !plan.skipCh) {
       for (var k = 0; k < ch.length; k++) {
-        _execPlanNode(el, ch[k], ctx, true);
+        _execPlanNode(el, ch[k], ctx, true, isMutable);
       }
     }
     // Apply bindings
@@ -2081,8 +2144,22 @@
         var kept = _applyPlanBindings(el, xh, ctx);
         if (kept === false) return null;
       } else {
-        for (var j = 0; j < xh.length; j += 2) {
-          el.setAttribute(xh[j], xh[j + 1]);
+        // Mutable path: reconstitute attrs on DOM for reactive subscriptions
+        for (var j = 0; j < xh.length; j += 3) {
+          switch (xh[j]) {
+            case XH_IF: el.setAttribute("xh-if", xh[j+1]); break;
+            case XH_UNLESS: el.setAttribute("xh-unless", xh[j+1]); break;
+            case XH_TEXT: el.setAttribute("xh-text", xh[j+1]); break;
+            case XH_HTML: el.setAttribute("xh-html", xh[j+1]); break;
+            case XH_SHOW: el.setAttribute("xh-show", xh[j+1]); break;
+            case XH_HIDE: el.setAttribute("xh-hide", xh[j+1]); break;
+            case XH_ATTR: el.setAttribute("xh-attr-" + xh[j+1], xh[j+2]); break;
+            case XH_CLASS: el.setAttribute("xh-class-" + xh[j+1], xh[j+2]); break;
+            case XH_ON: el.setAttribute("xh-on-" + xh[j+1], xh[j+2]); break;
+            case XH_TRACK: el.setAttribute("xh-track", xh[j+1]); break;
+            case XH_TRACK_VIEW: el.setAttribute("xh-track-view", xh[j+1]); break;
+            default: el.setAttribute(xh[j+1], xh[j+2]); break;
+          }
         }
         var kept2 = applyBindings(el, ctx);
         if (kept2 === false) return null;
@@ -2223,8 +2300,14 @@
       if (!bindEls[j].parentNode) continue;
       if (hasRest && getRestVerb(bindEls[j])) continue;
       if (hasEach) {
-        if (bindEls[j].closest && bindEls[j].closest("[data-xh-each-item]")) continue;
-        if (!bindEls[j].closest && bindEls[j].hasAttribute("data-xh-each-item")) continue;
+        // Walk up to check if inside an xh-each item (WeakSet replaces DOM attribute)
+        var inEach = false;
+        var p = bindEls[j];
+        while (p && p !== container) {
+          if (eachItemSet.has(p)) { inEach = true; break; }
+          p = p.parentNode;
+        }
+        if (inEach) continue;
       }
       applyBindings(bindEls[j], ctx);
     }
