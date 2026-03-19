@@ -775,17 +775,22 @@
 
     // xh-class-*
     if (classPairs) {
+      var toAdd = null, toRemove = null;
       for (var c = 0; c < classPairs.length; c += 2) {
         var cval = ctx.resolve(classPairs[c + 1]);
         if (cval) {
-          el.classList.add(classPairs[c]);
+          if (!toAdd) toAdd = [];
+          toAdd.push(classPairs[c]);
         } else {
-          el.classList.remove(classPairs[c]);
+          if (!toRemove) toRemove = [];
+          toRemove.push(classPairs[c]);
         }
         if (isMutable) {
           bindClassSubscription(el, ctx, classPairs[c + 1], classPairs[c]);
         }
       }
+      if (toAdd) el.classList.add.apply(el.classList, toAdd);
+      if (toRemove) el.classList.remove.apply(el.classList, toRemove);
     }
 
     // xh-model
@@ -1754,7 +1759,7 @@
    */
   function compileRenderPlan(parent) {
     var plan = [];
-    _compilePlanChildren(parent, plan);
+    if (_compilePlanChildren(parent, plan) === false) return null;
     return plan;
   }
 
@@ -1791,10 +1796,32 @@
     return entry;
   }
 
+  /**
+   * @returns {boolean} true on success, false if plan can't be compiled
+   *                    (e.g. xh-each with nested xh-each or REST verbs).
+   */
   function _compilePlanChildren(parent, planArr) {
     var child = parent.firstChild;
     while (child) {
       if (child.nodeType === 1) { // Element
+        // xh-each: compile as a special plan node (t: 4)
+        if (child.hasAttribute("xh-each")) {
+          // Check if root has xh-on-* handlers (can't be plan-compiled)
+          var hasXhOn = false;
+          for (var chk = 0; chk < child.attributes.length; chk++) {
+            if (child.attributes[chk].name.indexOf("xh-on-") === 0) { hasXhOn = true; break; }
+          }
+          // Clone to avoid mutating the prototype, remove xh-each, check eligibility
+          var cloneForPlan = child.cloneNode(true);
+          cloneForPlan.removeAttribute("xh-each");
+          var eachP = compileEachPlan(cloneForPlan);
+          if (!eachP || hasXhOn) return false; // Can't compile — bail out
+          var itemPlan = compileElementPlan(cloneForPlan);
+          planArr.push({ t: 4, eachAttr: child.getAttribute("xh-each"), itemPlan: itemPlan });
+          child = child.nextSibling;
+          continue;
+        }
+
         var entry = {
           t: 1, // element
           tag: child.tagName.toLowerCase(),
@@ -1818,7 +1845,7 @@
         entry.attrs = staticAttrs;
         entry.xh = xhAttrs;
         var children = [];
-        _compilePlanChildren(child, children);
+        if (_compilePlanChildren(child, children) === false) return false;
         entry.children = children.length ? children : null;
         planArr.push(entry);
       } else if (child.nodeType === 3) { // Text
@@ -1831,6 +1858,62 @@
       }
       child = child.nextSibling;
     }
+    return true;
+  }
+
+  /**
+   * Apply bindings directly from a plan's xh array, bypassing the DOM
+   * setAttribute → applyBindings round-trip. Only used for immutable
+   * (non-MutableDataContext) contexts where no reactive subscriptions are
+   * needed.
+   *
+   * @param {Element}    el  – The freshly created element.
+   * @param {string[]}   xh  – Flat array of [name, value, name, value, ...].
+   * @param {DataContext} ctx – The (immutable) data context.
+   * @returns {boolean}  false if element was removed (xh-if/xh-unless), true otherwise.
+   */
+  function _applyPlanBindings(el, xh, ctx) {
+    var hasUnknown = false;
+    for (var i = 0; i < xh.length; i += 2) {
+      var name = xh[i], field = xh[i + 1];
+      switch (name) {
+        case "xh-if":
+          if (!ctx.resolve(field)) return false;
+          break;
+        case "xh-unless":
+          if (ctx.resolve(field)) return false;
+          break;
+        case "xh-text":
+          var tv = ctx.resolve(field);
+          el.textContent = tv != null ? (typeof tv === "string" ? tv : String(tv)) : "";
+          break;
+        case "xh-html":
+          if (!config.cspSafe) {
+            var hv = ctx.resolve(field);
+            el.innerHTML = hv != null ? String(hv) : "";
+          }
+          break;
+        case "xh-show":
+          el.style.display = ctx.resolve(field) ? "" : "none";
+          break;
+        case "xh-hide":
+          el.style.display = ctx.resolve(field) ? "none" : "";
+          break;
+        default:
+          if (name.indexOf("xh-attr-") === 0) {
+            var av = ctx.resolve(field);
+            if (av != null) el.setAttribute(name.slice(8), String(av));
+          } else if (name.indexOf("xh-class-") === 0) {
+            if (ctx.resolve(field)) el.classList.add(name.slice(9));
+          } else {
+            // Unknown xh-* (xh-model, etc.) — set on DOM for compatibility
+            el.setAttribute(name, field);
+            hasUnknown = true;
+          }
+      }
+    }
+    if (hasUnknown) applyBindings(el, ctx);
+    return true;
   }
 
   /**
@@ -1856,7 +1939,55 @@
       parent.appendChild(tnode);
       return;
     }
+    if (node.t === 4) { // xh-each
+      var arr = ctx.resolve(node.eachAttr);
+      if (!Array.isArray(arr)) return;
+      var isMut = ctx instanceof MutableDataContext;
+      var EachCtx = isMut ? MutableDataContext : DataContext;
+      var renderPlanItem = function(item, idx, target) {
+        var ic = new EachCtx(item, ctx, idx);
+        var b = execElementPlan(node.itemPlan, ic);
+        if (b) {
+          b.setAttribute("data-xh-each-item", "");
+          elementStates.set(b, { processed: true });
+          target.appendChild(b);
+        }
+      };
+      if (arr.length > config.batchThreshold && typeof requestAnimationFrame === "function") {
+        var batchSize = config.batchThreshold;
+        for (var ei = 0; ei < Math.min(batchSize, arr.length); ei++) {
+          renderPlanItem(arr[ei], ei, parent);
+        }
+        var offset = batchSize;
+        var parentRef = parent;
+        function _planBatch() {
+          var end = Math.min(offset + batchSize, arr.length);
+          for (var rb = offset; rb < end; rb++) {
+            renderPlanItem(arr[rb], rb, parentRef);
+          }
+          offset = end;
+          if (offset < arr.length) requestAnimationFrame(_planBatch);
+        }
+        if (offset < arr.length) requestAnimationFrame(_planBatch);
+      } else {
+        for (var ei2 = 0; ei2 < arr.length; ei2++) {
+          renderPlanItem(arr[ei2], ei2, parent);
+        }
+      }
+      return;
+    }
     // Element node (t === 1)
+    var xh = node.xh;
+    var isMutable = ctx instanceof MutableDataContext;
+
+    // Fast path: check xh-if/xh-unless BEFORE creating children or element attrs
+    if (xh && !isMutable) {
+      for (var pre = 0; pre < xh.length; pre += 2) {
+        if (xh[pre] === "xh-if") { if (!ctx.resolve(xh[pre + 1])) return; }
+        else if (xh[pre] === "xh-unless") { if (ctx.resolve(xh[pre + 1])) return; }
+      }
+    }
+
     var el = document.createElement(node.tag);
     // Set static attributes
     var sa = node.attrs;
@@ -1869,34 +2000,40 @@
         el.setAttribute(sa[i], attrVal);
       }
     }
-    // Create children FIRST (bindings like xh-text may overwrite them)
+    // Create children (bindings like xh-text may overwrite them)
     var ch = node.children;
     if (ch) {
       for (var k = 0; k < ch.length; k++) {
         _execPlanNode(el, ch[k], ctx, markProcessed);
       }
     }
-    // Set xh-* attributes and apply bindings AFTER children exist
-    var xh = node.xh;
+    // Apply bindings
     if (xh) {
-      for (var j = 0; j < xh.length; j += 2) {
-        el.setAttribute(xh[j], xh[j + 1]);
+      if (!isMutable) {
+        // Fast path: apply bindings directly from plan array (no DOM round-trip)
+        var kept = _applyPlanBindings(el, xh, ctx);
+        if (kept === false) return;
+      } else {
+        // Mutable path: set attrs on DOM for reactive subscriptions
+        for (var j = 0; j < xh.length; j += 2) {
+          el.setAttribute(xh[j], xh[j + 1]);
+        }
+        var kept2 = applyBindings(el, ctx);
+        if (kept2 === false) return;
       }
-      var kept = applyBindings(el, ctx);
-      if (kept === false) return; // xh-if/xh-unless removed it
-      // When used from xh-each, also handle event handlers and analytics
-      // since processNode won't run on these elements
       if (markProcessed) {
         for (var m = 0; m < xh.length; m += 2) {
           if (xh[m].indexOf("xh-on-") === 0) {
             attachOnHandler(el, xh[m].slice(6), xh[m + 1]);
+          } else if (xh[m] === "xh-track") {
+            el.setAttribute("xh-track", xh[m + 1]);
+            setupTrack(el, ctx);
+          } else if (xh[m] === "xh-track-view") {
+            el.setAttribute("xh-track-view", xh[m + 1]);
+            setupTrackView(el, ctx);
           }
         }
-        if (el.hasAttribute("xh-track")) setupTrack(el, ctx);
-        if (el.hasAttribute("xh-track-view")) setupTrackView(el, ctx);
-        var es = elementStates.get(el) || {};
-        es.processed = true;
-        elementStates.set(el, es);
+        elementStates.set(el, { processed: true });
       }
     }
     parent.appendChild(el);
@@ -1907,6 +2044,17 @@
    * Used for xh-each item rendering.
    */
   function execElementPlan(plan, ctx) {
+    var xh = plan.xh;
+    var isMutable = ctx instanceof MutableDataContext;
+
+    // Fast path: check xh-if/xh-unless BEFORE creating element or children
+    if (xh && !isMutable) {
+      for (var pre = 0; pre < xh.length; pre += 2) {
+        if (xh[pre] === "xh-if") { if (!ctx.resolve(xh[pre + 1])) return null; }
+        else if (xh[pre] === "xh-unless") { if (ctx.resolve(xh[pre + 1])) return null; }
+      }
+    }
+
     var el = document.createElement(plan.tag);
     // Set static attributes
     var sa = plan.attrs;
@@ -1919,7 +2067,7 @@
         el.setAttribute(sa[i], attrVal);
       }
     }
-    // Create children FIRST (bindings like xh-text may overwrite them)
+    // Create children (bindings like xh-text may overwrite them)
     // markProcessed=true because xh-each items must not be re-processed by processNode
     var ch = plan.children;
     if (ch) {
@@ -1927,14 +2075,18 @@
         _execPlanNode(el, ch[k], ctx, true);
       }
     }
-    // Set xh-* attributes and apply bindings AFTER children exist
-    var xh = plan.xh;
+    // Apply bindings
     if (xh) {
-      for (var j = 0; j < xh.length; j += 2) {
-        el.setAttribute(xh[j], xh[j + 1]);
+      if (!isMutable) {
+        var kept = _applyPlanBindings(el, xh, ctx);
+        if (kept === false) return null;
+      } else {
+        for (var j = 0; j < xh.length; j += 2) {
+          el.setAttribute(xh[j], xh[j + 1]);
+        }
+        var kept2 = applyBindings(el, ctx);
+        if (kept2 === false) return null;
       }
-      var kept = applyBindings(el, ctx);
-      if (kept === false) return null; // xh-if/xh-unless removed it
     }
     return el;
   }
@@ -2006,8 +2158,9 @@
       hasEach = analysis.hasEach;
       hasRest = analysis.hasRest;
 
-      // Compile a render plan for simple templates (no xh-each, no REST)
-      var plan = (!hasEach && !hasRest) ? compileRenderPlan(container) : null;
+      // Compile a render plan (supports xh-each; bails out for REST verbs
+      // or complex xh-each that can't be plan-compiled)
+      var plan = !hasRest ? compileRenderPlan(container) : null;
 
       // Cache the pristine prototype before any data-dependent mutations
       if (renderFragmentCache.size >= RENDER_FRAGMENT_CACHE_MAX) {
