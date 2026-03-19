@@ -150,21 +150,21 @@
   DataContext.prototype.resolve = function (path) {
     if (path == null || path === "") return undefined;
 
-    // -- transform pipe support: "price | currency" --------------------------
-    if (path.indexOf(" | ") !== -1) {
-      var pipeParts = path.split(" | ");
-      var rawValue = this.resolve(pipeParts[0].trim());
-      for (var p = 1; p < pipeParts.length; p++) {
-        var transformName = pipeParts[p].trim();
-        if (transforms[transformName]) {
-          rawValue = transforms[transformName](rawValue);
-        }
-      }
-      return rawValue;
-    }
-
     var parts = pathSplitCache.get(path);
     if (!parts) {
+      // -- transform pipe support: "price | currency" --------------------------
+      // Check for pipes only on cache miss (pipe paths won't be dot-split cached)
+      if (path.indexOf(" | ") !== -1) {
+        var pipeParts = path.split(" | ");
+        var rawValue = this.resolve(pipeParts[0].trim());
+        for (var p = 1; p < pipeParts.length; p++) {
+          var transformName = pipeParts[p].trim();
+          if (transforms[transformName]) {
+            rawValue = transforms[transformName](rawValue);
+          }
+        }
+        return rawValue;
+      }
       if (pathSplitCache.size >= PATH_SPLIT_CACHE_MAX) {
         // Evict oldest half instead of flushing entire cache
         var toDelete = PATH_SPLIT_CACHE_MAX >> 1;
@@ -261,8 +261,13 @@
    * @returns {*}
    */
   function resolveDot(obj, parts, startIdx) {
+    var start = startIdx || 0;
+    // Fast path for single-key lookups (most common case)
+    if (parts.length - start === 1) {
+      return obj != null && typeof obj === "object" && parts[start] in obj ? obj[parts[start]] : undefined;
+    }
     var cur = obj;
-    for (var i = startIdx || 0; i < parts.length; i++) {
+    for (var i = start; i < parts.length; i++) {
       if (cur == null || typeof cur !== "object") return undefined;
       if (!(parts[i] in cur)) return undefined;
       cur = cur[parts[i]];
@@ -297,7 +302,11 @@
    * @param {*}      value – The new value.
    */
   MutableDataContext.prototype.set = function(path, value) {
-    var parts = path.split(".");
+    var parts = pathSplitCache.get(path);
+    if (!parts) {
+      parts = path.split(".");
+      pathSplitCache.set(path, parts);
+    }
     var obj = this.data;
     for (var i = 0; i < parts.length - 1; i++) {
       if (obj[parts[i]] == null) obj[parts[i]] = {};
@@ -357,6 +366,7 @@
    * @returns {string}
    */
   function interpolate(str, ctx, uriEnc) {
+    if (str.indexOf("{{") === -1) return str;
     return str.replace(INTERP_RE, function (_match, path) {
       var val = ctx.resolve(path.trim());
       if (val === undefined) {
@@ -384,6 +394,7 @@
     while (walker.nextNode()) {
       var node = walker.currentNode;
       var original = node.nodeValue;
+      if (original.indexOf("{{") === -1) continue;
       var replaced = interpolate(original, ctx, false);
       if (replaced !== original) node.nodeValue = replaced;
     }
@@ -392,13 +403,18 @@
     var elements = root.querySelectorAll("*");
     for (var e = 0; e < elements.length; e++) {
       var attrs = elements[e].attributes;
+      var hasInterp = false;
       for (var a = 0; a < attrs.length; a++) {
-        var name = attrs[a].name;
-        // Skip xh-* attributes — they are processed by directives/executeRequest
+        if (attrs[a].value.indexOf("{{") !== -1) { hasInterp = true; break; }
+      }
+      if (!hasInterp) continue;
+      for (var a2 = 0; a2 < attrs.length; a2++) {
+        var name = attrs[a2].name;
         if (name.indexOf("xh-") === 0) continue;
-        var origAttr = attrs[a].value;
+        var origAttr = attrs[a2].value;
+        if (origAttr.indexOf("{{") === -1) continue;
         var replacedAttr = interpolate(origAttr, ctx, false);
-        if (replacedAttr !== origAttr) attrs[a].value = replacedAttr;
+        if (replacedAttr !== origAttr) attrs[a2].value = replacedAttr;
       }
     }
   }
@@ -492,6 +508,7 @@
   // ---------------------------------------------------------------------------
 
   var REST_VERBS = ["xh-get", "xh-post", "xh-put", "xh-delete", "xh-patch"];
+  var VERB_MAP = {"xh-get":"GET","xh-post":"POST","xh-put":"PUT","xh-delete":"DELETE","xh-patch":"PATCH"};
 
   /**
    * Returns the REST verb attribute on an element, if any.
@@ -502,8 +519,7 @@
     for (var i = 0; i < REST_VERBS.length; i++) {
       var url = el.getAttribute(REST_VERBS[i]);
       if (url != null) {
-        var method = REST_VERBS[i].replace("xh-", "").toUpperCase();
-        return { verb: method, url: url };
+        return { verb: VERB_MAP[REST_VERBS[i]], url: url };
       }
     }
     return null;
@@ -721,7 +737,8 @@
    * @returns {string}
    */
   function buildCloneSelector(templateEl) {
-    var dynamicAttrs = {};
+    var localDynamic = {};
+    var needRebuild = false;
     var all = templateEl.querySelectorAll("*");
     for (var i = 0; i < all.length; i++) {
       var attrs = all[i].attributes;
@@ -729,11 +746,18 @@
         var name = attrs[a].name;
         if (name.indexOf("xh-on-") === 0 || name.indexOf("xh-attr-") === 0 ||
             name.indexOf("xh-class-") === 0 || name.indexOf("xh-i18n-") === 0) {
-          dynamicAttrs["[" + name + "]"] = true;
+          var sel = "[" + name + "]";
+          localDynamic[sel] = true;
+          // Track globally so MutationObserver detect selector stays current
+          if (!dynamicAttrSelectors[sel]) {
+            dynamicAttrSelectors[sel] = true;
+            needRebuild = true;
+          }
         }
       }
     }
-    var extra = Object.keys(dynamicAttrs);
+    if (needRebuild) rebuildDetectSelector();
+    var extra = Object.keys(localDynamic);
     return extra.length ? XH_KNOWN_SELECTOR + "," + extra.join(",") : XH_KNOWN_SELECTOR;
   }
 
@@ -1169,23 +1193,23 @@
   function resolveErrorTemplate(el, status) {
     // 1. exact code on element
     var exact = el.getAttribute("xh-error-template-" + status);
-    if (exact) return exact;
+    if (exact) return { template: exact, boundary: null };
 
     // 2. class (4xx, 5xx) on element
     var cls = Math.floor(status / 100) + "xx";
     var classAttr = el.getAttribute("xh-error-template-" + cls);
-    if (classAttr) return classAttr;
+    if (classAttr) return { template: classAttr, boundary: null };
 
     // 3. generic on element
     var generic = el.getAttribute("xh-error-template");
-    if (generic) return generic;
+    if (generic) return { template: generic, boundary: null };
 
     // 4. nearest ancestor xh-error-boundary
     var boundary = findErrorBoundary(el, status);
-    if (boundary) return boundary.template;
+    if (boundary) return { template: boundary.template, boundary: boundary };
 
     // 5. global config
-    if (config.defaultErrorTemplate) return config.defaultErrorTemplate;
+    if (config.defaultErrorTemplate) return { template: config.defaultErrorTemplate, boundary: null };
 
     return null;
   }
@@ -1226,7 +1250,7 @@
    * @param {boolean} isError     – Whether this is an error swap.
    * @returns {Element}
    */
-  function getSwapTarget(el, isError, status) {
+  function getSwapTarget(el, isError, status, cachedBoundary) {
     var sel;
     if (isError) {
       // 1. Element-level xh-error-target
@@ -1236,18 +1260,16 @@
         if (t) return t;
       }
 
-      // 2. Error boundary target
-      if (status) {
-        var boundary = findErrorBoundary(el, status);
-        if (boundary) {
-          var bTarget = boundary.boundaryEl.getAttribute("xh-error-target");
-          if (bTarget) {
-            var bt = document.querySelector(bTarget);
-            if (bt) return bt;
-          }
-          // If boundary has no xh-error-target, swap into the boundary itself
-          return boundary.boundaryEl;
+      // 2. Error boundary target (use cached boundary to avoid redundant DOM walk)
+      var boundary = cachedBoundary !== undefined ? cachedBoundary : (status ? findErrorBoundary(el, status) : null);
+      if (boundary) {
+        var bTarget = boundary.boundaryEl.getAttribute("xh-error-target");
+        if (bTarget) {
+          var bt = document.querySelector(bTarget);
+          if (bt) return bt;
         }
+        // If boundary has no xh-error-target, swap into the boundary itself
+        return boundary.boundaryEl;
       }
 
       // 3. Global config error target
@@ -1278,9 +1300,12 @@
    * about to be removed from the DOM.
    * @param {Element} container
    */
+  // Selector targeting elements likely to have cleanup state (REST verbs, WS, intervals)
+  var CLEANUP_SELECTOR = "[xh-get],[xh-post],[xh-put],[xh-delete],[xh-patch],[xh-ws],[xh-model]";
+
   function cleanupBeforeSwap(container, includeContainer) {
-    // Clean up elements inside the container
-    var all = container.querySelectorAll("*");
+    // Only visit elements likely to have intervals/observers/ws state
+    var all = container.querySelectorAll(CLEANUP_SELECTOR);
     for (var i = 0; i < all.length; i++) {
       cleanupElement(all[i]);
     }
@@ -1523,11 +1548,18 @@
 
   function applySettleClasses(processTarget) {
     if (!processTarget) return;
-    var newEls = processTarget.querySelectorAll ? Array.prototype.slice.call(processTarget.querySelectorAll("*")) : [];
-    if (processTarget.classList) newEls.unshift(processTarget);
+    // Only apply settle classes to the target and its direct children,
+    // not every descendant — CSS transitions typically target top-level elements.
+    var newEls = [];
+    if (processTarget.classList) newEls.push(processTarget);
+    if (processTarget.children) {
+      for (var c = 0; c < processTarget.children.length; c++) {
+        newEls.push(processTarget.children[c]);
+      }
+    }
 
     for (var se = 0; se < newEls.length; se++) {
-      if (newEls[se].classList) newEls[se].classList.add("xh-added");
+      newEls[se].classList.add("xh-added");
     }
 
     var raf = typeof requestAnimationFrame === "function" ? requestAnimationFrame : function(fn) { setTimeout(fn, 16); };
@@ -1976,20 +2008,21 @@
     // Emit xh:responseError
     emitEvent(el, "xh:responseError", errorData, false);
 
-    // Resolve error template
-    var errorTemplateUrl = resolveErrorTemplate(el, status);
+    // Resolve error template (returns {template, boundary} or null)
+    var errorResult = resolveErrorTemplate(el, status);
 
-    if (!errorTemplateUrl) {
+    if (!errorResult) {
       // No error template — just add error class
       el.classList.add(config.errorClass);
       return;
     }
 
     // Fetch and render error template
-    fetchTemplate(errorTemplateUrl)
+    fetchTemplate(errorResult.template)
       .then(function (html) {
         var fragment = renderTemplate(html, errorCtx);
-        var errorTarget = getSwapTarget(el, true, status);
+        // Pass cached boundary to avoid redundant DOM walk
+        var errorTarget = getSwapTarget(el, true, status, errorResult.boundary);
         var swapMode = el.getAttribute("xh-swap") || config.defaultSwapMode;
 
         var swapAllowed = emitEvent(el, "xh:beforeSwap", {
@@ -2060,6 +2093,7 @@
   // Global resize handler — single listener delegates to all registered elements
   // ---------------------------------------------------------------------------
   var resizeElements = [];
+  var resizeElementSet = new WeakSet();
   var resizeGlobalTimer = null;
   var resizeGlobalDelay = 300;
   var resizeListenerAttached = false;
@@ -2080,10 +2114,9 @@
   }
 
   function registerResizeElement(el, ctx, templateStack, delay) {
-    // Prevent duplicates when elements are reprocessed
-    for (var i = 0; i < resizeElements.length; i++) {
-      if (resizeElements[i].el === el) return;
-    }
+    // Prevent duplicates with O(1) check
+    if (resizeElementSet.has(el)) return;
+    resizeElementSet.add(el);
     resizeElements.push({ el: el, ctx: ctx, templateStack: templateStack });
     if (delay < resizeGlobalDelay) resizeGlobalDelay = delay;
     if (!resizeListenerAttached && typeof window !== "undefined") {
@@ -2359,6 +2392,7 @@
           jsonData = JSON.parse(text);
         } catch(e) {
           // If not JSON, treat as HTML and swap directly
+          cleanupBeforeSwap(target, false);
           target.innerHTML = text;
           processNode(target, ctx, []);
           return;
@@ -2368,6 +2402,7 @@
         if (templateUrl) {
           fetchTemplate(templateUrl).then(function(html) {
             var fragment = renderTemplate(html, childCtx);
+            cleanupBeforeSwap(target, false);
             target.innerHTML = "";
             target.appendChild(fragment);
             processNode(target, childCtx, []);
@@ -2420,6 +2455,7 @@
         if (templateUrl) {
           fetchTemplate(templateUrl).then(function(html) {
             var fragment = renderTemplate(html, childCtx);
+            cleanupBeforeSwap(target, false);
             target.innerHTML = "";
             target.appendChild(fragment);
             processNode(target, childCtx, []);
@@ -2627,14 +2663,26 @@
 
   /**
    * Gather elements that have xh-* attributes within a root node.
-   * Uses buildCloneSelector to create a targeted compound CSS selector
-   * covering both known and dynamic attributes (xh-attr-*, xh-on-*,
-   * xh-class-*, xh-i18n-*), replacing the old querySelectorAll("*") fallback.
+   * Single-pass: queries with XH_KNOWN_SELECTOR first, then scans results
+   * for dynamic attrs to avoid a separate buildCloneSelector scan.
    * @param {Element} root
    * @returns {Element[]}
    */
   function gatherXhElements(root) {
-    return Array.prototype.slice.call(root.querySelectorAll(buildCloneSelector(root)));
+    // Use the known selector plus any dynamic attrs previously discovered
+    // by buildCloneSelector (tracked in dynamicAttrSelectors).
+    var extra = Object.keys(dynamicAttrSelectors);
+    var selector = extra.length ? XH_KNOWN_SELECTOR + "," + extra.join(",") : XH_KNOWN_SELECTOR;
+
+    // Fast check: if the subtree may contain undiscovered dynamic attrs,
+    // do a one-time broader scan via buildCloneSelector to discover them.
+    var html = root.innerHTML;
+    if (html && (html.indexOf("xh-on-") !== -1 || html.indexOf("xh-attr-") !== -1 ||
+        html.indexOf("xh-class-") !== -1 || html.indexOf("xh-i18n-") !== -1)) {
+      selector = buildCloneSelector(root);
+    }
+
+    return Array.prototype.slice.call(root.querySelectorAll(selector));
   }
 
   // ---------------------------------------------------------------------------
@@ -2819,27 +2867,27 @@
 
   /**
    * Check whether an element or any of its descendants have xh-* attributes.
+   * Uses the known selector plus any dynamic attribute selectors discovered
+   * during processing (tracked in dynamicAttrSelectors).
    * @param {Element} el
    * @returns {boolean}
    */
-  // Reuse the same compound selector for detection.
+  var dynamicAttrSelectors = {};
   var XH_DETECT_SELECTOR = XH_KNOWN_SELECTOR;
+
+  /** Rebuild the detect selector when new dynamic attrs are discovered. */
+  function rebuildDetectSelector() {
+    var extra = Object.keys(dynamicAttrSelectors);
+    XH_DETECT_SELECTOR = extra.length ? XH_KNOWN_SELECTOR + "," + extra.join(",") : XH_KNOWN_SELECTOR;
+  }
 
   function hasXhAttributes(el) {
     // Skip nodes owned by xhtmlx (inserted via swap/render)
     if (el.hasAttribute && el.hasAttribute("data-xh-owned")) return false;
     // Check the element itself (fast path — avoids full subtree scan)
     if (checkElementForXh(el)) return true;
-    // Single check using querySelector (stops at first match)
-    if (el.querySelectorAll) {
-      // Fast path covers all known fixed-name attributes
-      if (el.querySelector(XH_DETECT_SELECTOR)) return true;
-      // Fallback for dynamic wildcard attrs (xh-attr-*, xh-on-*, xh-class-*, xh-i18n-*)
-      var all = el.querySelectorAll("*");
-      for (var i = 0; i < all.length; i++) {
-        if (checkElementForXh(all[i])) return true;
-      }
-    }
+    // Single querySelector check covers both known and discovered dynamic attrs
+    if (el.querySelector && el.querySelector(XH_DETECT_SELECTOR)) return true;
     return false;
   }
 
@@ -2935,28 +2983,18 @@
   // Common i18n attribute selectors for targeted scanning
   var I18N_ATTR_SELECTOR = "[xh-i18n-placeholder],[xh-i18n-title],[xh-i18n-alt],[xh-i18n-label],[xh-i18n-aria-label]";
 
+  // Track discovered i18n attribute selectors to avoid full DOM scan
+  var discoveredI18nSelectors = {};
+
+  /** Rebuild the combined i18n selector from known + discovered attrs. */
+  function getI18nSelector() {
+    var extra = Object.keys(discoveredI18nSelectors);
+    return extra.length ? "[xh-i18n]," + I18N_ATTR_SELECTOR + "," + extra.join(",")
+                        : "[xh-i18n]," + I18N_ATTR_SELECTOR;
+  }
+
   function applyI18n(root) {
-    // Single combined selector for xh-i18n and common xh-i18n-{attr} elements
-    var selector = "[xh-i18n]," + I18N_ATTR_SELECTOR;
-
-    // Scan root for any uncommon xh-i18n-* attrs and add them to the selector
-    var all = root.querySelectorAll("*");
-    var extraSels = {};
-    for (var s = 0; s < all.length; s++) {
-      if (checkElementForI18nAttr(all[s])) {
-        var attrs = all[s].attributes;
-        for (var a = 0; a < attrs.length; a++) {
-          if (attrs[a].name.indexOf("xh-i18n-") === 0 && attrs[a].name !== "xh-i18n-vars") {
-            extraSels["[" + attrs[a].name + "]"] = true;
-          }
-        }
-      }
-    }
-    var extra = Object.keys(extraSels);
-    if (extra.length) selector += "," + extra.join(",");
-
-    // Single querySelectorAll pass
-    var els = root.querySelectorAll(selector);
+    var els = root.querySelectorAll(getI18nSelector());
     for (var i = 0; i < els.length; i++) {
       var el = els[i];
       // Handle xh-i18n (textContent translation)
@@ -2969,7 +3007,7 @@
         }
         el.textContent = i18n.t(key, parsedVars);
       }
-      // Handle xh-i18n-{attr} attribute translations
+      // Handle xh-i18n-{attr} attribute translations and track new selectors
       applyI18nAttrs(el);
     }
   }
@@ -2982,6 +3020,11 @@
         var targetAttr = name.slice(8);
         var attrKey = attrs[a].value;
         el.setAttribute(targetAttr, i18n.t(attrKey));
+        // Track uncommon i18n attr selectors so future applyI18n calls find them
+        var sel = "[" + name + "]";
+        if (!discoveredI18nSelectors[sel]) {
+          discoveredI18nSelectors[sel] = true;
+        }
       }
     }
   }

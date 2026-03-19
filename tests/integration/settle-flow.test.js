@@ -69,10 +69,11 @@ describe("Settle classes integration flow", () => {
     expect(title).not.toBeNull();
     expect(title.textContent).toBe("Test Title");
 
-    // The output container and its children should have xh-added
+    // The output container and direct children should have xh-added
+    // (nested descendants like title are excluded for performance)
     expect(output.classList.contains("xh-added")).toBe(true);
     expect(card.classList.contains("xh-added")).toBe(true);
-    expect(title.classList.contains("xh-added")).toBe(true);
+    expect(title.classList.contains("xh-added")).toBe(false);
   });
 
   test("after two RAF cycles, xh-added replaced by xh-settled", async () => {

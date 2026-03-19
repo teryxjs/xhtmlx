@@ -15,66 +15,66 @@ describe('resolveErrorTemplate', () => {
   describe('exact status code match', () => {
     it('returns template URL for exact 404 match', () => {
       el.setAttribute('xh-error-template-404', '/errors/404.html');
-      expect(resolveErrorTemplate(el, 404)).toBe('/errors/404.html');
+      expect(resolveErrorTemplate(el, 404).template).toBe('/errors/404.html');
     });
 
     it('returns template URL for exact 500 match', () => {
       el.setAttribute('xh-error-template-500', '/errors/500.html');
-      expect(resolveErrorTemplate(el, 500)).toBe('/errors/500.html');
+      expect(resolveErrorTemplate(el, 500).template).toBe('/errors/500.html');
     });
 
     it('returns template URL for exact 422 match', () => {
       el.setAttribute('xh-error-template-422', '/errors/422.html');
-      expect(resolveErrorTemplate(el, 422)).toBe('/errors/422.html');
+      expect(resolveErrorTemplate(el, 422).template).toBe('/errors/422.html');
     });
 
     it('returns template URL for exact 400 match', () => {
       el.setAttribute('xh-error-template-400', '/errors/400.html');
-      expect(resolveErrorTemplate(el, 400)).toBe('/errors/400.html');
+      expect(resolveErrorTemplate(el, 400).template).toBe('/errors/400.html');
     });
 
     it('returns template URL for exact 503 match', () => {
       el.setAttribute('xh-error-template-503', '/errors/503.html');
-      expect(resolveErrorTemplate(el, 503)).toBe('/errors/503.html');
+      expect(resolveErrorTemplate(el, 503).template).toBe('/errors/503.html');
     });
   });
 
   describe('class match (Nxx)', () => {
     it('returns template URL for 4xx class match', () => {
       el.setAttribute('xh-error-template-4xx', '/errors/4xx.html');
-      expect(resolveErrorTemplate(el, 404)).toBe('/errors/4xx.html');
+      expect(resolveErrorTemplate(el, 404).template).toBe('/errors/4xx.html');
     });
 
     it('returns template URL for 5xx class match', () => {
       el.setAttribute('xh-error-template-5xx', '/errors/5xx.html');
-      expect(resolveErrorTemplate(el, 500)).toBe('/errors/5xx.html');
+      expect(resolveErrorTemplate(el, 500).template).toBe('/errors/5xx.html');
     });
 
     it('4xx class matches 400', () => {
       el.setAttribute('xh-error-template-4xx', '/errors/4xx.html');
-      expect(resolveErrorTemplate(el, 400)).toBe('/errors/4xx.html');
+      expect(resolveErrorTemplate(el, 400).template).toBe('/errors/4xx.html');
     });
 
     it('4xx class matches 422', () => {
       el.setAttribute('xh-error-template-4xx', '/errors/4xx.html');
-      expect(resolveErrorTemplate(el, 422)).toBe('/errors/4xx.html');
+      expect(resolveErrorTemplate(el, 422).template).toBe('/errors/4xx.html');
     });
 
     it('5xx class matches 503', () => {
       el.setAttribute('xh-error-template-5xx', '/errors/5xx.html');
-      expect(resolveErrorTemplate(el, 503)).toBe('/errors/5xx.html');
+      expect(resolveErrorTemplate(el, 503).template).toBe('/errors/5xx.html');
     });
   });
 
   describe('generic fallback', () => {
     it('returns generic template when no specific match', () => {
       el.setAttribute('xh-error-template', '/errors/generic.html');
-      expect(resolveErrorTemplate(el, 404)).toBe('/errors/generic.html');
+      expect(resolveErrorTemplate(el, 404).template).toBe('/errors/generic.html');
     });
 
     it('returns generic template for 500 when no specific match', () => {
       el.setAttribute('xh-error-template', '/errors/generic.html');
-      expect(resolveErrorTemplate(el, 500)).toBe('/errors/generic.html');
+      expect(resolveErrorTemplate(el, 500).template).toBe('/errors/generic.html');
     });
   });
 
@@ -84,14 +84,14 @@ describe('resolveErrorTemplate', () => {
       el.setAttribute('xh-error-template-4xx', '/errors/4xx.html');
       el.setAttribute('xh-error-template', '/errors/generic.html');
 
-      expect(resolveErrorTemplate(el, 404)).toBe('/errors/404.html');
+      expect(resolveErrorTemplate(el, 404).template).toBe('/errors/404.html');
     });
 
     it('prefers class match over generic when no exact match', () => {
       el.setAttribute('xh-error-template-4xx', '/errors/4xx.html');
       el.setAttribute('xh-error-template', '/errors/generic.html');
 
-      expect(resolveErrorTemplate(el, 422)).toBe('/errors/4xx.html');
+      expect(resolveErrorTemplate(el, 422).template).toBe('/errors/4xx.html');
     });
 
     it('falls back to generic when neither exact nor class match', () => {
@@ -99,14 +99,14 @@ describe('resolveErrorTemplate', () => {
       el.setAttribute('xh-error-template-4xx', '/errors/4xx.html');
       el.setAttribute('xh-error-template', '/errors/generic.html');
 
-      expect(resolveErrorTemplate(el, 500)).toBe('/errors/generic.html');
+      expect(resolveErrorTemplate(el, 500).template).toBe('/errors/generic.html');
     });
 
     it('uses class match for status in same class as exact match for different status', () => {
       el.setAttribute('xh-error-template-404', '/errors/404.html');
       el.setAttribute('xh-error-template-4xx', '/errors/4xx.html');
 
-      expect(resolveErrorTemplate(el, 400)).toBe('/errors/4xx.html');
+      expect(resolveErrorTemplate(el, 400).template).toBe('/errors/4xx.html');
     });
   });
 
@@ -129,42 +129,42 @@ describe('resolveErrorTemplate', () => {
   describe('various status codes', () => {
     it('handles 400 Bad Request', () => {
       el.setAttribute('xh-error-template-400', '/errors/400.html');
-      expect(resolveErrorTemplate(el, 400)).toBe('/errors/400.html');
+      expect(resolveErrorTemplate(el, 400).template).toBe('/errors/400.html');
     });
 
     it('handles 401 Unauthorized via 4xx class', () => {
       el.setAttribute('xh-error-template-4xx', '/errors/4xx.html');
-      expect(resolveErrorTemplate(el, 401)).toBe('/errors/4xx.html');
+      expect(resolveErrorTemplate(el, 401).template).toBe('/errors/4xx.html');
     });
 
     it('handles 403 Forbidden via generic', () => {
       el.setAttribute('xh-error-template', '/errors/generic.html');
-      expect(resolveErrorTemplate(el, 403)).toBe('/errors/generic.html');
+      expect(resolveErrorTemplate(el, 403).template).toBe('/errors/generic.html');
     });
 
     it('handles 404 Not Found exact match', () => {
       el.setAttribute('xh-error-template-404', '/errors/not-found.html');
-      expect(resolveErrorTemplate(el, 404)).toBe('/errors/not-found.html');
+      expect(resolveErrorTemplate(el, 404).template).toBe('/errors/not-found.html');
     });
 
     it('handles 422 Unprocessable Entity', () => {
       el.setAttribute('xh-error-template-422', '/errors/validation.html');
-      expect(resolveErrorTemplate(el, 422)).toBe('/errors/validation.html');
+      expect(resolveErrorTemplate(el, 422).template).toBe('/errors/validation.html');
     });
 
     it('handles 500 Internal Server Error', () => {
       el.setAttribute('xh-error-template-500', '/errors/server.html');
-      expect(resolveErrorTemplate(el, 500)).toBe('/errors/server.html');
+      expect(resolveErrorTemplate(el, 500).template).toBe('/errors/server.html');
     });
 
     it('handles 502 Bad Gateway via 5xx class', () => {
       el.setAttribute('xh-error-template-5xx', '/errors/5xx.html');
-      expect(resolveErrorTemplate(el, 502)).toBe('/errors/5xx.html');
+      expect(resolveErrorTemplate(el, 502).template).toBe('/errors/5xx.html');
     });
 
     it('handles 503 Service Unavailable', () => {
       el.setAttribute('xh-error-template-503', '/errors/503.html');
-      expect(resolveErrorTemplate(el, 503)).toBe('/errors/503.html');
+      expect(resolveErrorTemplate(el, 503).template).toBe('/errors/503.html');
     });
   });
 
@@ -266,7 +266,7 @@ describe('resolveErrorTemplate', () => {
       `;
       const child = document.getElementById('child');
       // child has no element-level error template → boundary should be found
-      expect(resolveErrorTemplate(child, 404)).toBe('/errors/boundary.html');
+      expect(resolveErrorTemplate(child, 404).template).toBe('/errors/boundary.html');
     });
 
     it('element-level template wins over boundary', () => {
@@ -276,7 +276,7 @@ describe('resolveErrorTemplate', () => {
         </div>
       `;
       const child = document.getElementById('child');
-      expect(resolveErrorTemplate(child, 404)).toBe('/errors/element.html');
+      expect(resolveErrorTemplate(child, 404).template).toBe('/errors/element.html');
     });
   });
 
@@ -290,7 +290,7 @@ describe('resolveErrorTemplate', () => {
       config.defaultErrorTemplate = '/errors/global.html';
       document.body.innerHTML = `<div id="child"></div>`;
       const child = document.getElementById('child');
-      expect(resolveErrorTemplate(child, 404)).toBe('/errors/global.html');
+      expect(resolveErrorTemplate(child, 404).template).toBe('/errors/global.html');
     });
 
     it('boundary wins over global config', () => {
@@ -301,7 +301,7 @@ describe('resolveErrorTemplate', () => {
         </div>
       `;
       const child = document.getElementById('child');
-      expect(resolveErrorTemplate(child, 404)).toBe('/errors/boundary.html');
+      expect(resolveErrorTemplate(child, 404).template).toBe('/errors/boundary.html');
     });
 
     it('element-level wins over both boundary and global', () => {
@@ -312,7 +312,7 @@ describe('resolveErrorTemplate', () => {
         </div>
       `;
       const child = document.getElementById('child');
-      expect(resolveErrorTemplate(child, 404)).toBe('/errors/element.html');
+      expect(resolveErrorTemplate(child, 404).template).toBe('/errors/element.html');
     });
 
     it('returns null when no match at any level', () => {
