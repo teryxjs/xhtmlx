@@ -49,18 +49,29 @@
 
   /**
    * Build a viewport context object with current breakpoint and dimensions.
+   * Cached and invalidated on resize (or when dimensions change) to avoid
+   * allocating a new object per $viewport access during a synchronous pass.
    * @returns {Object}
    */
+  var _vpCache = null;
+  var _vpCacheW = -1;
+  var _vpCacheH = -1;
   function getViewportContext() {
+    var w = typeof window !== "undefined" ? window.innerWidth : 0;
+    var h = typeof window !== "undefined" ? window.innerHeight : 0;
+    if (_vpCache && w === _vpCacheW && h === _vpCacheH) return _vpCache;
     var bp = getCurrentBreakpoint();
-    return {
-      width: typeof window !== "undefined" ? window.innerWidth : 0,
-      height: typeof window !== "undefined" ? window.innerHeight : 0,
+    _vpCacheW = w;
+    _vpCacheH = h;
+    _vpCache = {
+      width: w,
+      height: h,
       breakpoint: bp,
       mobile: bp === "mobile",
       tablet: bp === "tablet",
       desktop: bp === "desktop"
     };
+    return _vpCache;
   }
 
   // ---------------------------------------------------------------------------
@@ -79,7 +90,7 @@
   /** Generation counter per element for discarding stale responses */
   var generationMap = new WeakMap();
 
-  /** Map<string, {data: string, timestamp: number}> — response cache (verb:url → body) */
+  /** Map<string, {data: *, timestamp: number}> — response cache (verb:url → parsed JSON) */
   var responseCache = new Map();
   var RESPONSE_CACHE_MAX = 200;
 
@@ -339,13 +350,14 @@
   MutableDataContext.prototype._notify = function(path) {
     var subs = this._subscribers[path];
     if (!subs) return;
-    // Execute callbacks and prune any that throw (detached element references)
-    var live = [];
+    // Execute callbacks and prune any that throw (detached element references).
+    // In-place compaction avoids allocating a new array on every notification.
+    var write = 0;
     for (var i = 0; i < subs.length; i++) {
-      try { subs[i](); live.push(subs[i]); }
+      try { subs[i](); subs[write++] = subs[i]; }
       catch (e) { /* subscriber references a detached element — drop it */ }
     }
-    if (live.length !== subs.length) this._subscribers[path] = live;
+    subs.length = write;
   };
 
   // ---------------------------------------------------------------------------
@@ -435,7 +447,12 @@
    */
   function interpolateDOMAttrs(root, ctx, elements) {
     if (!elements) {
-      elements = root.querySelectorAll("*");
+      // Use TreeWalker for element nodes instead of querySelectorAll("*")
+      // to avoid creating a snapshot NodeList of every descendant.
+      var walker = document.createTreeWalker(root, 1 /* NodeFilter.SHOW_ELEMENT */);
+      var collected = [];
+      while (walker.nextNode()) collected.push(walker.currentNode);
+      elements = collected;
     }
     for (var e = 0; e < elements.length; e++) {
       var attrs = elements[e].attributes;
@@ -780,18 +797,21 @@
    * @returns {string}
    */
   function buildCloneSelector(templateEl) {
+    // Scan descendants using a TreeWalker (visits elements without creating a
+    // snapshot NodeList) to discover dynamic attrs like xh-on-*, xh-attr-*,
+    // xh-class-*, xh-i18n-*. These can't be part of XH_KNOWN_SELECTOR because
+    // their full attribute names are user-defined.
     var localDynamic = {};
     var needRebuild = false;
-    var all = templateEl.querySelectorAll("*");
-    for (var i = 0; i < all.length; i++) {
-      var attrs = all[i].attributes;
+    var walker = document.createTreeWalker(templateEl, 1 /* SHOW_ELEMENT */);
+    while (walker.nextNode()) {
+      var attrs = walker.currentNode.attributes;
       for (var a = 0; a < attrs.length; a++) {
         var name = attrs[a].name;
         if (name.indexOf("xh-on-") === 0 || name.indexOf("xh-attr-") === 0 ||
             name.indexOf("xh-class-") === 0 || name.indexOf("xh-i18n-") === 0) {
           var sel = "[" + name + "]";
           localDynamic[sel] = true;
-          // Track globally so MutationObserver detect selector stays current
           if (!dynamicAttrSelectors[sel]) {
             dynamicAttrSelectors[sel] = true;
             needRebuild = true;
@@ -839,7 +859,7 @@
 
     var ItemCtxClass = (ctx instanceof MutableDataContext) ? MutableDataContext : DataContext;
 
-    var renderItem = function (item, idx) {
+    var renderItem = function (item, idx, targetFragment) {
       var clone = el.cloneNode(true);
       // Mark only the clone root — descendants are detected via closest()
       clone.setAttribute("data-xh-each-item", "");
@@ -857,14 +877,14 @@
       elementStates.set(clone, cloneState);
       // Single combined pass: bindings + REST triggers for all descendants
       processEachCloneChildren(clone, itemCtx, cloneSelector);
-      fragment.appendChild(clone);
+      targetFragment.appendChild(clone);
     };
 
     if (arr.length > config.batchThreshold && typeof requestAnimationFrame === "function") {
       // Render first batch immediately (above-the-fold content)
       var batchSize = config.batchThreshold;
       for (var i = 0; i < Math.min(batchSize, arr.length); i++) {
-        renderItem(arr[i], i);
+        renderItem(arr[i], i, fragment);
       }
       parent.insertBefore(fragment, el);
 
@@ -875,12 +895,7 @@
         var batchFragment = document.createDocumentFragment();
         var end = Math.min(offset + batchSize, arr.length);
         for (var b = offset; b < end; b++) {
-          var clone = el.cloneNode(true);
-          clone.setAttribute("data-xh-each-item", "");
-          var itemCtx = new ItemCtxClass(arr[b], ctx, b);
-          applyBindings(clone, itemCtx);
-          processEachCloneChildren(clone, itemCtx, cloneSelector);
-          batchFragment.appendChild(clone);
+          renderItem(arr[b], b, batchFragment);
         }
         // Insert after the last inserted batch
         parent.appendChild(batchFragment);
@@ -897,7 +912,7 @@
       return true;
     } else {
       for (var j = 0; j < arr.length; j++) {
-        renderItem(arr[j], j);
+        renderItem(arr[j], j, fragment);
       }
     }
 
@@ -945,7 +960,9 @@
    *                                 elements with xh-* attributes.
    */
   function processEachCloneChildren(root, ctx, selector) {
-    var elements = Array.prototype.slice.call(root.querySelectorAll(selector));
+    // Clone children are in a detached fragment — the NodeList is stable,
+    // so iterate directly without snapshotting to avoid array allocation.
+    var elements = root.querySelectorAll(selector);
     for (var i = 0; i < elements.length; i++) {
       var el = elements[i];
       if (!el.parentNode) continue;
@@ -1022,8 +1039,14 @@
    * @param {string} raw
    * @returns {Object[]}
    */
+  var triggerSpecCache = new Map();
+
   function parseTrigger(raw) {
     if (!raw || !raw.trim()) return [];
+
+    // Cache parsed specs — many elements share identical trigger strings
+    var cached = triggerSpecCache.get(raw);
+    if (cached) return cached;
 
     // Multiple triggers can be comma-separated
     var parts = raw.split(",");
@@ -1074,6 +1097,7 @@
 
       specs.push(spec);
     }
+    triggerSpecCache.set(raw, specs);
     return specs;
   }
 
@@ -1097,7 +1121,9 @@
    * @param {HTMLFormElement} form
    * @returns {Object}
    */
+  var _hasFromEntries = typeof Object.fromEntries === "function";
   function formDataToObject(form) {
+    if (_hasFromEntries) return Object.fromEntries(new FormData(form));
     var obj = {};
     new FormData(form).forEach(function(v, k) { obj[k] = v; });
     return obj;
@@ -1865,12 +1891,8 @@
         var age = Date.now() - cached.timestamp;
         var ttl = cacheAttr === "forever" ? Infinity : parseInt(cacheAttr, 10) * 1000;
         if (age < ttl) {
-          // Use cached response — create a fake Response-like object
-          var fakeResponse = {
-            ok: true, status: 200, statusText: "OK (cached)",
-            text: function () { return Promise.resolve(cached.data); }
-          };
-          processFetchResponse(fakeResponse);
+          // Use cached parsed JSON directly — avoids JSON.parse on every cache hit
+          processJsonData(cached.data);
           return;
         }
         responseCache.delete(cacheKey);
@@ -1920,6 +1942,93 @@
         }
       });
 
+    function processJsonData(jsonData) {
+      var childCtx = new MutableDataContext(jsonData, ctx);
+
+      // Resolve and render template
+      return resolveTemplate(el, templateStack).then(function (tmpl) {
+        var swapMode = el.getAttribute("xh-swap") || config.defaultSwapMode;
+        var target = getSwapTarget(el, false);
+
+        if (tmpl.html !== null) {
+          // Render from template HTML
+          var fragment = renderTemplate(tmpl.html, childCtx);
+
+          // Emit xh:beforeSwap (cancelable)
+          var swapAllowed = emitEvent(el, "xh:beforeSwap", {
+            target: target,
+            fragment: fragment,
+            swapMode: swapMode
+          }, true);
+          if (!swapAllowed) return;
+
+          // Mark fragment children so MutationObserver skips them
+          markFragmentOwned(fragment);
+          var processTarget = performSwap(target, fragment, swapMode);
+
+          // Apply settle classes to newly added elements
+          applySettleClasses(processTarget);
+
+          // Recursively process new content with correct data context
+          if (processTarget) {
+            processNode(processTarget, childCtx, tmpl.templateStack);
+          }
+
+          // Emit xh:afterSwap
+          emitEvent(el, "xh:afterSwap", { target: target }, false);
+
+          // -- xh-focus: focus management after swap ----------------------------
+          var focusEl = el.getAttribute("xh-focus");
+          if (focusEl && focusEl !== "auto") {
+            var toFocus = document.querySelector(focusEl);
+            if (toFocus) toFocus.focus();
+          } else if (focusEl === "auto" && processTarget) {
+            var focusable = processTarget.querySelector("a, button, input, select, textarea, [tabindex]");
+            if (focusable) focusable.focus();
+          }
+
+        } else {
+          // Self-binding: apply bindings directly to the element
+          applyBindings(el, childCtx);
+
+          // Also process children for bindings
+          processBindingsInTree(el, childCtx);
+
+          // Emit swap events
+          emitEvent(el, "xh:afterSwap", { target: el }, false);
+        }
+
+        // -- xh-push-url -------------------------------------------------------
+        var pushUrl = el.getAttribute("xh-push-url");
+        if (pushUrl) {
+          var historyUrl = pushUrl === "true" ? url : interpolate(pushUrl, childCtx, false);
+          var historyState = {
+            xhtmlx: true,
+            url: restInfo.url,
+            verb: restInfo.verb,
+            targetSel: el.getAttribute("xh-target"),
+            templateUrl: el.getAttribute("xh-template")
+          };
+          history.pushState(historyState, "", historyUrl);
+        }
+
+        // -- xh-replace-url ----------------------------------------------------
+        var replaceUrl = el.getAttribute("xh-replace-url");
+        if (replaceUrl) {
+          var rUrl = replaceUrl === "true" ? url : interpolate(replaceUrl, childCtx, false);
+          history.replaceState({ xhtmlx: true }, "", rUrl);
+        }
+
+        // Store data context and URLs for reload/versioning
+        if (state) {
+          state.dataContext = childCtx;
+          state.templateUrl = el.getAttribute("xh-template");
+          state.apiUrl = restInfo.url;
+          state.apiVerb = restInfo.verb;
+        }
+      });
+    }
+
     function processFetchResponse(response) {
       // Emit xh:afterRequest
       emitEvent(el, "xh:afterRequest", { url: url, status: response.status }, false);
@@ -1958,7 +2067,7 @@
           }
         }
 
-        // Cache the response if xh-cache is set
+        // Cache the parsed JSON if xh-cache is set (avoids re-parsing on cache hits)
         if (cacheAttr && restInfo.verb === "GET" && bodyText) {
           if (responseCache.size >= RESPONSE_CACHE_MAX) {
             // Evict oldest half (Map preserves insertion order)
@@ -1968,93 +2077,10 @@
               responseCache.delete(rcIter.next().value);
             }
           }
-          responseCache.set(cacheKey, { data: bodyText, timestamp: Date.now() });
+          responseCache.set(cacheKey, { data: jsonData, timestamp: Date.now() });
         }
 
-        var childCtx = new MutableDataContext(jsonData, ctx);
-
-        // Resolve and render template
-        return resolveTemplate(el, templateStack).then(function (tmpl) {
-          var swapMode = el.getAttribute("xh-swap") || config.defaultSwapMode;
-          var target = getSwapTarget(el, false);
-
-          if (tmpl.html !== null) {
-            // Render from template HTML
-            var fragment = renderTemplate(tmpl.html, childCtx);
-
-            // Emit xh:beforeSwap (cancelable)
-            var swapAllowed = emitEvent(el, "xh:beforeSwap", {
-              target: target,
-              fragment: fragment,
-              swapMode: swapMode
-            }, true);
-            if (!swapAllowed) return;
-
-            // Mark fragment children so MutationObserver skips them
-            markFragmentOwned(fragment);
-            var processTarget = performSwap(target, fragment, swapMode);
-
-            // Apply settle classes to newly added elements
-            applySettleClasses(processTarget);
-
-            // Recursively process new content with correct data context
-            if (processTarget) {
-              processNode(processTarget, childCtx, tmpl.templateStack);
-            }
-
-            // Emit xh:afterSwap
-            emitEvent(el, "xh:afterSwap", { target: target }, false);
-
-            // -- xh-focus: focus management after swap ----------------------------
-            var focusEl = el.getAttribute("xh-focus");
-            if (focusEl && focusEl !== "auto") {
-              var toFocus = document.querySelector(focusEl);
-              if (toFocus) toFocus.focus();
-            } else if (focusEl === "auto" && processTarget) {
-              var focusable = processTarget.querySelector("a, button, input, select, textarea, [tabindex]");
-              if (focusable) focusable.focus();
-            }
-
-          } else {
-            // Self-binding: apply bindings directly to the element
-            applyBindings(el, childCtx);
-
-            // Also process children for bindings
-            processBindingsInTree(el, childCtx);
-
-            // Emit swap events
-            emitEvent(el, "xh:afterSwap", { target: el }, false);
-          }
-
-          // -- xh-push-url -------------------------------------------------------
-          var pushUrl = el.getAttribute("xh-push-url");
-          if (pushUrl) {
-            var historyUrl = pushUrl === "true" ? url : interpolate(pushUrl, childCtx, false);
-            var historyState = {
-              xhtmlx: true,
-              url: restInfo.url,
-              verb: restInfo.verb,
-              targetSel: el.getAttribute("xh-target"),
-              templateUrl: el.getAttribute("xh-template")
-            };
-            history.pushState(historyState, "", historyUrl);
-          }
-
-          // -- xh-replace-url ----------------------------------------------------
-          var replaceUrl = el.getAttribute("xh-replace-url");
-          if (replaceUrl) {
-            var rUrl = replaceUrl === "true" ? url : interpolate(replaceUrl, childCtx, false);
-            history.replaceState({ xhtmlx: true }, "", rUrl);
-          }
-
-          // Store data context and URLs for reload/versioning
-          if (state) {
-            state.dataContext = childCtx;
-            state.templateUrl = el.getAttribute("xh-template");
-            state.apiUrl = restInfo.url;
-            state.apiVerb = restInfo.verb;
-          }
-        });
+        return processJsonData(jsonData);
       });
     }
   }
@@ -2167,8 +2193,12 @@
   var resizeListenerAttached = false;
 
   function globalResizeHandler() {
+    // Invalidate viewport cache immediately so synchronous reads are fresh
+    _vpCache = null;
     clearTimeout(resizeGlobalTimer);
     resizeGlobalTimer = setTimeout(function() {
+      // Check for breakpoint changes (merged — avoids a second resize listener)
+      checkBreakpointChange();
       for (var i = resizeElements.length - 1; i >= 0; i--) {
         var entry = resizeElements[i];
         // Skip elements no longer in DOM
@@ -3063,12 +3093,15 @@
 
   // Track discovered i18n attribute selectors to avoid full DOM scan
   var discoveredI18nSelectors = {};
+  var _i18nSelectorCache = null;
 
   /** Rebuild the combined i18n selector from known + discovered attrs. */
   function getI18nSelector() {
+    if (_i18nSelectorCache) return _i18nSelectorCache;
     var extra = Object.keys(discoveredI18nSelectors);
-    return extra.length ? "[xh-i18n]," + I18N_ATTR_SELECTOR + "," + extra.join(",")
-                        : "[xh-i18n]," + I18N_ATTR_SELECTOR;
+    _i18nSelectorCache = extra.length ? "[xh-i18n]," + I18N_ATTR_SELECTOR + "," + extra.join(",")
+                                      : "[xh-i18n]," + I18N_ATTR_SELECTOR;
+    return _i18nSelectorCache;
   }
 
   function applyI18n(root) {
@@ -3102,6 +3135,7 @@
         var sel = "[" + name + "]";
         if (!discoveredI18nSelectors[sel]) {
           discoveredI18nSelectors[sel] = true;
+          _i18nSelectorCache = null; // Invalidate cached selector
         }
       }
     }
@@ -3211,6 +3245,7 @@
               if (route.template) {
                 fetchTemplate(route.template).then(function(html) {
                   var fragment = renderTemplate(html, childCtx);
+                  cleanupBeforeSwap(router._outlet, false);
                   router._outlet.innerHTML = "";
                   router._outlet.appendChild(fragment);
                   processNode(router._outlet, childCtx, []);
@@ -3220,6 +3255,7 @@
           } else if (route.template) {
             fetchTemplate(route.template).then(function(html) {
               var fragment = renderTemplate(html, ctx);
+              cleanupBeforeSwap(router._outlet, false);
               router._outlet.innerHTML = "";
               router._outlet.appendChild(fragment);
               processNode(router._outlet, ctx, []);
@@ -3236,6 +3272,7 @@
         var ctx404 = new DataContext({ path: path });
         fetchTemplate(router._notFoundTemplate).then(function(html) {
           var fragment = renderTemplate(html, ctx404);
+          cleanupBeforeSwap(router._outlet, false);
           router._outlet.innerHTML = "";
           router._outlet.appendChild(fragment);
         });
@@ -3503,6 +3540,12 @@
       processNode(document.body, rootCtx, []);
       setupMutationObserver(rootCtx);
       router._init();
+      // Ensure the global resize listener is attached for breakpoint detection
+      // even when no xh-trigger="resize" elements exist.
+      if (!resizeListenerAttached && typeof window !== "undefined") {
+        window.addEventListener("resize", globalResizeHandler);
+        resizeListenerAttached = true;
+      }
     }
 
     if (document.readyState === "loading") {
@@ -3531,6 +3574,7 @@
           if (e.state.templateUrl) {
             fetchTemplate(e.state.templateUrl).then(function (html) {
               var fragment = renderTemplate(html, ctx);
+              cleanupBeforeSwap(target, false);
               target.innerHTML = "";
               target.appendChild(fragment);
               processNode(target, ctx, []);
@@ -3547,29 +3591,27 @@
 
   // ---------------------------------------------------------------------------
   // Breakpoint change detection — emits xh:breakpointChanged on resize
+  // Merged into the globalResizeHandler to avoid a second resize listener.
   // ---------------------------------------------------------------------------
 
-  if (typeof window !== "undefined") {
-    var lastBreakpoint = getCurrentBreakpoint();
-    var bpTimer = null;
-    window.addEventListener("resize", function() {
-      clearTimeout(bpTimer);
-      bpTimer = setTimeout(function() {
-        var current = getCurrentBreakpoint();
-        if (current !== lastBreakpoint) {
-          lastBreakpoint = current;
-          if (typeof document !== "undefined") {
-            emitEvent(document.body, "xh:breakpointChanged", {
-              breakpoint: current,
-              width: window.innerWidth,
-              mobile: current === "mobile",
-              tablet: current === "tablet",
-              desktop: current === "desktop"
-            }, false);
-          }
-        }
-      }, 200);
-    });
+  var lastBreakpoint = typeof window !== "undefined" ? getCurrentBreakpoint() : "desktop";
+
+  function checkBreakpointChange() {
+    // Invalidate cached viewport context on every resize
+    _vpCache = null;
+    var current = getCurrentBreakpoint();
+    if (current !== lastBreakpoint) {
+      lastBreakpoint = current;
+      if (typeof document !== "undefined") {
+        emitEvent(document.body, "xh:breakpointChanged", {
+          breakpoint: current,
+          width: window.innerWidth,
+          mobile: current === "mobile",
+          tablet: current === "tablet",
+          desktop: current === "desktop"
+        }, false);
+      }
+    }
   }
 
 })();

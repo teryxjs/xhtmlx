@@ -60,7 +60,7 @@ describe('Response caching with TTL', () => {
 
     expect(global.fetch).toHaveBeenCalledTimes(1);
     expect(responseCache.has('GET:/api/user')).toBe(true);
-    expect(responseCache.get('GET:/api/user').data).toBe(JSON.stringify({ name: 'Alice' }));
+    expect(responseCache.get('GET:/api/user').data).toEqual({ name: 'Alice' });
   });
 
   it('second GET request with same URL returns cached data', async () => {
