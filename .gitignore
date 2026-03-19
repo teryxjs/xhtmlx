@@ -2,5 +2,28 @@ node_modules/
 coverage/
 xhtmlx.min.js
 xhtmlx.min.js.map
+xhtmlx.js.backup
 *.tgz
 .DS_Store
+
+test-results/
+
+# Personal and AI TODO list
+TODO*.md
+
+# Codex - AI assistant metadata
+.codex/
+.codex-cache/
+.codex-config.json
+.codex-settings.json
+codex.log
+AGENTS.md
+
+# Claude - AI assistant metadata
+.anthropic/
+.claude/
+claude.log
+claude_history.json
+claude_config.json
+CLAUDE.md
+
