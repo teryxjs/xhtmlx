@@ -98,6 +98,15 @@
   var pathSplitCache = new Map();
   var PATH_SPLIT_CACHE_MAX = 1000;
 
+  /** Cache for parsed template DOM fragments — avoids HTML re-parsing on repeat renders.
+   *  Key: HTML string, Value: { prototype: Element, selector: string, hasInterp: boolean,
+   *                              hasEach: boolean, hasRest: boolean } */
+  var renderFragmentCache = new Map();
+  var RENDER_FRAGMENT_CACHE_MAX = 100;
+
+  /** WeakMap<Element, PatchState> — binding state for DOM patching via render() */
+  var patchStates = new WeakMap();
+
   // ---------------------------------------------------------------------------
   // Default CSS injection
   // ---------------------------------------------------------------------------
@@ -162,6 +171,13 @@
    */
   DataContext.prototype.resolve = function (path) {
     if (path == null || path === "") return undefined;
+
+    // Fast path: simple key (no dots, no $ prefix, no pipes) — ~90% of calls
+    if (path.charCodeAt(0) !== 36 /* $ */ && path.indexOf(".") === -1 && path.indexOf(" | ") === -1) {
+      var v = this.data != null && typeof this.data === "object" ? this.data[path] : undefined;
+      if (v !== undefined) return v;
+      return this.parent ? this.parent.resolve(path) : undefined;
+    }
 
     var parts = pathSplitCache.get(path);
     if (!parts) {
@@ -427,6 +443,8 @@
       var node = walker.currentNode;
       var original = node.nodeValue;
       if (original.indexOf("{{") === -1) continue;
+      // Store the original template for DOM patching support
+      node._xhTpl = original;
       var replaced = interpolate(original, ctx, false);
       if (replaced !== original) node.nodeValue = replaced;
     }
@@ -625,119 +643,158 @@
   function applyBindings(el, ctx) {
     var isMutable = ctx instanceof MutableDataContext;
 
-    // -- xh-show ----------------------------------------------------------------
-    var showAttr = el.getAttribute("xh-show");
-    if (showAttr != null) {
-      var sval = ctx.resolve(showAttr);
+    // -- Single pass over attributes to collect all xh-* bindings -----------
+    // Replaces 7+ individual getAttribute calls with one loop.
+    var attrs = el.attributes;
+    var showField = null, hideField = null, ifField = null, unlessField = null;
+    var textField = null, htmlField = null, modelField = null;
+    // Collect xh-attr-*/xh-class-* inline (pairs of target,field)
+    var attrPairs = null;  // lazy: [targetAttr, field, targetAttr, field, ...]
+    var classPairs = null; // lazy: [className, field, className, field, ...]
+
+    for (var i = attrs.length - 1; i >= 0; i--) {
+      var aName = attrs[i].name;
+      // Quick bail: skip non-xh attributes (most common case)
+      if (aName.charCodeAt(0) !== 120 /* x */ ||
+          aName.charCodeAt(1) !== 104 /* h */ ||
+          aName.charCodeAt(2) !== 45  /* - */) continue;
+
+      var aValue = attrs[i].value;
+      switch (aName) {
+        case "xh-show":    showField   = aValue; break;
+        case "xh-hide":    hideField   = aValue; break;
+        case "xh-if":      ifField     = aValue; break;
+        case "xh-unless":  unlessField = aValue; break;
+        case "xh-text":    textField   = aValue; break;
+        case "xh-html":    htmlField   = aValue; break;
+        case "xh-model":   modelField  = aValue; break;
+        default:
+          if (aName.indexOf("xh-attr-") === 0) {
+            if (!attrPairs) attrPairs = [];
+            attrPairs.push(aName.slice(8), aValue);
+          } else if (aName.indexOf("xh-class-") === 0) {
+            if (!classPairs) classPairs = [];
+            classPairs.push(aName.slice(9), aValue);
+          }
+      }
+    }
+
+    // -- Apply in correct order -----------------------------------------------
+
+    // xh-show
+    if (showField !== null) {
+      var sval = ctx.resolve(showField);
       el.style.display = sval ? "" : "none";
       if (isMutable) {
-        trackSubscription(el, ctx, showAttr, function() {
-          var newVal = ctx.resolve(showAttr);
+        trackSubscription(el, ctx, showField, function() {
+          var newVal = ctx.resolve(showField);
           el.style.display = newVal ? "" : "none";
         });
       }
     }
 
-    // -- xh-hide ----------------------------------------------------------------
-    var hideAttr = el.getAttribute("xh-hide");
-    if (hideAttr != null) {
-      var hdval = ctx.resolve(hideAttr);
+    // xh-hide
+    if (hideField !== null) {
+      var hdval = ctx.resolve(hideField);
       el.style.display = hdval ? "none" : "";
       if (isMutable) {
-        trackSubscription(el, ctx, hideAttr, function() {
-          var newVal = ctx.resolve(hideAttr);
+        trackSubscription(el, ctx, hideField, function() {
+          var newVal = ctx.resolve(hideField);
           el.style.display = newVal ? "none" : "";
         });
       }
     }
 
-    // -- xh-if ----------------------------------------------------------------
-    var ifAttr = el.getAttribute("xh-if");
-    if (ifAttr != null) {
-      var val = ctx.resolve(ifAttr);
-      if (!val) {
+    // xh-if
+    if (ifField !== null) {
+      if (!ctx.resolve(ifField)) {
         el.remove();
         return false;
       }
     }
 
-    // -- xh-unless ------------------------------------------------------------
-    var unlessAttr = el.getAttribute("xh-unless");
-    if (unlessAttr != null) {
-      var uval = ctx.resolve(unlessAttr);
-      if (uval) {
+    // xh-unless
+    if (unlessField !== null) {
+      if (ctx.resolve(unlessField)) {
         el.remove();
         return false;
       }
     }
 
-    // -- xh-text --------------------------------------------------------------
-    var textAttr = el.getAttribute("xh-text");
-    if (textAttr != null) {
-      var tv = ctx.resolve(textAttr);
-      el.textContent = tv != null ? String(tv) : "";
+    // xh-text
+    if (textField !== null) {
+      var tv = ctx.resolve(textField);
+      var tvStr = tv != null ? (typeof tv === "string" ? tv : String(tv)) : "";
+      if (el.firstChild && el.firstChild.nodeType === 3) {
+        el.firstChild.nodeValue = tvStr;
+      } else {
+        el.textContent = tvStr;
+      }
       if (isMutable) {
-        trackSubscription(el, ctx, textAttr, function() {
-          var newVal = ctx.resolve(textAttr);
-          el.textContent = newVal != null ? String(newVal) : "";
+        trackSubscription(el, ctx, textField, function() {
+          var newVal = ctx.resolve(textField);
+          var s = newVal != null ? (typeof newVal === "string" ? newVal : String(newVal)) : "";
+          if (el.firstChild && el.firstChild.nodeType === 3) {
+            el.firstChild.nodeValue = s;
+          } else {
+            el.textContent = s;
+          }
         });
       }
     }
 
-    // -- xh-html --------------------------------------------------------------
-    var htmlAttr = el.getAttribute("xh-html");
-    if (htmlAttr != null) {
-      var hv = ctx.resolve(htmlAttr);
+    // xh-html
+    if (htmlField !== null) {
+      var hv = ctx.resolve(htmlField);
       if (config.cspSafe) {
         if (config.debug) console.warn("[xhtmlx] xh-html is disabled in CSP-safe mode, falling back to xh-text");
         el.textContent = hv != null ? String(hv) : "";
       } else {
         el.innerHTML = hv != null ? String(hv) : "";
         if (isMutable) {
-          trackSubscription(el, ctx, htmlAttr, function() {
-            var newVal = ctx.resolve(htmlAttr);
+          trackSubscription(el, ctx, htmlField, function() {
+            var newVal = ctx.resolve(htmlField);
             el.innerHTML = newVal != null ? String(newVal) : "";
           });
         }
       }
     }
 
-    // -- xh-attr-* + xh-class-* (single pass) ----------------------------------
-    var attrs = el.attributes;
-    for (var i = attrs.length - 1; i >= 0; i--) {
-      var aName = attrs[i].name;
-      if (aName.indexOf("xh-attr-") === 0) {
-        var targetAttr = aName.slice(8);
-        var aval = ctx.resolve(attrs[i].value);
+    // xh-attr-*
+    if (attrPairs) {
+      for (var a = 0; a < attrPairs.length; a += 2) {
+        var aval = ctx.resolve(attrPairs[a + 1]);
         if (aval != null) {
-          el.setAttribute(targetAttr, String(aval));
+          el.setAttribute(attrPairs[a], String(aval));
         }
         if (isMutable) {
-          bindAttrSubscription(el, ctx, attrs[i].value, targetAttr);
-        }
-      } else if (aName.indexOf("xh-class-") === 0) {
-        var className = aName.slice(9);
-        var cval = ctx.resolve(attrs[i].value);
-        if (cval) {
-          el.classList.add(className);
-        } else {
-          el.classList.remove(className);
-        }
-        if (isMutable) {
-          bindClassSubscription(el, ctx, attrs[i].value, className);
+          bindAttrSubscription(el, ctx, attrPairs[a + 1], attrPairs[a]);
         }
       }
     }
 
-    // -- xh-model ---------------------------------------------------------------
-    var modelAttr = el.getAttribute("xh-model");
-    if (modelAttr != null) {
-      var mv = ctx.resolve(modelAttr);
+    // xh-class-*
+    if (classPairs) {
+      for (var c = 0; c < classPairs.length; c += 2) {
+        var cval = ctx.resolve(classPairs[c + 1]);
+        if (cval) {
+          el.classList.add(classPairs[c]);
+        } else {
+          el.classList.remove(classPairs[c]);
+        }
+        if (isMutable) {
+          bindClassSubscription(el, ctx, classPairs[c + 1], classPairs[c]);
+        }
+      }
+    }
+
+    // xh-model
+    if (modelField !== null) {
+      var mv = ctx.resolve(modelField);
       var tag = el.tagName.toLowerCase();
       var type = (el.getAttribute("type") || "").toLowerCase();
 
       if (tag === "select") {
-        // Set the matching option as selected
         var options = el.options;
         for (var s = 0; s < options.length; s++) {
           options[s].selected = (options[s].value === mv);
@@ -749,12 +806,9 @@
       } else if (tag === "textarea") {
         el.value = mv != null ? String(mv) : "";
       } else {
-        // text, email, number, hidden, etc.
         el.value = mv != null ? String(mv) : "";
       }
 
-      // Live reactivity: when the user edits an xh-model input, call ctx.set()
-      // Guard against duplicate listeners on reprocessing (reload/process)
       if (isMutable && !el.hasAttribute("data-xh-model-bound")) {
         el.setAttribute("data-xh-model-bound", "");
         (function(field, element, context) {
@@ -768,13 +822,11 @@
             }
             context.set(field, newValue);
           });
-        })(modelAttr, el, ctx);
+        })(modelField, el, ctx);
       }
     }
 
-    // xh-class-* is now handled in the xh-attr-* loop above (single pass)
-
-    // -- custom directives -------------------------------------------------------
+    // custom directives
     for (var cd = 0; cd < customDirectives.length; cd++) {
       var directive = customDirectives[cd];
       var cdVal = el.getAttribute(directive.name);
@@ -831,7 +883,7 @@
    * @param {Element}     el
    * @param {DataContext}  ctx
    */
-  function processEach(el, ctx) {
+  function processEach(el, ctx, selectorHint) {
     var eachAttr = el.getAttribute("xh-each");
     if (eachAttr == null) return false;
 
@@ -851,32 +903,70 @@
     // re-trigger iteration.
     el.removeAttribute("xh-each");
 
-    // Pre-build a targeted selector from the template once, reused for all
-    // cloned items instead of querySelectorAll("*") per clone.
-    var cloneSelector = buildCloneSelector(el);
+    // Use pre-built selector from caller if available, otherwise build one
+    // from the template once, reused for all cloned items.
+    var cloneSelector = selectorHint || buildCloneSelector(el);
+
+    // Try to compile a fast binding plan for simple templates (no REST verbs,
+    // no nested xh-each, no xh-on-* handlers). Falls back to null for complex
+    // templates that need full processEachCloneChildren processing.
+    var eachPlan = compileEachPlan(el);
+
+    // Pre-check: does the template root have xh-on-* handlers?
+    var rootHasOn = false;
+    for (var roa = 0; roa < el.attributes.length; roa++) {
+      if (el.attributes[roa].name.indexOf("xh-on-") === 0) {
+        rootHasOn = true;
+        break;
+      }
+    }
+
+    // Compile an element plan for plan-based rendering (eliminates cloneNode)
+    var itemPlan = (eachPlan && !rootHasOn) ? compileElementPlan(el) : null;
 
     var fragment = document.createDocumentFragment();
 
     var ItemCtxClass = (ctx instanceof MutableDataContext) ? MutableDataContext : DataContext;
 
     var renderItem = function (item, idx, targetFragment) {
+      var itemCtx = new ItemCtxClass(item, ctx, idx);
+
+      // Plan-based path: build DOM directly (no cloneNode)
+      if (itemPlan) {
+        var built = execElementPlan(itemPlan, itemCtx);
+        if (built) {
+          built.setAttribute("data-xh-each-item", "");
+          var builtState = elementStates.get(built) || {};
+          builtState.processed = true;
+          elementStates.set(built, builtState);
+          targetFragment.appendChild(built);
+        }
+        return;
+      }
+
+      // Fallback: cloneNode path
       var clone = el.cloneNode(true);
       // Mark only the clone root — descendants are detected via closest()
       clone.setAttribute("data-xh-each-item", "");
-      var itemCtx = new ItemCtxClass(item, ctx, idx);
       applyBindings(clone, itemCtx);
       // Handle xh-on-* event handlers on the clone root itself
-      for (var oa = 0; oa < clone.attributes.length; oa++) {
-        if (clone.attributes[oa].name.indexOf("xh-on-") === 0) {
-          attachOnHandler(clone, clone.attributes[oa].name.slice(6), clone.attributes[oa].value);
+      if (rootHasOn) {
+        for (var oa = 0; oa < clone.attributes.length; oa++) {
+          if (clone.attributes[oa].name.indexOf("xh-on-") === 0) {
+            attachOnHandler(clone, clone.attributes[oa].name.slice(6), clone.attributes[oa].value);
+          }
         }
       }
       // Mark clone root as processed to prevent re-processing by processNode
       var cloneState = elementStates.get(clone) || {};
       cloneState.processed = true;
       elementStates.set(clone, cloneState);
-      // Single combined pass: bindings + REST triggers for all descendants
-      processEachCloneChildren(clone, itemCtx, cloneSelector);
+      // Process descendants: use compiled plan (fast) or full selector path
+      if (eachPlan) {
+        applyEachPlan(clone, itemCtx, eachPlan);
+      } else {
+        processEachCloneChildren(clone, itemCtx, cloneSelector);
+      }
       targetFragment.appendChild(clone);
     };
 
@@ -1004,6 +1094,122 @@
           bState.processed = true;
           elementStates.set(el, bState);
         }
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Pre-compiled binding plan for xh-each (avoids querySelectorAll per clone)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Analyze an xh-each template element and build a binding plan.
+   * The plan records child element paths and their binding types, so that
+   * clones can be processed by direct tree traversal instead of CSS selectors.
+   *
+   * @param {Element} templateEl – The template element (xh-each already removed).
+   * @returns {Object|null} – Plan object, or null if template needs full processing
+   *                          (has REST verbs, xh-on-*, analytics, nested xh-each).
+   */
+  function compileEachPlan(templateEl) {
+    var entries = []; // { path: number[], hasRest: boolean, hasOnHandlers: boolean, ... }
+    var needsFull = false;
+
+    function walk(node, path) {
+      var children = node.children;
+      for (var i = 0; i < children.length; i++) {
+        var child = children[i];
+        var childPath = path.length === 0 ? [i] : path.concat(i);
+        var hasXh = false;
+        var hasRest = false;
+        var hasEach = false;
+        var hasOn = false;
+        var hasTrack = false;
+
+        var attrs = child.attributes;
+        for (var a = 0; a < attrs.length; a++) {
+          var name = attrs[a].name;
+          if (name.charCodeAt(0) !== 120 || name.charCodeAt(1) !== 104 ||
+              name.charCodeAt(2) !== 45) continue;
+          hasXh = true;
+          if (name === "xh-each") hasEach = true;
+          else if (name === "xh-get" || name === "xh-post" || name === "xh-put" ||
+                   name === "xh-delete" || name === "xh-patch") hasRest = true;
+          else if (name.indexOf("xh-on-") === 0) hasOn = true;
+          else if (name === "xh-track" || name === "xh-track-view") hasTrack = true;
+        }
+
+        // If template has nested xh-each, REST verbs, or event handlers,
+        // fall back to the full processEachCloneChildren path.
+        if (hasEach) { needsFull = true; return; }
+
+        if (hasXh) {
+          entries.push({
+            path: childPath,
+            hasRest: hasRest,
+            hasOn: hasOn,
+            hasTrack: hasTrack
+          });
+        }
+
+        // If this child has REST verbs, we need the full processing for triggers
+        if (hasRest) { needsFull = true; return; }
+
+        walk(child, childPath);
+      }
+    }
+
+    walk(templateEl, []);
+    if (needsFull) return null;
+    return entries;
+  }
+
+  /**
+   * Navigate a DOM tree by child indices path.
+   * @param {Element} root
+   * @param {number[]} path – Array of child element indices from root.
+   * @returns {Element}
+   */
+  function navigatePath(root, path) {
+    var node = root;
+    for (var i = 0; i < path.length; i++) {
+      node = node.children[path[i]];
+    }
+    return node;
+  }
+
+  /**
+   * Apply a pre-compiled binding plan to a cloned xh-each item.
+   * Avoids querySelectorAll and redundant feature checks per clone.
+   *
+   * @param {Element}     clone   – The cloned element.
+   * @param {DataContext}  ctx     – Per-item data context.
+   * @param {Object[]}    plan    – Pre-compiled binding entries.
+   */
+  function applyEachPlan(clone, ctx, plan) {
+    for (var i = 0; i < plan.length; i++) {
+      var entry = plan[i];
+      var el = navigatePath(clone, entry.path);
+      if (!el) continue;
+
+      var kept = applyBindings(el, ctx);
+      if (kept) {
+        if (entry.hasOn) {
+          var attrs = el.attributes;
+          for (var oa = 0; oa < attrs.length; oa++) {
+            if (attrs[oa].name.indexOf("xh-on-") === 0) {
+              attachOnHandler(el, attrs[oa].name.slice(6), attrs[oa].value);
+            }
+          }
+        }
+        if (entry.hasTrack) {
+          if (el.hasAttribute("xh-track")) setupTrack(el, ctx);
+          if (el.hasAttribute("xh-track-view")) setupTrackView(el, ctx);
+        }
+        // No REST verbs in compiled plan (falls back to full path if present)
+        var bState = elementStates.get(el) || {};
+        bState.processed = true;
+        elementStates.set(el, bState);
       }
     }
   }
@@ -1442,11 +1648,13 @@
   function performSwap(target, fragment, mode) {
     switch (mode) {
       case "innerHTML":
-        cleanupBeforeSwap(target, false);
-        if (config.cspSafe) {
-          while (target.firstChild) target.removeChild(target.firstChild);
-        } else {
-          target.innerHTML = "";
+        if (target.firstChild) {
+          cleanupBeforeSwap(target, false);
+          if (config.cspSafe) {
+            while (target.firstChild) target.removeChild(target.firstChild);
+          } else {
+            target.innerHTML = "";
+          }
         }
         target.appendChild(fragment);
         return target;
@@ -1517,39 +1725,300 @@
    * @param {DataContext}  ctx
    * @returns {DocumentFragment}
    */
-  function renderTemplate(html, ctx) {
-    // 1. Parse into fragment (no global interpolation — that would replace
-    //    {{field}} inside xh-* attributes with the wrong context)
-    var container = document.createElement("div");
+  // ---------------------------------------------------------------------------
+  // Compiled render plan — eliminates cloneNode(true) and post-clone TreeWalker
+  // ---------------------------------------------------------------------------
 
-    var parsedFragment;
-    if (config.cspSafe) {
-      var parser = new DOMParser();
-      var doc = parser.parseFromString("<body>" + html + "</body>", "text/html");
-      parsedFragment = document.createDocumentFragment();
-      var children = Array.prototype.slice.call(doc.body.childNodes);
-      for (var c = 0; c < children.length; c++) {
-        parsedFragment.appendChild(document.importNode(children[c], true));
+  /**
+   * Compile a DOM subtree into a flat render plan.
+   * Each entry describes how to recreate one DOM node from scratch.
+   */
+  function compileRenderPlan(parent) {
+    var plan = [];
+    _compilePlanChildren(parent, plan);
+    return plan;
+  }
+
+  /**
+   * Compile a single element (e.g. an xh-each template) into a plan node.
+   * Returns a plan entry for that element including its children.
+   */
+  function compileElementPlan(el) {
+    var entry = {
+      t: 1,
+      tag: el.tagName.toLowerCase(),
+      attrs: null,
+      xh: null,
+      children: null
+    };
+    var attrs = el.attributes;
+    var staticAttrs = null;
+    var xhAttrs = null;
+    for (var i = 0; i < attrs.length; i++) {
+      var name = attrs[i].name;
+      if (name.charCodeAt(0) === 120 && name.charCodeAt(1) === 104 && name.charCodeAt(2) === 45) {
+        if (!xhAttrs) xhAttrs = [];
+        xhAttrs.push(name, attrs[i].value);
+      } else {
+        if (!staticAttrs) staticAttrs = [];
+        staticAttrs.push(name, attrs[i].value);
       }
-    } else {
-      var tpl = document.createElement("template");
-      tpl.innerHTML = html;
-      parsedFragment = document.importNode(tpl.content, true);
     }
-    container.appendChild(parsedFragment);
+    entry.attrs = staticAttrs;
+    entry.xh = xhAttrs;
+    var children = [];
+    _compilePlanChildren(el, children);
+    entry.children = children.length ? children : null;
+    return entry;
+  }
 
-    // 2. Process directives in the fragment
-    // We need a temporary container because DocumentFragment doesn't support
-    // querySelectorAll with :scope or certain traversals in all browsers.
+  function _compilePlanChildren(parent, planArr) {
+    var child = parent.firstChild;
+    while (child) {
+      if (child.nodeType === 1) { // Element
+        var entry = {
+          t: 1, // element
+          tag: child.tagName.toLowerCase(),
+          attrs: null,
+          xh: null,
+          children: null
+        };
+        var attrs = child.attributes;
+        var staticAttrs = null;
+        var xhAttrs = null;
+        for (var i = 0; i < attrs.length; i++) {
+          var name = attrs[i].name;
+          if (name.charCodeAt(0) === 120 && name.charCodeAt(1) === 104 && name.charCodeAt(2) === 45) {
+            if (!xhAttrs) xhAttrs = [];
+            xhAttrs.push(name, attrs[i].value);
+          } else {
+            if (!staticAttrs) staticAttrs = [];
+            staticAttrs.push(name, attrs[i].value);
+          }
+        }
+        entry.attrs = staticAttrs;
+        entry.xh = xhAttrs;
+        var children = [];
+        _compilePlanChildren(child, children);
+        entry.children = children.length ? children : null;
+        planArr.push(entry);
+      } else if (child.nodeType === 3) { // Text
+        var text = child.nodeValue;
+        if (text.indexOf("{{") !== -1) {
+          planArr.push({ t: 3, v: text }); // interpolated text
+        } else {
+          planArr.push({ t: 2, v: text }); // static text
+        }
+      }
+      child = child.nextSibling;
+    }
+  }
+
+  /**
+   * Execute a compiled render plan, building DOM directly via createElement.
+   * Avoids cloneNode(true) overhead.
+   */
+  function executePlan(plan, ctx) {
+    var frag = document.createDocumentFragment();
+    for (var i = 0; i < plan.length; i++) {
+      _execPlanNode(frag, plan[i], ctx, false);
+    }
+    return frag;
+  }
+
+  function _execPlanNode(parent, node, ctx, markProcessed) {
+    if (node.t === 2) { // static text
+      parent.appendChild(document.createTextNode(node.v));
+      return;
+    }
+    if (node.t === 3) { // interpolated text
+      var tnode = document.createTextNode(interpolate(node.v, ctx, false));
+      tnode._xhTpl = node.v;
+      parent.appendChild(tnode);
+      return;
+    }
+    // Element node (t === 1)
+    var el = document.createElement(node.tag);
+    // Set static attributes
+    var sa = node.attrs;
+    if (sa) {
+      for (var i = 0; i < sa.length; i += 2) {
+        var attrVal = sa[i + 1];
+        if (attrVal.indexOf("{{") !== -1) {
+          attrVal = interpolate(attrVal, ctx, false);
+        }
+        el.setAttribute(sa[i], attrVal);
+      }
+    }
+    // Create children FIRST (bindings like xh-text may overwrite them)
+    var ch = node.children;
+    if (ch) {
+      for (var k = 0; k < ch.length; k++) {
+        _execPlanNode(el, ch[k], ctx, markProcessed);
+      }
+    }
+    // Set xh-* attributes and apply bindings AFTER children exist
+    var xh = node.xh;
+    if (xh) {
+      for (var j = 0; j < xh.length; j += 2) {
+        el.setAttribute(xh[j], xh[j + 1]);
+      }
+      var kept = applyBindings(el, ctx);
+      if (kept === false) return; // xh-if/xh-unless removed it
+      // When used from xh-each, also handle event handlers and analytics
+      // since processNode won't run on these elements
+      if (markProcessed) {
+        for (var m = 0; m < xh.length; m += 2) {
+          if (xh[m].indexOf("xh-on-") === 0) {
+            attachOnHandler(el, xh[m].slice(6), xh[m + 1]);
+          }
+        }
+        if (el.hasAttribute("xh-track")) setupTrack(el, ctx);
+        if (el.hasAttribute("xh-track-view")) setupTrackView(el, ctx);
+        var es = elementStates.get(el) || {};
+        es.processed = true;
+        elementStates.set(el, es);
+      }
+    }
+    parent.appendChild(el);
+  }
+
+  /**
+   * Execute a single element plan node and return the created element.
+   * Used for xh-each item rendering.
+   */
+  function execElementPlan(plan, ctx) {
+    var el = document.createElement(plan.tag);
+    // Set static attributes
+    var sa = plan.attrs;
+    if (sa) {
+      for (var i = 0; i < sa.length; i += 2) {
+        var attrVal = sa[i + 1];
+        if (attrVal.indexOf("{{") !== -1) {
+          attrVal = interpolate(attrVal, ctx, false);
+        }
+        el.setAttribute(sa[i], attrVal);
+      }
+    }
+    // Create children FIRST (bindings like xh-text may overwrite them)
+    // markProcessed=true because xh-each items must not be re-processed by processNode
+    var ch = plan.children;
+    if (ch) {
+      for (var k = 0; k < ch.length; k++) {
+        _execPlanNode(el, ch[k], ctx, true);
+      }
+    }
+    // Set xh-* attributes and apply bindings AFTER children exist
+    var xh = plan.xh;
+    if (xh) {
+      for (var j = 0; j < xh.length; j += 2) {
+        el.setAttribute(xh[j], xh[j + 1]);
+      }
+      var kept = applyBindings(el, ctx);
+      if (kept === false) return null; // xh-if/xh-unless removed it
+    }
+    return el;
+  }
+
+  /**
+   * Analyze a prototype container for xh-each and REST verb presence.
+   * Used to enable fast paths that skip unnecessary per-element checks.
+   */
+  function analyzePrototype(container) {
+    var hasEach = false, hasRest = false;
+    var tw = document.createTreeWalker(container, 1 /* SHOW_ELEMENT */);
+    while (tw.nextNode()) {
+      var el = tw.currentNode;
+      if (!hasEach && el.hasAttribute("xh-each")) hasEach = true;
+      if (!hasRest) {
+        for (var r = 0; r < REST_VERBS.length; r++) {
+          if (el.hasAttribute(REST_VERBS[r])) { hasRest = true; break; }
+        }
+      }
+      if (hasEach && hasRest) break;
+    }
+    return { hasEach: hasEach, hasRest: hasRest };
+  }
+
+  function renderTemplate(html, ctx) {
+    // 1. Parse into fragment, using a cache to avoid re-parsing the same HTML
+    //    string on every call.  The cache stores a pristine (un-interpolated)
+    //    prototype DOM plus the pre-built CSS selector for xh-* elements.
+    var cached = renderFragmentCache.get(html);
+    var container, targetedSelector, hasInterp, hasEach, hasRest;
+
+    if (cached) {
+      // Compiled plan path: build DOM directly via createElement (no cloneNode)
+      if (cached.plan) {
+        return executePlan(cached.plan, ctx);
+      }
+      // Fallback: clone the pristine prototype — avoids HTML parsing entirely
+      container = cached.prototype.cloneNode(true);
+      targetedSelector = cached.selector;
+      hasInterp = cached.hasInterp;
+      hasEach = cached.hasEach;
+      hasRest = cached.hasRest;
+    } else {
+      // Slow path: first time seeing this HTML string — parse it
+      container = document.createElement("div");
+
+      var parsedFragment;
+      if (config.cspSafe) {
+        var parser = new DOMParser();
+        var doc = parser.parseFromString("<body>" + html + "</body>", "text/html");
+        parsedFragment = document.createDocumentFragment();
+        var children = Array.prototype.slice.call(doc.body.childNodes);
+        for (var c = 0; c < children.length; c++) {
+          parsedFragment.appendChild(document.importNode(children[c], true));
+        }
+      } else {
+        var tpl = document.createElement("template");
+        tpl.innerHTML = html;
+        parsedFragment = document.importNode(tpl.content, true);
+      }
+      container.appendChild(parsedFragment);
+
+      // Build selector once from the pristine DOM (also registers dynamic attrs globally)
+      targetedSelector = buildCloneSelector(container);
+      hasInterp = html.indexOf("{{") !== -1;
+
+      // Analyze for fast-path eligibility
+      var analysis = analyzePrototype(container);
+      hasEach = analysis.hasEach;
+      hasRest = analysis.hasRest;
+
+      // Compile a render plan for simple templates (no xh-each, no REST)
+      var plan = (!hasEach && !hasRest) ? compileRenderPlan(container) : null;
+
+      // Cache the pristine prototype before any data-dependent mutations
+      if (renderFragmentCache.size >= RENDER_FRAGMENT_CACHE_MAX) {
+        renderFragmentCache.delete(renderFragmentCache.keys().next().value);
+      }
+      renderFragmentCache.set(html, {
+        prototype: container.cloneNode(true),
+        selector: targetedSelector,
+        hasInterp: hasInterp,
+        hasEach: hasEach,
+        hasRest: hasRest,
+        plan: plan
+      });
+
+      // Use the plan immediately on first call too
+      if (plan) {
+        return executePlan(plan, ctx);
+      }
+    }
+
+    // 2. Process directives in the (possibly cloned) fragment
 
     // 2a. Interpolate {{field}} in text nodes and attributes.
-    //     Short-circuit the attribute scan if the template has no interpolation tokens.
-    if (html.indexOf("{{") !== -1) {
+    if (hasInterp) {
       interpolateDOM(container, ctx);
     }
 
-    // Use targeted selector instead of querySelectorAll("*")
-    var targetedSelector = buildCloneSelector(container);
+    // -----------------------------------------------------------------------
+    // General path: templates with xh-each and/or REST verbs (no plan available)
+    // -----------------------------------------------------------------------
     var allEls = Array.prototype.slice.call(container.querySelectorAll(targetedSelector));
     var eachEls = [];
     var bindEls = [];
@@ -1563,43 +2032,33 @@
     }
 
     // Process xh-each first (top-level only, they handle their own children).
-    // Use a Set for O(1) nesting checks instead of O(n) parent walks.
     var eachSet = new Set(eachEls);
     for (var i = 0; i < eachEls.length; i++) {
       if (!eachEls[i].parentNode) continue;
-      // Only process top-level xh-each — skip if any ancestor is also xh-each
       var isNested = false;
       var check = eachEls[i].parentNode;
       while (check && check !== container) {
-        if (eachSet.has(check)) {
-          isNested = true;
-          break;
-        }
+        if (eachSet.has(check)) { isNested = true; break; }
         check = check.parentNode;
       }
       if (!isNested) {
-        processEach(eachEls[i], ctx);
+        processEach(eachEls[i], ctx, targetedSelector);
       }
     }
 
-    // Process other bindings (skip elements already handled by xh-each)
+    // Process other bindings
     for (var j = 0; j < bindEls.length; j++) {
       if (!bindEls[j].parentNode) continue;
-      // Skip elements with REST verbs — they will be processed by processNode
-      if (getRestVerb(bindEls[j])) continue;
-      // Skip elements created by xh-each — they were already bound with the
-      // correct per-item context inside processEach.
-      // Only the clone root is marked, so check via closest().
-      if (bindEls[j].closest && bindEls[j].closest("[data-xh-each-item]")) continue;
-      if (!bindEls[j].closest && bindEls[j].hasAttribute("data-xh-each-item")) continue;
+      if (hasRest && getRestVerb(bindEls[j])) continue;
+      if (hasEach) {
+        if (bindEls[j].closest && bindEls[j].closest("[data-xh-each-item]")) continue;
+        if (!bindEls[j].closest && bindEls[j].hasAttribute("data-xh-each-item")) continue;
+      }
       applyBindings(bindEls[j], ctx);
     }
 
-    // Move children back into a new fragment
     var resultFragment = document.createDocumentFragment();
-    while (container.firstChild) {
-      resultFragment.appendChild(container.firstChild);
-    }
+    while (container.firstChild) resultFragment.appendChild(container.firstChild);
     return resultFragment;
   }
 
@@ -3283,6 +3742,191 @@
   };
 
   // ---------------------------------------------------------------------------
+  // DOM patching — render() with in-place updates
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Collect binding state from live DOM elements for future patching.
+   * Walks the target and records references to bound elements and their values.
+   *
+   * @param {Element}     target – The container holding rendered content.
+   * @param {DataContext}  ctx    – The data context used for this render.
+   * @param {string}       html   – The template HTML string.
+   * @returns {Object} Patch state for future updates.
+   */
+  function collectBindingState(target, ctx, html) {
+    var bindings = [];
+    var tw = document.createTreeWalker(target, 1 /* SHOW_ELEMENT */);
+    while (tw.nextNode()) {
+      var el = tw.currentNode;
+      var attrs = el.attributes;
+      var entry = null;
+
+      for (var i = 0; i < attrs.length; i++) {
+        var name = attrs[i].name;
+        if (name.charCodeAt(0) !== 120 || name.charCodeAt(1) !== 104 ||
+            name.charCodeAt(2) !== 45) continue;
+
+        if (!entry) entry = { el: el, ops: [] };
+        var value = attrs[i].value;
+
+        switch (name) {
+          case "xh-text":
+            entry.ops.push({ type: 0 /* text */, field: value, last: ctx.resolve(value) });
+            break;
+          case "xh-html":
+            entry.ops.push({ type: 1 /* html */, field: value, last: ctx.resolve(value) });
+            break;
+          case "xh-show":
+            entry.ops.push({ type: 2 /* show */, field: value, last: ctx.resolve(value) });
+            break;
+          case "xh-hide":
+            entry.ops.push({ type: 3 /* hide */, field: value, last: ctx.resolve(value) });
+            break;
+          case "xh-if":
+            entry.ops.push({ type: 4 /* if */, field: value, last: ctx.resolve(value) });
+            break;
+          case "xh-unless":
+            entry.ops.push({ type: 5 /* unless */, field: value, last: ctx.resolve(value) });
+            break;
+          default:
+            if (name.indexOf("xh-attr-") === 0) {
+              entry.ops.push({ type: 6 /* attr */, target: name.slice(8), field: value, last: ctx.resolve(value) });
+            } else if (name.indexOf("xh-class-") === 0) {
+              entry.ops.push({ type: 7 /* class */, className: name.slice(9), field: value, last: ctx.resolve(value) });
+            }
+        }
+      }
+      if (entry) bindings.push(entry);
+    }
+
+    // Also capture text-node interpolation state
+    var interpNodes = [];
+    var txtWalker = document.createTreeWalker(target, 4 /* SHOW_TEXT */);
+    while (txtWalker.nextNode()) {
+      var tnode = txtWalker.currentNode;
+      // Check if this text node's original template had interpolation.
+      // We mark it by storing the template string in a custom property.
+      if (tnode._xhTpl) {
+        interpNodes.push({ node: tnode, tpl: tnode._xhTpl, last: tnode.nodeValue });
+      }
+    }
+
+    return { html: html, bindings: bindings, interpNodes: interpNodes, ctx: ctx };
+  }
+
+  /**
+   * Patch existing bound DOM nodes in place instead of full re-render.
+   * Only updates DOM properties whose data values have changed.
+   *
+   * @param {Object}      state – Patch state from collectBindingState.
+   * @param {DataContext}  ctx   – New data context.
+   * @returns {boolean} true if patching succeeded, false if full re-render needed.
+   */
+  function patchBindings(state, ctx) {
+    var bindings = state.bindings;
+    for (var i = 0; i < bindings.length; i++) {
+      var entry = bindings[i];
+      var el = entry.el;
+      // If element was removed from DOM (e.g. parent got replaced), bail out
+      if (!el.parentNode) return false;
+
+      var ops = entry.ops;
+      for (var j = 0; j < ops.length; j++) {
+        var op = ops[j];
+        var newVal = ctx.resolve(op.field);
+
+        if (newVal === op.last) continue; // No change — skip DOM mutation
+        op.last = newVal;
+
+        switch (op.type) {
+          case 0: // text
+            var text = newVal != null ? (typeof newVal === "string" ? newVal : String(newVal)) : "";
+            if (el.firstChild && el.firstChild.nodeType === 3) {
+              el.firstChild.nodeValue = text;
+            } else {
+              el.textContent = text;
+            }
+            break;
+          case 1: // html
+            el.innerHTML = newVal != null ? (typeof newVal === "string" ? newVal : String(newVal)) : "";
+            break;
+          case 2: // show
+            el.style.display = newVal ? "" : "none";
+            break;
+          case 3: // hide
+            el.style.display = newVal ? "none" : "";
+            break;
+          case 4: // if
+            // xh-if change requires full re-render (element removal/addition)
+            if (!newVal !== !op.last) return false;
+            break;
+          case 5: // unless
+            if (!newVal !== !op.last) return false;
+            break;
+          case 6: // attr
+            if (newVal != null) el.setAttribute(op.target, String(newVal));
+            else el.removeAttribute(op.target);
+            break;
+          case 7: // class
+            if (newVal) el.classList.add(op.className);
+            else el.classList.remove(op.className);
+            break;
+        }
+      }
+    }
+
+    // Patch text-node interpolation
+    var interpNodes = state.interpNodes;
+    for (var k = 0; k < interpNodes.length; k++) {
+      var entry2 = interpNodes[k];
+      if (!entry2.node.parentNode) return false;
+      var newText = interpolate(entry2.tpl, ctx, false);
+      if (newText !== entry2.last) {
+        entry2.node.nodeValue = newText;
+        entry2.last = newText;
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * Render a template into a target element with DOM patching.
+   * On the first call for a target, does a full render. On subsequent calls
+   * with the same template, patches only changed bindings in place.
+   *
+   * @param {string}       html   – Template HTML string.
+   * @param {DataContext|Object} ctx – Data context or plain object.
+   * @param {Element}      target – Target element to render into.
+   */
+  function renderInto(html, ctx, target) {
+    // Check for existing patch state
+    var state = patchStates.get(target);
+    if (state && state.html === html) {
+      // Reuse cached DataContext, just update the data
+      if (!(ctx instanceof DataContext)) {
+        state.ctx.data = ctx;
+        ctx = state.ctx;
+      }
+      // Patch path: update only changed bindings
+      if (patchBindings(state, ctx)) return;
+      // Patching failed (xh-if change, etc.) — fall through to full render
+    }
+
+    if (!(ctx instanceof DataContext)) {
+      ctx = new DataContext(ctx);
+    }
+
+    // Full render path
+    var fragment = renderTemplate(html, ctx);
+    performSwap(target, fragment, "innerHTML");
+
+    // Collect and store binding state for future patching
+    patchStates.set(target, collectBindingState(target, ctx, html));
+  }
+
+  // ---------------------------------------------------------------------------
   // Public API
   // ---------------------------------------------------------------------------
 
@@ -3297,6 +3941,19 @@
      */
     process: function (root, ctx) {
       processNode(root || document.body, ctx || new DataContext({}), []);
+    },
+
+    /**
+     * Render a template into a target element with DOM patching.
+     * First call does a full render. Subsequent calls with the same template
+     * patch only changed bindings in place (no DOM rebuild).
+     *
+     * @param {string}       html   – Template HTML string.
+     * @param {*}            data   – Data (plain object or DataContext).
+     * @param {Element}      target – Target element to render into.
+     */
+    render: function (html, data, target) {
+      renderInto(html, data, target);
     },
 
     /**
@@ -3315,6 +3972,7 @@
      */
     clearTemplateCache: function () {
       templateCache.clear();
+      renderFragmentCache.clear();
     },
 
     /**
@@ -3367,6 +4025,7 @@
       config.templatePrefix = opts.templatePrefix != null ? opts.templatePrefix : "/ui/" + version;
       config.apiPrefix = opts.apiPrefix != null ? opts.apiPrefix : config.apiPrefix;
       templateCache.clear();
+      renderFragmentCache.clear();
       responseCache.clear();
 
       if (typeof document !== "undefined") {
@@ -3439,6 +4098,9 @@
         mutationObserver.disconnect();
         mutationObserver = null;
       }
+      templateCache.clear();
+      renderFragmentCache.clear();
+      responseCache.clear();
     },
 
     /** Internal version string */
@@ -3470,6 +4132,11 @@
       defaultTrigger: defaultTrigger,
       resolveDot: resolveDot,
       templateCache: templateCache,
+      renderFragmentCache: renderFragmentCache,
+      patchStates: patchStates,
+      renderInto: renderInto,
+      collectBindingState: collectBindingState,
+      patchBindings: patchBindings,
       responseCache: responseCache,
       elementStates: elementStates,
       generationMap: generationMap,
