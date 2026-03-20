@@ -843,12 +843,14 @@
       }
     }
 
-    // custom directives
-    for (var cd = 0; cd < customDirectives.length; cd++) {
-      var directive = customDirectives[cd];
-      var cdVal = el.getAttribute(directive.name);
-      if (cdVal != null) {
-        directive.handler(el, cdVal, ctx);
+    // custom directives (skip loop setup when none registered)
+    if (customDirectives.length > 0) {
+      for (var cd = 0; cd < customDirectives.length; cd++) {
+        var directive = customDirectives[cd];
+        var cdVal = el.getAttribute(directive.name);
+        if (cdVal != null) {
+          directive.handler(el, cdVal, ctx);
+        }
       }
     }
 
@@ -1233,9 +1235,7 @@
           if (el.hasAttribute("xh-track-view")) setupTrackView(el, ctx);
         }
         // No REST verbs in compiled plan (falls back to full path if present)
-        var bState = elementStates.get(el) || {};
-        bState.processed = true;
-        elementStates.set(el, bState);
+        elementStates.set(el, PROCESSED_STATE);
       }
     }
   }
@@ -1814,24 +1814,30 @@
       t: 1,
       tag: el.tagName.toLowerCase(),
       attrs: null,
+      iAttrs: null,
       xh: null,
       skipCh: false,
       children: null
     };
     var attrs = el.attributes;
     var staticAttrs = null;
+    var interpAttrs = null;
     var xhAttrs = null;
     for (var i = 0; i < attrs.length; i++) {
       var name = attrs[i].name;
       if (name.charCodeAt(0) === 120 && name.charCodeAt(1) === 104 && name.charCodeAt(2) === 45) {
         if (!xhAttrs) xhAttrs = [];
         _pushXhCode(xhAttrs, name, attrs[i].value);
+      } else if (attrs[i].value.indexOf("{{") !== -1) {
+        if (!interpAttrs) interpAttrs = [];
+        interpAttrs.push(name, attrs[i].value);
       } else {
         if (!staticAttrs) staticAttrs = [];
         staticAttrs.push(name, attrs[i].value);
       }
     }
     entry.attrs = staticAttrs;
+    entry.iAttrs = interpAttrs;
     entry.xh = xhAttrs;
     if (xhAttrs) {
       for (var sc = 0; sc < xhAttrs.length; sc += 3) {
@@ -1874,24 +1880,30 @@
           t: 1, // element
           tag: child.tagName.toLowerCase(),
           attrs: null,
+          iAttrs: null,
           xh: null,
           skipCh: false,
           children: null
         };
         var attrs = child.attributes;
         var staticAttrs = null;
+        var interpAttrs = null;
         var xhAttrs = null;
         for (var i = 0; i < attrs.length; i++) {
           var name = attrs[i].name;
           if (name.charCodeAt(0) === 120 && name.charCodeAt(1) === 104 && name.charCodeAt(2) === 45) {
             if (!xhAttrs) xhAttrs = [];
             _pushXhCode(xhAttrs, name, attrs[i].value);
+          } else if (attrs[i].value.indexOf("{{") !== -1) {
+            if (!interpAttrs) interpAttrs = [];
+            interpAttrs.push(name, attrs[i].value);
           } else {
             if (!staticAttrs) staticAttrs = [];
             staticAttrs.push(name, attrs[i].value);
           }
         }
         entry.attrs = staticAttrs;
+        entry.iAttrs = interpAttrs;
         entry.xh = xhAttrs;
         if (xhAttrs) {
           for (var sc = 0; sc < xhAttrs.length; sc += 3) {
@@ -2039,15 +2051,18 @@
     }
 
     var el = document.createElement(node.tag);
-    // Set static attributes
+    // Set static attributes (no interpolation needed — pre-split at compile time)
     var sa = node.attrs;
     if (sa) {
       for (var i = 0; i < sa.length; i += 2) {
-        var attrVal = sa[i + 1];
-        if (attrVal.indexOf("{{") !== -1) {
-          attrVal = interpolate(attrVal, ctx, false);
-        }
-        el.setAttribute(sa[i], attrVal);
+        el.setAttribute(sa[i], sa[i + 1]);
+      }
+    }
+    // Set interpolated attributes
+    var ia = node.iAttrs;
+    if (ia) {
+      for (var ii = 0; ii < ia.length; ii += 2) {
+        el.setAttribute(ia[ii], interpolate(ia[ii + 1], ctx, false));
       }
     }
     // Skip children if xh-text/xh-html will overwrite them
@@ -2119,15 +2134,18 @@
     }
 
     var el = document.createElement(plan.tag);
-    // Set static attributes
+    // Set static attributes (no interpolation needed — pre-split at compile time)
     var sa = plan.attrs;
     if (sa) {
       for (var i = 0; i < sa.length; i += 2) {
-        var attrVal = sa[i + 1];
-        if (attrVal.indexOf("{{") !== -1) {
-          attrVal = interpolate(attrVal, ctx, false);
-        }
-        el.setAttribute(sa[i], attrVal);
+        el.setAttribute(sa[i], sa[i + 1]);
+      }
+    }
+    // Set interpolated attributes
+    var ia = plan.iAttrs;
+    if (ia) {
+      for (var ii = 0; ii < ia.length; ii += 2) {
+        el.setAttribute(ia[ii], interpolate(ia[ii + 1], ctx, false));
       }
     }
     // Skip children if xh-text/xh-html will overwrite them
@@ -3486,10 +3504,9 @@
    * @returns {Element[]}
    */
   function gatherXhElements(root) {
-    // Use the known selector plus any dynamic attrs previously discovered
-    // by buildCloneSelector (tracked in dynamicAttrSelectors).
-    var extra = Object.keys(dynamicAttrSelectors);
-    var selector = extra.length ? XH_KNOWN_SELECTOR + "," + extra.join(",") : XH_KNOWN_SELECTOR;
+    // Use the cached combined selector (rebuilt by rebuildDetectSelector when
+    // new dynamic attrs are discovered — avoids Object.keys + join per call).
+    var selector = _gatherSelector;
 
     // Check for undiscovered dynamic attrs using querySelector (avoids
     // expensive innerHTML serialization of the entire subtree).
@@ -3585,8 +3602,8 @@
       setupTrackView(el, ctx);
     }
 
-    // -- i18n support -----------------------------------------------------------
-    if (el.hasAttribute("xh-i18n") || checkElementForI18nAttr(el)) {
+    // -- i18n support (skip attribute scan when no locales are loaded) ----------
+    if (i18n._locale && (el.hasAttribute("xh-i18n") || checkElementForI18nAttr(el))) {
       applyI18n(el);
     }
 
@@ -3695,11 +3712,14 @@
    */
   var dynamicAttrSelectors = {};
   var XH_DETECT_SELECTOR = XH_KNOWN_SELECTOR;
+  /** Cached combined selector for gatherXhElements (invalidated by rebuildDetectSelector) */
+  var _gatherSelector = XH_KNOWN_SELECTOR;
 
   /** Rebuild the detect selector when new dynamic attrs are discovered. */
   function rebuildDetectSelector() {
     var extra = Object.keys(dynamicAttrSelectors);
     XH_DETECT_SELECTOR = extra.length ? XH_KNOWN_SELECTOR + "," + extra.join(",") : XH_KNOWN_SELECTOR;
+    _gatherSelector = XH_DETECT_SELECTOR;
   }
 
   function hasXhAttributes(el) {
@@ -4094,10 +4114,10 @@
         var newVal = ctx.resolve(op.field);
 
         if (newVal === op.last) continue; // No change — skip DOM mutation
-        op.last = newVal;
 
         switch (op.type) {
           case 0: // text
+            op.last = newVal;
             var text = newVal != null ? (typeof newVal === "string" ? newVal : String(newVal)) : "";
             if (el.firstChild && el.firstChild.nodeType === 3) {
               el.firstChild.nodeValue = text;
@@ -4106,26 +4126,33 @@
             }
             break;
           case 1: // html
+            op.last = newVal;
             el.innerHTML = newVal != null ? (typeof newVal === "string" ? newVal : String(newVal)) : "";
             break;
           case 2: // show
+            op.last = newVal;
             el.style.display = newVal ? "" : "none";
             break;
           case 3: // hide
+            op.last = newVal;
             el.style.display = newVal ? "none" : "";
             break;
           case 4: // if
             // xh-if change requires full re-render (element removal/addition)
             if (!newVal !== !op.last) return false;
+            op.last = newVal;
             break;
           case 5: // unless
             if (!newVal !== !op.last) return false;
+            op.last = newVal;
             break;
           case 6: // attr
+            op.last = newVal;
             if (newVal != null) el.setAttribute(op.target, String(newVal));
             else el.removeAttribute(op.target);
             break;
           case 7: // class
+            op.last = newVal;
             if (newVal) el.classList.add(op.className);
             else el.classList.remove(op.className);
             break;
