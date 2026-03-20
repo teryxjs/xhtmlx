@@ -391,8 +391,6 @@
   // Interpolation  — {{field}} replacement
   // ---------------------------------------------------------------------------
 
-  var INTERP_RE = /\{\{([^}]+)\}\}/g;
-
   /**
    * Replace all {{field}} tokens in a string using the given DataContext.
    *
@@ -425,18 +423,28 @@
       return str.substring(0, start) + replacement + str.substring(end + 2);
     }
 
-    // Multi-token: use regex
-    return str.replace(INTERP_RE, function (_match, path) {
-      var val = ctx.resolve(path.trim());
-      if (val === undefined) {
+    // Multi-token: manual indexOf loop (avoids regex engine + closure allocation)
+    var out = "";
+    var idx = 0;
+    var open2, close2;
+    while ((open2 = str.indexOf("{{", idx)) !== -1) {
+      close2 = str.indexOf("}}", open2 + 2);
+      if (close2 === -1) break;
+      out += str.substring(idx, open2);
+      var tpath = str.substring(open2 + 2, close2).trim();
+      var tval = ctx.resolve(tpath);
+      if (tval === undefined) {
         if (config.debug) {
-          console.warn("[xhtmlx] unresolved interpolation: {{" + path + "}}");
+          console.warn("[xhtmlx] unresolved interpolation: {{" + tpath + "}}");
         }
-        return "";
+      } else {
+        var ts = String(tval);
+        out += uriEnc ? encodeURIComponent(ts) : ts;
       }
-      var s = String(val);
-      return uriEnc ? encodeURIComponent(s) : s;
-    });
+      idx = close2 + 2;
+    }
+    out += str.substring(idx);
+    return out;
   }
 
   /**
@@ -1050,7 +1058,8 @@
   function processBindingsInTree(root, ctx, selectorHint) {
     // Use a targeted selector instead of querySelectorAll("*") so we only
     // visit elements that actually have xh-* attributes.
-    var elements = Array.prototype.slice.call(root.querySelectorAll(selectorHint || buildCloneSelector(root)));
+    // querySelectorAll returns a static NodeList — safe to iterate directly
+    var elements = root.querySelectorAll(selectorHint || buildCloneSelector(root));
     for (var i = 0; i < elements.length; i++) {
       var el = elements[i];
       // Skip if already detached from DOM
@@ -1806,19 +1815,11 @@
   }
 
   /**
-   * Compile a single element (e.g. an xh-each template) into a plan node.
-   * Returns a plan entry for that element including its children.
+   * Classify element attributes into static, interpolated, and xh-* categories.
+   * Populates entry.attrs, entry.iAttrs, entry.xh, and entry.skipCh.
+   * Shared between compileElementPlan and _compilePlanChildren.
    */
-  function compileElementPlan(el) {
-    var entry = {
-      t: 1,
-      tag: el.tagName.toLowerCase(),
-      attrs: null,
-      iAttrs: null,
-      xh: null,
-      skipCh: false,
-      children: null
-    };
+  function _classifyAttrs(el, entry) {
     var attrs = el.attributes;
     var staticAttrs = null;
     var interpAttrs = null;
@@ -1844,6 +1845,23 @@
         if (xhAttrs[sc] === XH_TEXT || xhAttrs[sc] === XH_HTML) { entry.skipCh = true; break; }
       }
     }
+  }
+
+  /**
+   * Compile a single element (e.g. an xh-each template) into a plan node.
+   * Returns a plan entry for that element including its children.
+   */
+  function compileElementPlan(el) {
+    var entry = {
+      t: 1,
+      tag: el.tagName.toLowerCase(),
+      attrs: null,
+      iAttrs: null,
+      xh: null,
+      skipCh: false,
+      children: null
+    };
+    _classifyAttrs(el, entry);
     var children = [];
     _compilePlanChildren(el, children);
     entry.children = children.length ? children : null;
@@ -1885,31 +1903,7 @@
           skipCh: false,
           children: null
         };
-        var attrs = child.attributes;
-        var staticAttrs = null;
-        var interpAttrs = null;
-        var xhAttrs = null;
-        for (var i = 0; i < attrs.length; i++) {
-          var name = attrs[i].name;
-          if (name.charCodeAt(0) === 120 && name.charCodeAt(1) === 104 && name.charCodeAt(2) === 45) {
-            if (!xhAttrs) xhAttrs = [];
-            _pushXhCode(xhAttrs, name, attrs[i].value);
-          } else if (attrs[i].value.indexOf("{{") !== -1) {
-            if (!interpAttrs) interpAttrs = [];
-            interpAttrs.push(name, attrs[i].value);
-          } else {
-            if (!staticAttrs) staticAttrs = [];
-            staticAttrs.push(name, attrs[i].value);
-          }
-        }
-        entry.attrs = staticAttrs;
-        entry.iAttrs = interpAttrs;
-        entry.xh = xhAttrs;
-        if (xhAttrs) {
-          for (var sc = 0; sc < xhAttrs.length; sc += 3) {
-            if (xhAttrs[sc] === XH_TEXT || xhAttrs[sc] === XH_HTML) { entry.skipCh = true; break; }
-          }
-        }
+        _classifyAttrs(child, entry);
         var children = [];
         if (_compilePlanChildren(child, children) === false) return false;
         entry.children = children.length ? children : null;
@@ -2286,7 +2280,8 @@
     // -----------------------------------------------------------------------
     // General path: templates with xh-each and/or REST verbs (no plan available)
     // -----------------------------------------------------------------------
-    var allEls = Array.prototype.slice.call(container.querySelectorAll(targetedSelector));
+    // querySelectorAll returns a static NodeList — safe to iterate directly
+    var allEls = container.querySelectorAll(targetedSelector);
     var eachEls = [];
     var bindEls = [];
 
@@ -2317,16 +2312,10 @@
     for (var j = 0; j < bindEls.length; j++) {
       if (!bindEls[j].parentNode) continue;
       if (hasRest && getRestVerb(bindEls[j])) continue;
-      if (hasEach) {
-        // Walk up to check if inside an xh-each item (WeakSet replaces DOM attribute)
-        var inEach = false;
-        var ancestor = bindEls[j];
-        while (ancestor && ancestor !== container) {
-          if (eachItemSet.has(ancestor)) { inEach = true; break; }
-          ancestor = ancestor.parentNode;
-        }
-        if (inEach) continue;
-      }
+      // After processEach, elements from the original xh-each template are
+      // detached from container.  Native contains() is O(1) in engine code
+      // vs the previous O(depth) JS ancestor walk with eachItemSet checks.
+      if (hasEach && !container.contains(bindEls[j])) continue;
       applyBindings(bindEls[j], ctx);
     }
 
@@ -3520,12 +3509,12 @@
             !dynamicAttrSelectors["[" + name + "]"]) {
           // Found undiscovered dynamic attrs — do a full scan once
           selector = buildCloneSelector(root);
-          return Array.prototype.slice.call(root.querySelectorAll(selector));
+          return root.querySelectorAll(selector);
         }
       }
     }
 
-    return Array.prototype.slice.call(candidates);
+    return candidates;
   }
 
   // ---------------------------------------------------------------------------
@@ -3587,10 +3576,15 @@
     var existing = elementStates.get(el);
     if (existing && existing.processed) return;
 
-    // -- xh-on-* event handlers (single pass, no intermediate array) ----------
-    for (var oa = 0; oa < el.attributes.length; oa++) {
-      if (el.attributes[oa].name.indexOf("xh-on-") === 0) {
-        attachOnHandler(el, el.attributes[oa].name.slice(6), el.attributes[oa].value);
+    // -- Single pass: xh-on-* handlers + i18n attribute detection ---------------
+    var hasI18nAttr = false;
+    var pAttrs = el.attributes;
+    for (var oa = 0; oa < pAttrs.length; oa++) {
+      var oaName = pAttrs[oa].name;
+      if (oaName.indexOf("xh-on-") === 0) {
+        attachOnHandler(el, oaName.slice(6), pAttrs[oa].value);
+      } else if (!hasI18nAttr && oaName.indexOf("xh-i18n-") === 0 && oaName !== "xh-i18n-vars") {
+        hasI18nAttr = true;
       }
     }
 
@@ -3602,8 +3596,8 @@
       setupTrackView(el, ctx);
     }
 
-    // -- i18n support (skip attribute scan when no locales are loaded) ----------
-    if (i18n._locale && (el.hasAttribute("xh-i18n") || checkElementForI18nAttr(el))) {
+    // -- i18n support (skip when no locales loaded; reuse flag from loop above)
+    if (i18n._locale && (el.hasAttribute("xh-i18n") || hasI18nAttr)) {
       applyI18n(el);
     }
 
@@ -3744,20 +3738,6 @@
     if (!el.attributes) return false;
     for (var i = 0; i < el.attributes.length; i++) {
       if (el.attributes[i].name.indexOf("xh-") === 0) return true;
-    }
-    return false;
-  }
-
-  /**
-   * Check if an element has any xh-i18n-{attr} attribute (not xh-i18n-vars).
-   * @param {Element} el
-   * @returns {boolean}
-   */
-  function checkElementForI18nAttr(el) {
-    if (!el.attributes) return false;
-    for (var i = 0; i < el.attributes.length; i++) {
-      var name = el.attributes[i].name;
-      if (name.indexOf("xh-i18n-") === 0 && name !== "xh-i18n-vars") return true;
     }
     return false;
   }
