@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.1] - 2026-03-19
+
+### Performance
+- Pre-compute numeric binding type codes in render plan (eliminates string comparison per binding)
+- Skip child creation when xh-text/xh-html will overwrite them
+- Use `textContent = ''` instead of `innerHTML = ""` in performSwap (avoids HTML parser)
+- Batch `classList.add` calls in plan bindings
+- Check `instanceof MutableDataContext` once per render, pass boolean down recursion
+- Shared frozen `PROCESSED_STATE` constant (avoids per-element object allocation)
+- Replace `data-xh-each-item` setAttribute with WeakSet lookup
+- Eliminate `renderItem` closure in plan-based processEach path
+- Inline plan bindings bypass DOM setAttribute round-trip
+- Compiled xh-each plans with direct DOM creation (no cloneNode)
+- xh-if fast path checks before element/child creation
+- Skip cleanup querySelectorAll, outerHTML fast path, selector caching
+- Compiled render plans with resolve() fast path and text binding optimizations
+- Eliminate remaining querySelectorAll("*"), cache hot paths, fix resource leaks
+- Eliminate DOM serialization, reduce allocations, add caches
+- Optimize hot paths — eliminate redundant DOM scans, add fast paths
+- Remove unnecessary IIFE closures in bindings, add destroy() for cleanup
+- Consolidate i18n scans, cache validation regex, optimize xh-each nesting check
+- Fix listener duplication, resize element leaks, subscriber accumulation
+- Replace querySelectorAll("*") in gatherXhElements with targeted selector
+- Use targeted selectors in xh-each clone processing
+- Deduplicate XH_KNOWN_SELECTOR and XH_DETECT_SELECTOR
+
 ## [0.3.0] - 2026-03-17
 
 ### Added

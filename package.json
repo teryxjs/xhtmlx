@@ -1,6 +1,6 @@
 {
   "name": "xhtmlx",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Declarative HTML attributes for REST API driven UIs. Like htmx, but with JSON APIs and client-side rendering.",
   "main": "xhtmlx.js",
   "types": "xhtmlx.d.ts",
