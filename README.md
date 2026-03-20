@@ -761,6 +761,50 @@ xhtmlx.config.defaultErrorTemplate = null;     // Global error template
 xhtmlx.config.defaultErrorTarget = null;       // Global error target
 ```
 
+## Performance
+
+xhtmlx is benchmarked head-to-head against React 18 on every release. The numbers below are averages of 3 runs in JSDOM with Jest (`flushSync` for React to keep the comparison synchronous).
+
+### Initial Render — template to DOM
+
+| Scenario | xhtmlx | React 18 | Winner |
+|---|---:|---:|---|
+| Single text binding | 19.0K ops/s | 45.5K ops/s | React 2.4x |
+| 5 text bindings | 5.9K ops/s | 69.7K ops/s | React 11.8x |
+| Conditional render | 6.0K ops/s | 25.9K ops/s | React 4.3x |
+| User profile card | 2.0K ops/s | 10.2K ops/s | React 5.0x |
+| List — 100 items | 330 ops/s | 943 ops/s | React 2.9x |
+| **List — 500 items** | **406 ops/s** | **189 ops/s** | **xhtmlx 2.1x** |
+| **List — 1,000 items** | **464 ops/s** | **93 ops/s** | **xhtmlx 5.0x** |
+
+React wins small-to-medium initial renders (its vDOM is hard to beat for first paint). xhtmlx overtakes React on large lists (500+ items) thanks to compiled element plans.
+
+### Re-Render / Patching — data change to DOM update
+
+| Scenario | xhtmlx | React 18 | Winner |
+|---|---:|---:|---|
+| 1 text — changing data | **10.66M ops/s** | 32.7K ops/s | **xhtmlx 326x** |
+| 1 text — same data (noop) | **5.79M ops/s** | 36.5K ops/s | **xhtmlx 159x** |
+| 5 text — same data (noop) | **13.51M ops/s** | 80.6K ops/s | **xhtmlx 168x** |
+| 10 text — changing data | **795.1K ops/s** | 6.0K ops/s | **xhtmlx 132x** |
+| Card — changing data | **5.35M ops/s** | 18.8K ops/s | **xhtmlx 285x** |
+| Card — same data (noop) | **14.75M ops/s** | 23.4K ops/s | **xhtmlx 630x** |
+| Conditional — same (noop) | **15.65M ops/s** | 44.7K ops/s | **xhtmlx 350x** |
+| Profile — same (noop) | **11.98M ops/s** | 21.7K ops/s | **xhtmlx 551x** |
+
+xhtmlx's `render()` API patches only changed DOM bindings in place — no virtual DOM diff, no reconciliation, no tree walk. This is where the library shines for polling, WebSocket streams, and reactive state updates: **100–630x faster** than React.
+
+### Summary
+
+| Category | Winner | Magnitude |
+|---|---|---|
+| Initial render (small/medium) | React | 2–12x faster |
+| Initial render (large lists 500+) | **xhtmlx** | 2–5x faster |
+| Re-render / patching | **xhtmlx** | **100–630x faster** |
+| Bundle size | **xhtmlx** | 4x smaller (~10KB vs ~40KB+) |
+
+> Benchmarks: `tests/benchmark/` — React 18.3, xhtmlx 0.3.1, JSDOM, 3 runs averaged.
+
 ## Migration
 
 Use the built-in CLI tool to migrate HTML files between xhtmlx versions:
