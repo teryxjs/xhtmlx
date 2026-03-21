@@ -125,11 +125,17 @@
     src: "src", href: "href", alt: "alt", title: "title", id: "id",
     value: "value", placeholder: "placeholder", type: "type", name: "name",
     action: "action", method: "method", target: "target", rel: "rel",
+    tabindex: "tabIndex", role: "role"
+  };
+  // Boolean IDL properties need explicit coercion — el.disabled = "false" is
+  // truthy and would incorrectly enable the attribute.
+  var BOOL_PROP_MAP = {
     disabled: "disabled", checked: "checked", selected: "selected",
-    hidden: "hidden", tabindex: "tabIndex", role: "role",
-    width: "width", height: "height"
+    hidden: "hidden"
   };
   function _setAttr(el, name, value) {
+    var boolProp = BOOL_PROP_MAP[name];
+    if (boolProp) { el[boolProp] = !!value; return; }
     var prop = PROP_MAP[name];
     if (prop) { el[prop] = value; }
     else { el.setAttribute(name, value); }
@@ -393,15 +399,18 @@
    */
   MutableDataContext.prototype._notify = function(path) {
     var subs = this._subscribers[path];
-    if (!subs) return;
-    // Execute callbacks and prune any that throw (detached element references).
-    // In-place compaction avoids allocating a new array on every notification.
-    var write = 0;
-    for (var i = 0; i < subs.length; i++) {
-      try { subs[i](); subs[write++] = subs[i]; }
-      catch (e) { /* subscriber references a detached element — drop it */ }
+    if (!subs || subs.length === 0) return;
+    // Snapshot the list to guard against reentrancy: a subscriber calling set()
+    // on the same path would recurse into _notify and corrupt the iteration.
+    var snapshot = subs.slice();
+    for (var i = 0; i < snapshot.length; i++) {
+      try { snapshot[i](); }
+      catch (e) {
+        // Subscriber references a detached element — remove from live list
+        var idx = subs.indexOf(snapshot[i]);
+        if (idx !== -1) subs.splice(idx, 1);
+      }
     }
-    subs.length = write;
   };
 
   // ---------------------------------------------------------------------------
@@ -729,15 +738,19 @@
       }
     }
 
-    // xh-hide
+    // xh-hide (skip if xh-show is also set — conflicting directives)
     if (hideField !== null) {
-      var hdval = ctx.resolve(hideField);
-      el.style.display = hdval ? "none" : "";
-      if (isMutable) {
-        trackSubscription(el, ctx, hideField, function() {
-          var newVal = ctx.resolve(hideField);
-          el.style.display = newVal ? "none" : "";
-        });
+      if (showField !== null) {
+        if (config.debug) console.warn("[xhtmlx] element has both xh-show and xh-hide; xh-hide ignored");
+      } else {
+        var hdval = ctx.resolve(hideField);
+        el.style.display = hdval ? "none" : "";
+        if (isMutable) {
+          trackSubscription(el, ctx, hideField, function() {
+            var newVal = ctx.resolve(hideField);
+            el.style.display = newVal ? "none" : "";
+          });
+        }
       }
     }
 
@@ -993,6 +1006,10 @@
           _renderPlanEachItem(arr[i], i, fragment, ItemCtxClass, ctx, itemPlan);
         }
         parent.insertBefore(fragment, el);
+        // Marker keeps insertion point stable so subsequent batches don't
+        // end up after sibling elements that follow the xh-each template.
+        var batchMarker = document.createComment("xh-each-batch");
+        parent.insertBefore(batchMarker, el);
         var offset = batchSize;
         function _planBatch() {
           var bf = document.createDocumentFragment();
@@ -1000,9 +1017,10 @@
           for (var b = offset; b < end; b++) {
             _renderPlanEachItem(arr[b], b, bf, ItemCtxClass, ctx, itemPlan);
           }
-          parent.appendChild(bf);
+          parent.insertBefore(bf, batchMarker);
           offset = end;
           if (offset < arr.length) requestAnimationFrame(_planBatch);
+          else batchMarker.remove();
         }
         if (offset < arr.length) requestAnimationFrame(_planBatch);
         parent.removeChild(el);
@@ -1040,6 +1058,10 @@
           renderItem(arr[i2], i2, fragment);
         }
         parent.insertBefore(fragment, el);
+        // Marker keeps insertion point stable so subsequent batches don't
+        // end up after sibling elements that follow the xh-each template.
+        var batchMarker2 = document.createComment("xh-each-batch");
+        parent.insertBefore(batchMarker2, el);
         var offset2 = batchSize2;
         function renderBatch() {
           var batchFragment = document.createDocumentFragment();
@@ -1047,9 +1069,10 @@
           for (var b2 = offset2; b2 < end; b2++) {
             renderItem(arr[b2], b2, batchFragment);
           }
-          parent.appendChild(batchFragment);
+          parent.insertBefore(batchFragment, batchMarker2);
           offset2 = end;
           if (offset2 < arr.length) requestAnimationFrame(renderBatch);
+          else batchMarker2.remove();
         }
         if (offset2 < arr.length) requestAnimationFrame(renderBatch);
         parent.removeChild(el);
@@ -1380,11 +1403,17 @@
    * @param {HTMLFormElement} form
    * @returns {Object}
    */
-  var _hasFromEntries = typeof Object.fromEntries === "function";
   function formDataToObject(form) {
-    if (_hasFromEntries) return Object.fromEntries(new FormData(form));
     var obj = {};
-    new FormData(form).forEach(function(v, k) { obj[k] = v; });
+    new FormData(form).forEach(function(v, k) {
+      if (obj.hasOwnProperty(k)) {
+        // Collect multiple values into an array (select-multiple, checkboxes)
+        if (Array.isArray(obj[k])) { obj[k].push(v); }
+        else { obj[k] = [obj[k], v]; }
+      } else {
+        obj[k] = v;
+      }
+    });
     return obj;
   }
 
@@ -2267,16 +2296,24 @@
         for (var ei = 0; ei < Math.min(batchSize, arr.length); ei++) {
           _renderPlanEachItem(arr[ei], ei, parent, EachCtx, ctx, node.itemPlan);
         }
+        // Marker keeps insertion point stable so subsequent batches don't
+        // end up after sibling nodes added by later plan entries.
+        var batchMarker3 = document.createComment("xh-each-batch");
+        parent.appendChild(batchMarker3);
         var offset = batchSize;
         var parentRef = parent;
         var itemPlanRef = node.itemPlan;
+        var markerRef = batchMarker3;
         function _planBatchInner() {
+          var bf = document.createDocumentFragment();
           var end = Math.min(offset + batchSize, arr.length);
           for (var rb = offset; rb < end; rb++) {
-            _renderPlanEachItem(arr[rb], rb, parentRef, EachCtx, ctx, itemPlanRef);
+            _renderPlanEachItem(arr[rb], rb, bf, EachCtx, ctx, itemPlanRef);
           }
+          parentRef.insertBefore(bf, markerRef);
           offset = end;
           if (offset < arr.length) requestAnimationFrame(_planBatchInner);
+          else markerRef.remove();
         }
         if (offset < arr.length) requestAnimationFrame(_planBatchInner);
       } else {
@@ -2654,7 +2691,7 @@
    * them as addedNodes and checks data-xh-owned on each one directly.
    */
   function markFragmentOwned(fragment) {
-    if (!fragment) return;
+    if (!fragment || !fragment.childNodes) return;
     var children = fragment.childNodes;
     for (var i = 0; i < children.length; i++) {
       if (children[i].nodeType === 1 && children[i].setAttribute) {
@@ -2922,8 +2959,17 @@
         var age = Date.now() - cached.timestamp;
         var ttl = cacheAttr === "forever" ? Infinity : parseInt(cacheAttr, 10) * 1000;
         if (age < ttl) {
-          // Use cached parsed JSON directly — avoids JSON.parse on every cache hit
-          processJsonData(cached.data);
+          // Use cached parsed JSON directly — avoids JSON.parse on every cache hit.
+          // Chain cleanup to reset requestInFlight, indicators, and aria state.
+          Promise.resolve(processJsonData(cached.data)).finally(function () {
+            hideIndicator(el, indicatorEl);
+            if (ariaTarget) ariaTarget.removeAttribute("aria-busy");
+            if (disabledClass) {
+              el.classList.remove(disabledClass);
+              el.removeAttribute("aria-disabled");
+            }
+            if (state) state.requestInFlight = false;
+          });
           return;
         }
         responseCache.delete(cacheKey);
@@ -3520,9 +3566,17 @@
         try {
           jsonData = JSON.parse(text);
         } catch(e) {
-          // If not JSON, treat as HTML and swap directly
+          // If not JSON, treat as HTML and swap safely via template element
+          // (scripts in template content are inert, unlike raw innerHTML)
           cleanupBeforeSwap(target, false);
-          target.innerHTML = text;
+          if (config.cspSafe) {
+            target.textContent = text;
+          } else {
+            var _safeTpl = document.createElement("template");
+            _safeTpl.innerHTML = text;
+            while (target.firstChild) target.removeChild(target.firstChild);
+            target.appendChild(document.importNode(_safeTpl.content, true));
+          }
           processNode(target, ctx, []);
           return;
         }
@@ -4222,10 +4276,8 @@
         if (notFound) router._notFoundTemplate = notFound;
       }
 
-      // Handle popstate for back/forward
-      window.addEventListener("popstate", function() {
-        router._resolve(window.location.pathname);
-      });
+      // popstate is handled by the global popstateHandler which delegates
+      // to router._resolve when appropriate (avoids duplicate listeners).
 
       // Resolve current URL on init
       if (router._routes.length > 0) {
@@ -4478,13 +4530,16 @@
     // Check for existing patch state
     var state = patchStates.get(target);
     if (state && state.html === html) {
-      // Reuse cached DataContext, just update the data
+      // Create a fresh DataContext rather than mutating the cached one —
+      // other code may still hold references to the previous state.ctx.
       if (!(ctx instanceof DataContext)) {
-        state.ctx.data = ctx;
-        ctx = state.ctx;
+        ctx = new DataContext(ctx);
       }
       // Patch path: update only changed bindings
-      if (patchBindings(state, ctx)) return;
+      if (patchBindings(state, ctx)) {
+        state.ctx = ctx;
+        return;
+      }
       // Patching failed (xh-if change, etc.) — fall through to full render
     }
 
@@ -4603,6 +4658,8 @@
       renderFragmentCache.clear();
       _rfcLastKey = null; _rfcLastVal = null;
       responseCache.clear();
+      // Re-register <template xh-name> elements with the updated prefix
+      scanNamedTemplates();
 
       if (typeof document !== "undefined") {
         emitEvent(document.body, "xh:versionChanged", {
@@ -4804,6 +4861,7 @@
   // ---------------------------------------------------------------------------
 
   function popstateHandler(e) {
+    // Handle xh-push-url history entries (state carries url property)
     if (e.state && e.state.xhtmlx && e.state.url) {
       var target = e.state.targetSel ? document.querySelector(e.state.targetSel) : document.body;
       if (target) {
@@ -4826,6 +4884,11 @@
           }
         }).catch(function () {});
       }
+      return;
+    }
+    // Delegate to SPA router if it has routes registered
+    if (router._routes.length > 0) {
+      router._resolve(window.location.pathname);
     }
   }
 
