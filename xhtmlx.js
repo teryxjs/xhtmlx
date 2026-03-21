@@ -118,6 +118,23 @@
       XH_SHOW = 4, XH_HIDE = 5, XH_ATTR = 6, XH_CLASS = 7,
       XH_ON = 8, XH_TRACK = 9, XH_TRACK_VIEW = 10, XH_UNKNOWN = 11;
 
+  // -- Fast property assignment for known HTML attributes ----------------------
+  // Direct property access (el.src = v) is faster than el.setAttribute("src", v)
+  // because it avoids the DOM attribute API overhead.
+  var PROP_MAP = {
+    src: "src", href: "href", alt: "alt", title: "title", id: "id",
+    value: "value", placeholder: "placeholder", type: "type", name: "name",
+    action: "action", method: "method", target: "target", rel: "rel",
+    disabled: "disabled", checked: "checked", selected: "selected",
+    hidden: "hidden", tabindex: "tabIndex", role: "role",
+    width: "width", height: "height"
+  };
+  function _setAttr(el, name, value) {
+    var prop = PROP_MAP[name];
+    if (prop) { el[prop] = value; }
+    else { el.setAttribute(name, value); }
+  }
+
   // ---------------------------------------------------------------------------
   // Default CSS injection
   // ---------------------------------------------------------------------------
@@ -962,6 +979,7 @@
 
     // Compile an element plan for plan-based rendering (eliminates cloneNode)
     var itemPlan = (eachPlan && !rootHasOn) ? compileElementPlan(el) : null;
+    if (itemPlan) _buildElementClonePlan(itemPlan);
 
     var fragment = document.createDocumentFragment();
 
@@ -1689,8 +1707,36 @@
    *                           or null for "none"/"delete".
    */
   function performSwap(target, fragment, mode) {
+    // Materialize lazy sentinel for non-innerHTML modes (no auto-patch available)
+    if (mode !== "innerHTML" && fragment._xhPlan) {
+      var rf = executePlan(fragment._xhPlan, fragment._xhCtx);
+      if (fragment._xhPatch) rf._xhPatch = fragment._xhPatch;
+      fragment = rf;
+    }
     switch (mode) {
       case "innerHTML":
+        // Auto-patch: if same template was previously rendered into this target,
+        // patch existing DOM in-place instead of rebuilding.
+        var hint = fragment._xhPatch;
+        if (hint && target.firstChild) {
+          var state = patchStates.get(target);
+          if (state && state.html === hint.html) {
+            var pctx = hint.ctx;
+            if (!(pctx instanceof DataContext)) pctx = new DataContext(pctx);
+            if (patchBindings(state, pctx)) {
+              // Save patch target so renderTemplate can skip fragment building next time
+              var ce = renderFragmentCache.get(hint.html);
+              if (ce) ce._patchTarget = target;
+              return target;
+            }
+            // Patching failed (e.g. xh-if change) — fall through to full swap
+          }
+        }
+        // Materialize lazy sentinel fragment if needed
+        if (fragment._xhPlan) {
+          fragment = executePlan(fragment._xhPlan, fragment._xhCtx);
+          if (hint) fragment._xhPatch = hint;
+        }
         if (target.firstChild) {
           cleanupBeforeSwap(target, false);
           if (config.cspSafe) {
@@ -1700,6 +1746,12 @@
           }
         }
         target.appendChild(fragment);
+        // Collect binding state for future auto-patching
+        if (hint) {
+          var sctx = hint.ctx;
+          if (!(sctx instanceof DataContext)) sctx = new DataContext(sctx);
+          patchStates.set(target, collectBindingState(target, sctx, hint.html));
+        }
         return target;
 
       case "outerHTML":
@@ -1796,14 +1848,21 @@
    * Encode an xh-* attribute name and value into the plan's numeric type code
    * format (stride 3: [typeCode, arg1, arg2]).
    */
+  // Check if a field name is a simple key (no dots, no $, no pipes).
+  // Simple keys can use direct data[key] access, skipping the full resolve() path.
+  function _isSimpleKey(v) {
+    return v.charCodeAt(0) !== 36 && v.indexOf(".") === -1 && v.indexOf(" | ") === -1;
+  }
+
   function _pushXhCode(arr, name, value) {
+    // For types with a spare a2 slot, use 1 to flag simple keys for fast resolve
     switch (name) {
-      case "xh-if":         arr.push(XH_IF, value, 0); break;
-      case "xh-unless":     arr.push(XH_UNLESS, value, 0); break;
-      case "xh-text":       arr.push(XH_TEXT, value, 0); break;
+      case "xh-if":         arr.push(XH_IF, value, _isSimpleKey(value) ? 1 : 0); break;
+      case "xh-unless":     arr.push(XH_UNLESS, value, _isSimpleKey(value) ? 1 : 0); break;
+      case "xh-text":       arr.push(XH_TEXT, value, _isSimpleKey(value) ? 1 : 0); break;
       case "xh-html":       arr.push(XH_HTML, value, 0); break;
-      case "xh-show":       arr.push(XH_SHOW, value, 0); break;
-      case "xh-hide":       arr.push(XH_HIDE, value, 0); break;
+      case "xh-show":       arr.push(XH_SHOW, value, _isSimpleKey(value) ? 1 : 0); break;
+      case "xh-hide":       arr.push(XH_HIDE, value, _isSimpleKey(value) ? 1 : 0); break;
       case "xh-track":      arr.push(XH_TRACK, value, 0); break;
       case "xh-track-view": arr.push(XH_TRACK_VIEW, value, 0); break;
       default:
@@ -1889,6 +1948,7 @@
           var eachP = compileEachPlan(cloneForPlan);
           if (!eachP || hasXhOn) return false; // Can't compile — bail out
           var itemPlan = compileElementPlan(cloneForPlan);
+          _buildElementClonePlan(itemPlan);
           planArr.push({ t: 4, eachAttr: child.getAttribute("xh-each"), itemPlan: itemPlan });
           child = child.nextSibling;
           continue;
@@ -1935,17 +1995,24 @@
   function _applyPlanBindings(el, xh, ctx) {
     var hasUnknown = false;
     var classes = null;
+    var d = ctx.data;
     for (var i = 0; i < xh.length; i += 3) {
       var type = xh[i], a1 = xh[i + 1], a2 = xh[i + 2];
+      // a2 === 1 means pre-classified simple key: direct data access, parent fallback
       switch (type) {
         case 0: // XH_IF
-          if (!ctx.resolve(a1)) return false;
+          var ifv = a2 ? d[a1] : ctx.resolve(a1);
+          if (ifv === undefined && a2 && ctx.parent) ifv = ctx.parent.resolve(a1);
+          if (!ifv) return false;
           break;
         case 1: // XH_UNLESS
-          if (ctx.resolve(a1)) return false;
+          var unv = a2 ? d[a1] : ctx.resolve(a1);
+          if (unv === undefined && a2 && ctx.parent) unv = ctx.parent.resolve(a1);
+          if (unv) return false;
           break;
         case 2: // XH_TEXT
-          var tv = ctx.resolve(a1);
+          var tv = a2 ? d[a1] : ctx.resolve(a1);
+          if (tv === undefined && a2 && ctx.parent) tv = ctx.parent.resolve(a1);
           el.textContent = tv != null ? (typeof tv === "string" ? tv : String(tv)) : "";
           break;
         case 3: // XH_HTML
@@ -1955,14 +2022,18 @@
           }
           break;
         case 4: // XH_SHOW
-          el.style.display = ctx.resolve(a1) ? "" : "none";
+          var sv = a2 ? d[a1] : ctx.resolve(a1);
+          if (sv === undefined && a2 && ctx.parent) sv = ctx.parent.resolve(a1);
+          el.style.display = sv ? "" : "none";
           break;
         case 5: // XH_HIDE
-          el.style.display = ctx.resolve(a1) ? "none" : "";
+          var hdv = a2 ? d[a1] : ctx.resolve(a1);
+          if (hdv === undefined && a2 && ctx.parent) hdv = ctx.parent.resolve(a1);
+          el.style.display = hdv ? "none" : "";
           break;
         case 6: // XH_ATTR
           var av = ctx.resolve(a2);
-          if (av != null) el.setAttribute(a1, String(av));
+          if (av != null) _setAttr(el, a1, String(av));
           break;
         case 7: // XH_CLASS
           if (ctx.resolve(a2)) {
@@ -1981,9 +2052,182 @@
     return true;
   }
 
+  // ---------------------------------------------------------------------------
+  // Clone-based plan execution for xh-each items and fast property assignment
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Navigate to a node by childNode indices from a root.
+   * @param {Node}     root
+   * @param {number[]} path – Array of childNode indices.
+   * @returns {Node}
+   */
+  function _navPath(root, path) {
+    var node = root;
+    for (var i = 0; i < path.length; i++) {
+      node = node.childNodes[path[i]];
+    }
+    return node;
+  }
+  /**
+   * Recursively build the static prototype and collect dynamic slots.
+   * Each plan node maps to exactly one childNode in the parent.
+   * @returns {boolean} true on success, false if plan can't be cloned.
+   */
+  function _buildCloneNodes(planArr, parent, slots, pathPrefix) {
+    for (var i = 0; i < planArr.length; i++) {
+      var node = planArr[i];
+      var nodePath = pathPrefix.length === 0 ? [i] : pathPrefix.concat(i);
+
+      if (node.t === 2) { // static text
+        parent.appendChild(document.createTextNode(node.v));
+        continue;
+      }
+      if (node.t === 3) { // interpolated text — add placeholder
+        parent.appendChild(document.createTextNode(""));
+        slots.push({ p: nodePath, tpl: node.v });
+        continue;
+      }
+      if (node.t === 4) { // xh-each — can't clone
+        return false;
+      }
+
+      // Element (t === 1)
+      var xh = node.xh;
+      if (xh) {
+        for (var pre = 0; pre < xh.length; pre += 3) {
+          if (xh[pre] === XH_IF || xh[pre] === XH_UNLESS) return false;
+        }
+      }
+
+      var el = document.createElement(node.tag);
+      // Static attrs
+      var sa = node.attrs;
+      if (sa) {
+        for (var j = 0; j < sa.length; j += 2) {
+          if (sa[j] === "class") el.className = sa[j + 1];
+          else _setAttr(el, sa[j], sa[j + 1]);
+        }
+      }
+
+      // Record slot for elements with dynamic bindings
+      if (node.iAttrs || (xh && xh.length > 0)) {
+        slots.push({ p: nodePath, xh: xh, iAttrs: node.iAttrs });
+      }
+
+      // Children (unless xh-text/xh-html will overwrite)
+      var ch = node.children;
+      if (ch && !node.skipCh) {
+        if (!_buildCloneNodes(ch, el, slots, nodePath)) return false;
+      }
+
+      parent.appendChild(el);
+    }
+    return true;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Clone-based element plan — for xh-each item rendering
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Try to build a clone plan for a single element plan (used by xh-each).
+   * Sets plan._cloneEl, plan._cloneSlots, plan._cloneRootSlot on success.
+   * Root xh-if/xh-unless are allowed (checked before cloning at render time).
+   */
+  function _buildElementClonePlan(plan) {
+    var el = document.createElement(plan.tag);
+    var slots = [];
+    var rootSlot = null;
+
+    // Static attrs on root element
+    var sa = plan.attrs;
+    if (sa) {
+      for (var j = 0; j < sa.length; j += 2) {
+        if (sa[j] === "class") el.className = sa[j + 1];
+        else _setAttr(el, sa[j], sa[j + 1]);
+      }
+    }
+
+    // Root element dynamic bindings
+    var xh = plan.xh;
+    if (plan.iAttrs || (xh && xh.length > 0)) {
+      rootSlot = { xh: xh, iAttrs: plan.iAttrs };
+    }
+
+    // Children — bail if they contain xh-each or xh-if/xh-unless
+    var ch = plan.children;
+    if (ch && !plan.skipCh) {
+      if (!_buildCloneNodes(ch, el, slots, [])) return false;
+    }
+
+    plan._cloneEl = el;
+    plan._cloneSlots = slots;
+    plan._cloneRootSlot = rootSlot;
+    return true;
+  }
+
+  /**
+   * Execute an element plan using clone-and-patch.
+   * Returns the element, or null if xh-if/xh-unless removes it.
+   */
+  function _execElementClone(plan, ctx) {
+    // Check root-level conditionals before cloning
+    var xh = plan.xh;
+    if (xh) {
+      for (var pre = 0; pre < xh.length; pre += 3) {
+        if (xh[pre] === XH_IF) { if (!ctx.resolve(xh[pre + 1])) return null; }
+        else if (xh[pre] === XH_UNLESS) { if (ctx.resolve(xh[pre + 1])) return null; }
+      }
+    }
+
+    var el = plan._cloneEl.cloneNode(true);
+
+    // Apply child slots
+    var slots = plan._cloneSlots;
+    for (var i = 0; i < slots.length; i++) {
+      var slot = slots[i];
+      var node = _navPath(el, slot.p);
+      if (slot.tpl !== undefined) {
+        node.nodeValue = interpolate(slot.tpl, ctx, false);
+        node._xhTpl = slot.tpl;
+      } else {
+        if (slot.iAttrs) {
+          var ia = slot.iAttrs;
+          for (var j = 0; j < ia.length; j += 2) {
+            var v = interpolate(ia[j + 1], ctx, false);
+            if (ia[j] === "class") node.className = v;
+            else _setAttr(node, ia[j], v);
+          }
+        }
+        if (slot.xh) {
+          _applyPlanBindings(node, slot.xh, ctx);
+        }
+      }
+    }
+
+    // Apply root element bindings
+    var rs = plan._cloneRootSlot;
+    if (rs) {
+      if (rs.iAttrs) {
+        var ria = rs.iAttrs;
+        for (var ri = 0; ri < ria.length; ri += 2) {
+          var rv = interpolate(ria[ri + 1], ctx, false);
+          if (ria[ri] === "class") el.className = rv;
+          else _setAttr(el, ria[ri], rv);
+        }
+      }
+      if (rs.xh) {
+        _applyPlanBindings(el, rs.xh, ctx);
+      }
+    }
+
+    return el;
+  }
+
   /**
    * Execute a compiled render plan, building DOM directly via createElement.
-   * Avoids cloneNode(true) overhead.
+   * Uses clone-and-patch fast path when available.
    */
   function executePlan(plan, ctx) {
     var frag = document.createDocumentFragment();
@@ -2045,18 +2289,21 @@
     }
 
     var el = document.createElement(node.tag);
-    // Set static attributes (no interpolation needed — pre-split at compile time)
+    // Set static attributes — use className fast path for "class"
     var sa = node.attrs;
     if (sa) {
       for (var i = 0; i < sa.length; i += 2) {
-        el.setAttribute(sa[i], sa[i + 1]);
+        if (sa[i] === "class") el.className = sa[i + 1];
+        else _setAttr(el, sa[i], sa[i + 1]);
       }
     }
     // Set interpolated attributes
     var ia = node.iAttrs;
     if (ia) {
       for (var ii = 0; ii < ia.length; ii += 2) {
-        el.setAttribute(ia[ii], interpolate(ia[ii + 1], ctx, false));
+        var iVal = interpolate(ia[ii + 1], ctx, false);
+        if (ia[ii] === "class") el.className = iVal;
+        else _setAttr(el, ia[ii], iVal);
       }
     }
     // Skip children if xh-text/xh-html will overwrite them
@@ -2116,6 +2363,11 @@
    * Used for xh-each item rendering.
    */
   function execElementPlan(plan, ctx) {
+    // Fast clone path for immutable contexts
+    if (plan._cloneEl && !(ctx instanceof MutableDataContext)) {
+      return _execElementClone(plan, ctx);
+    }
+
     var xh = plan.xh;
     var isMutable = ctx instanceof MutableDataContext;
 
@@ -2128,18 +2380,21 @@
     }
 
     var el = document.createElement(plan.tag);
-    // Set static attributes (no interpolation needed — pre-split at compile time)
+    // Set static attributes — use className fast path for "class"
     var sa = plan.attrs;
     if (sa) {
       for (var i = 0; i < sa.length; i += 2) {
-        el.setAttribute(sa[i], sa[i + 1]);
+        if (sa[i] === "class") el.className = sa[i + 1];
+        else _setAttr(el, sa[i], sa[i + 1]);
       }
     }
     // Set interpolated attributes
     var ia = plan.iAttrs;
     if (ia) {
       for (var ii = 0; ii < ia.length; ii += 2) {
-        el.setAttribute(ia[ii], interpolate(ia[ii + 1], ctx, false));
+        var iVal = interpolate(ia[ii + 1], ctx, false);
+        if (ia[ii] === "class") el.className = iVal;
+        else _setAttr(el, ia[ii], iVal);
       }
     }
     // Skip children if xh-text/xh-html will overwrite them
@@ -2210,7 +2465,23 @@
     if (cached) {
       // Compiled plan path: build DOM directly via createElement (no cloneNode)
       if (cached.plan) {
-        return executePlan(cached.plan, ctx);
+        // Fast path: if this template was previously auto-patched into a target,
+        // return a lightweight sentinel fragment. performSwap will patch in-place
+        // and the full DOM is never built. Falls back to full build if patch fails.
+        var pt = cached._patchTarget;
+        if (pt && pt.firstChild) {
+          var ptState = patchStates.get(pt);
+          if (ptState && ptState.html === html) {
+            var sentinel = document.createDocumentFragment();
+            sentinel._xhPatch = { html: html, ctx: ctx };
+            sentinel._xhPlan = cached.plan;
+            sentinel._xhCtx = ctx;
+            return sentinel;
+          }
+        }
+        var frag = executePlan(cached.plan, ctx);
+        frag._xhPatch = { html: html, ctx: ctx };
+        return frag;
       }
       // Fallback: clone the pristine prototype — avoids HTML parsing entirely
       container = cached.prototype.cloneNode(true);
@@ -2251,6 +2522,10 @@
       // or complex xh-each that can't be plan-compiled)
       var plan = !hasRest ? compileRenderPlan(container) : null;
 
+      // Try to build clone-based fast path for xh-each item plans within the plan.
+      // Fragment-level clone is not used (overhead in jsdom outweighs benefit).
+      // The plan compilation already calls _buildElementClonePlan for each items.
+
       // Cache the pristine prototype before any data-dependent mutations
       if (renderFragmentCache.size >= RENDER_FRAGMENT_CACHE_MAX) {
         renderFragmentCache.delete(renderFragmentCache.keys().next().value);
@@ -2266,7 +2541,9 @@
 
       // Use the plan immediately on first call too
       if (plan) {
-        return executePlan(plan, ctx);
+        var frag2 = executePlan(plan, ctx);
+        frag2._xhPatch = { html: html, ctx: ctx };
+        return frag2;
       }
     }
 
@@ -2321,6 +2598,7 @@
 
     var resultFragment = document.createDocumentFragment();
     while (container.firstChild) resultFragment.appendChild(container.firstChild);
+    resultFragment._xhPatch = { html: html, ctx: ctx };
     return resultFragment;
   }
 
