@@ -1007,7 +1007,11 @@ img { max-width: 100%; }
   width: 100%;
   border-collapse: collapse;
   font-size: 0.88rem;
+  table-layout: fixed;
 }
+.perf-table col.col-scenario { width: 38%; }
+.perf-table col.col-data    { width: 19%; }
+.perf-table col.col-result  { width: 24%; }
 .perf-table thead {
   background: var(--bg-card);
 }
@@ -3324,6 +3328,12 @@ html[data-theme="light"] .syn-kw { color: #9333ea; font-weight: 600; }
       <h3>Re-Render / Patching &mdash; data change to DOM update</h3>
       <div class="comparison-wrapper">
         <table class="perf-table">
+          <colgroup>
+            <col class="col-scenario">
+            <col class="col-data">
+            <col class="col-data">
+            <col class="col-result">
+          </colgroup>
           <thead>
             <tr>
               <th>Scenario</th>
@@ -3395,6 +3405,12 @@ html[data-theme="light"] .syn-kw { color: #9333ea; font-weight: 600; }
       <h3>Initial Render &mdash; template to DOM</h3>
       <div class="comparison-wrapper">
         <table class="perf-table">
+          <colgroup>
+            <col class="col-scenario">
+            <col class="col-data">
+            <col class="col-data">
+            <col class="col-result">
+          </colgroup>
           <thead>
             <tr>
               <th>Scenario</th>
