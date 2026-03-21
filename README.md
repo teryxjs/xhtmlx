@@ -765,20 +765,6 @@ xhtmlx.config.defaultErrorTarget = null;       // Global error target
 
 xhtmlx is benchmarked head-to-head against React 18 on every release. The numbers below are averages of 3 runs in JSDOM with Jest (`flushSync` for React to keep the comparison synchronous).
 
-### Initial Render — template to DOM
-
-| Scenario | xhtmlx | React 18 | Winner |
-|---|---:|---:|---|
-| Single text binding | 19.0K ops/s | 45.5K ops/s | React 2.4x |
-| 5 text bindings | 5.9K ops/s | 69.7K ops/s | React 11.8x |
-| Conditional render | 6.0K ops/s | 25.9K ops/s | React 4.3x |
-| User profile card | 2.0K ops/s | 10.2K ops/s | React 5.0x |
-| List — 100 items | 330 ops/s | 943 ops/s | React 2.9x |
-| **List — 500 items** | **406 ops/s** | **189 ops/s** | **xhtmlx 2.1x** |
-| **List — 1,000 items** | **464 ops/s** | **93 ops/s** | **xhtmlx 5.0x** |
-
-React wins small-to-medium initial renders (its vDOM is hard to beat for first paint). xhtmlx overtakes React on large lists (500+ items) thanks to compiled element plans.
-
 ### Re-Render / Patching — data change to DOM update
 
 | Scenario | xhtmlx | React 18 | Winner |
@@ -793,6 +779,20 @@ React wins small-to-medium initial renders (its vDOM is hard to beat for first p
 | Profile — same (noop) | **11.98M ops/s** | 21.7K ops/s | **xhtmlx 551x** |
 
 xhtmlx's `render()` API patches only changed DOM bindings in place — no virtual DOM diff, no reconciliation, no tree walk. This is where the library shines for polling, WebSocket streams, and reactive state updates: **100–630x faster** than React.
+
+### Initial Render — template to DOM
+
+| Scenario | xhtmlx | React 18 | Winner |
+|---|---:|---:|---|
+| Single text binding | 19.0K ops/s | 45.5K ops/s | React 2.4x |
+| 5 text bindings | 5.9K ops/s | 69.7K ops/s | React 11.8x |
+| Conditional render | 6.0K ops/s | 25.9K ops/s | React 4.3x |
+| User profile card | 2.0K ops/s | 10.2K ops/s | React 5.0x |
+| List — 100 items | 330 ops/s | 943 ops/s | React 2.9x |
+| **List — 500 items** | **406 ops/s** | **189 ops/s** | **xhtmlx 2.1x** |
+| **List — 1,000 items** | **464 ops/s** | **93 ops/s** | **xhtmlx 5.0x** |
+
+React wins small-to-medium initial renders (its vDOM is hard to beat for first paint). xhtmlx overtakes React on large lists (500+ items) thanks to compiled element plans.
 
 ### Summary
 

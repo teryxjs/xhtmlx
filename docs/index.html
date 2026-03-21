@@ -3321,70 +3321,6 @@ html[data-theme="light"] .syn-kw { color: #9333ea; font-weight: 600; }
     </div>
 
     <div class="perf-table-group fade-in">
-      <h3>Initial Render &mdash; template to DOM</h3>
-      <div class="comparison-wrapper">
-        <table class="perf-table">
-          <thead>
-            <tr>
-              <th>Scenario</th>
-              <th class="col-xhtmlx">xhtmlx</th>
-              <th>React 18</th>
-              <th>Result</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Single text binding</td>
-              <td>19.0K ops/s</td>
-              <td>45.5K ops/s</td>
-              <td><span class="perf-ratio loss">React 2.4x</span></td>
-            </tr>
-            <tr>
-              <td>5 text bindings</td>
-              <td>5.9K ops/s</td>
-              <td>69.7K ops/s</td>
-              <td><span class="perf-ratio loss">React 11.8x</span></td>
-            </tr>
-            <tr>
-              <td>Conditional render</td>
-              <td>6.0K ops/s</td>
-              <td>25.9K ops/s</td>
-              <td><span class="perf-ratio loss">React 4.3x</span></td>
-            </tr>
-            <tr>
-              <td>User profile card</td>
-              <td>2.0K ops/s</td>
-              <td>10.2K ops/s</td>
-              <td><span class="perf-ratio loss">React 5.0x</span></td>
-            </tr>
-            <tr>
-              <td>List &mdash; 100 items</td>
-              <td>330 ops/s</td>
-              <td>943 ops/s</td>
-              <td><span class="perf-ratio loss">React 2.9x</span></td>
-            </tr>
-            <tr>
-              <td>List &mdash; 500 items</td>
-              <td class="perf-win">406 ops/s</td>
-              <td>189 ops/s</td>
-              <td><span class="perf-ratio win">xhtmlx 2.1x</span></td>
-            </tr>
-            <tr>
-              <td>List &mdash; 1,000 items</td>
-              <td class="perf-win">464 ops/s</td>
-              <td>93 ops/s</td>
-              <td><span class="perf-ratio win">xhtmlx 5.0x</span></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <p style="font-size:0.82rem;color:var(--text-secondary);margin-top:10px;">
-        React wins small initial renders thanks to its compiled vDOM. xhtmlx overtakes React on large lists
-        with compiled element plans that bypass cloneNode entirely.
-      </p>
-    </div>
-
-    <div class="perf-table-group fade-in">
       <h3>Re-Render / Patching &mdash; data change to DOM update</h3>
       <div class="comparison-wrapper">
         <table class="perf-table">
@@ -3452,6 +3388,70 @@ html[data-theme="light"] .syn-kw { color: #9333ea; font-weight: 600; }
         xhtmlx's <code>render()</code> API patches only changed bindings in place &mdash; no virtual DOM
         diff, no reconciliation, no tree walk. This is the real-world advantage for polling, WebSocket
         streams, and reactive state updates.
+      </p>
+    </div>
+
+    <div class="perf-table-group fade-in">
+      <h3>Initial Render &mdash; template to DOM</h3>
+      <div class="comparison-wrapper">
+        <table class="perf-table">
+          <thead>
+            <tr>
+              <th>Scenario</th>
+              <th class="col-xhtmlx">xhtmlx</th>
+              <th>React 18</th>
+              <th>Result</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Single text binding</td>
+              <td>19.0K ops/s</td>
+              <td>45.5K ops/s</td>
+              <td><span class="perf-ratio loss">React 2.4x</span></td>
+            </tr>
+            <tr>
+              <td>5 text bindings</td>
+              <td>5.9K ops/s</td>
+              <td>69.7K ops/s</td>
+              <td><span class="perf-ratio loss">React 11.8x</span></td>
+            </tr>
+            <tr>
+              <td>Conditional render</td>
+              <td>6.0K ops/s</td>
+              <td>25.9K ops/s</td>
+              <td><span class="perf-ratio loss">React 4.3x</span></td>
+            </tr>
+            <tr>
+              <td>User profile card</td>
+              <td>2.0K ops/s</td>
+              <td>10.2K ops/s</td>
+              <td><span class="perf-ratio loss">React 5.0x</span></td>
+            </tr>
+            <tr>
+              <td>List &mdash; 100 items</td>
+              <td>330 ops/s</td>
+              <td>943 ops/s</td>
+              <td><span class="perf-ratio loss">React 2.9x</span></td>
+            </tr>
+            <tr>
+              <td>List &mdash; 500 items</td>
+              <td class="perf-win">406 ops/s</td>
+              <td>189 ops/s</td>
+              <td><span class="perf-ratio win">xhtmlx 2.1x</span></td>
+            </tr>
+            <tr>
+              <td>List &mdash; 1,000 items</td>
+              <td class="perf-win">464 ops/s</td>
+              <td>93 ops/s</td>
+              <td><span class="perf-ratio win">xhtmlx 5.0x</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="font-size:0.82rem;color:var(--text-secondary);margin-top:10px;">
+        React wins small initial renders thanks to its compiled vDOM. xhtmlx overtakes React on large lists
+        with compiled element plans that bypass cloneNode entirely.
       </p>
     </div>
 
