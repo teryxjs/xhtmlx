@@ -1719,17 +1719,26 @@
         // patch existing DOM in-place instead of rebuilding.
         var hint = fragment._xhPatch;
         if (hint && target.firstChild) {
-          var state = patchStates.get(target);
+          // Use pre-looked-up state from renderTemplate if available (opt #4)
+          var state = fragment._xhPtState || patchStates.get(target);
           if (state && state.html === hint.html) {
             var pctx = hint.ctx;
             if (!(pctx instanceof DataContext)) pctx = new DataContext(pctx);
+            // Skip patchBindings entirely when ctx.data hasn't changed (opt #1)
+            var pdata = pctx.data;
+            if (state._lastData === pdata) {
+              return target;
+            }
             if (patchBindings(state, pctx)) {
+              state._lastData = pdata;
               // Save patch target so renderTemplate can skip fragment building next time
-              var ce = renderFragmentCache.get(hint.html);
+              // Use one-entry cache (opt #5)
+              var ce = _rfcLastVal && _rfcLastKey === hint.html ? _rfcLastVal : renderFragmentCache.get(hint.html);
               if (ce) ce._patchTarget = target;
               return target;
             }
             // Patching failed (e.g. xh-if change) — fall through to full swap
+            state._lastData = null;
           }
         }
         // Materialize lazy sentinel fragment if needed
@@ -2455,28 +2464,45 @@
     return { hasEach: hasEach, hasRest: hasRest };
   }
 
+  // One-entry cache for renderFragmentCache lookups (opt #5)
+  var _rfcLastKey = null, _rfcLastVal = null;
+
+  // Reusable sentinel object — avoids createDocumentFragment per call (opt #2)
+  // performSwap checks ._xhPatch before using as DOM node; if patching succeeds
+  // the sentinel is never touched as a Node.
+  var _sentinel = { _xhPatch: null, _xhPlan: null, _xhCtx: null };
+
   function renderTemplate(html, ctx) {
     // 1. Parse into fragment, using a cache to avoid re-parsing the same HTML
     //    string on every call.  The cache stores a pristine (un-interpolated)
     //    prototype DOM plus the pre-built CSS selector for xh-* elements.
-    var cached = renderFragmentCache.get(html);
+    // One-entry cache avoids Map.get on hot path (opt #5)
+    var cached = (_rfcLastKey === html) ? _rfcLastVal : renderFragmentCache.get(html);
+    _rfcLastKey = html;
+    _rfcLastVal = cached;
     var container, targetedSelector, hasInterp, hasEach, hasRest;
 
     if (cached) {
       // Compiled plan path: build DOM directly via createElement (no cloneNode)
       if (cached.plan) {
         // Fast path: if this template was previously auto-patched into a target,
-        // return a lightweight sentinel fragment. performSwap will patch in-place
+        // return a lightweight sentinel. performSwap will patch in-place
         // and the full DOM is never built. Falls back to full build if patch fails.
         var pt = cached._patchTarget;
         if (pt && pt.firstChild) {
           var ptState = patchStates.get(pt);
           if (ptState && ptState.html === html) {
-            var sentinel = document.createDocumentFragment();
-            sentinel._xhPatch = { html: html, ctx: ctx };
-            sentinel._xhPlan = cached.plan;
-            sentinel._xhCtx = ctx;
-            return sentinel;
+            // Reuse cached _patchHint object (opt #3)
+            var hint = cached._patchHint;
+            if (!hint) { hint = { html: html, ctx: null }; cached._patchHint = hint; }
+            hint.ctx = ctx;
+            // Reuse sentinel object instead of createDocumentFragment (opt #2)
+            _sentinel._xhPatch = hint;
+            _sentinel._xhPlan = cached.plan;
+            _sentinel._xhCtx = ctx;
+            // Pass ptState to performSwap to avoid redundant patchStates.get (opt #4)
+            _sentinel._xhPtState = ptState;
+            return _sentinel;
           }
         }
         var frag = executePlan(cached.plan, ctx);
@@ -2528,16 +2554,22 @@
 
       // Cache the pristine prototype before any data-dependent mutations
       if (renderFragmentCache.size >= RENDER_FRAGMENT_CACHE_MAX) {
-        renderFragmentCache.delete(renderFragmentCache.keys().next().value);
+        var evictKey = renderFragmentCache.keys().next().value;
+        renderFragmentCache.delete(evictKey);
+        if (_rfcLastKey === evictKey) { _rfcLastKey = null; _rfcLastVal = null; }
       }
-      renderFragmentCache.set(html, {
+      var newEntry = {
         prototype: container.cloneNode(true),
         selector: targetedSelector,
         hasInterp: hasInterp,
         hasEach: hasEach,
         hasRest: hasRest,
         plan: plan
-      });
+      };
+      renderFragmentCache.set(html, newEntry);
+      // Update one-entry cache
+      _rfcLastKey = html;
+      _rfcLastVal = newEntry;
 
       // Use the plan immediately on first call too
       if (plan) {
@@ -4515,6 +4547,7 @@
     clearTemplateCache: function () {
       templateCache.clear();
       renderFragmentCache.clear();
+      _rfcLastKey = null; _rfcLastVal = null;
     },
 
     /**
@@ -4568,6 +4601,7 @@
       config.apiPrefix = opts.apiPrefix != null ? opts.apiPrefix : config.apiPrefix;
       templateCache.clear();
       renderFragmentCache.clear();
+      _rfcLastKey = null; _rfcLastVal = null;
       responseCache.clear();
 
       if (typeof document !== "undefined") {
@@ -4642,6 +4676,7 @@
       }
       templateCache.clear();
       renderFragmentCache.clear();
+      _rfcLastKey = null; _rfcLastVal = null;
       responseCache.clear();
     },
 
